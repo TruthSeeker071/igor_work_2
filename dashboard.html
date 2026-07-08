@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlightWay — Career Hub</title>
+<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260703p">
+<link rel="stylesheet" href="assets/css/hub-dashboard.css?v=20260705g">
+<script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
+<script src="assets/js/shared/global-shim.js?v=20260703p"></script>
+<script src="assets/js/shared/flags.js?v=20260703p"></script>
+<link rel="stylesheet" href="assets/css/flightway-2.css?v=20260708a">
+<script src="assets/js/shared/events.js?v=20260708a" defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="/data/onet/artifacts/careers.json?v=20260703q" as="fetch" crossorigin>
+<link rel="preload" href="/data/onet/artifacts/zone-layout.json" as="fetch" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="hub-page">
+
+<!-- TOP BAR -->
+  <div id="topbar">
+  <a href="/" class="fw-brand hub-brand" data-fw-brand data-fw-brand-href="/" aria-label="FlightWay home"></a>
+
+  <nav class="app-nav hub-app-nav" aria-label="App">
+    <a href="portal.html" class="app-nav-tab" data-app-nav="home"><span class="app-nav-label">Home</span></a>
+    <a href="dashboard.html" class="app-nav-tab is-active" data-app-nav="hub" aria-current="page"><span class="app-nav-label">Career Hub</span></a>
+    <!-- AI Career Advisor is reached via the Marco bubble (bottom-left), not a nav tab. -->
+    <a href="roadmap.html" class="app-nav-tab" data-app-nav="roadmap"><span class="app-nav-label">Career Roadmap</span></a>
+    <a href="quiz.html" class="app-nav-tab app-nav-tab--muted" data-app-nav="quiz"><span class="app-nav-label">Career Quiz</span></a>
+  </nav>
+
+  <div id="search-wrap">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M9.5 9.5L12.5 12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    <input id="search" type="text" placeholder="Search careers..." autocomplete="off" role="combobox" aria-expanded="false" aria-controls="search-suggest">
+    <div id="search-suggest" class="search-suggest" role="listbox" hidden></div>
+  </div>
+
+  <div class="topbar-right">
+    <div class="legend legend--overview">
+      <span class="legend-label">Overall fit</span>
+      <div class="legend-bar legend-bar--rarity" aria-hidden="true"></div>
+      <button type="button" id="hub-fit-help" class="hub-fit-help" aria-label="How fit scores work" title="How fit scores work">?</button>
+      <div class="legend-orb-sample" aria-hidden="true"></div>
+    </div>
+    <div class="hub-topbar-actions">
+      <button type="button" class="fw-theme-toggle" aria-label="Switch to dark mode" aria-pressed="false">
+        <span class="fw-theme-icon" aria-hidden="true"></span>
+      </button>
+    </div>
+    <div id="hub-refine-slot" class="hub-refine-slot"></div>
+    <div class="user-chip">
+      <div class="user-avatar" id="user-avatar-initials">S</div>
+      <span id="user-display-name">Student</span>
+    </div>
+  </div>
+</div>
+
+<!-- CANVAS -->
+<div id="hub-loading" class="hub-loading" aria-live="polite" aria-busy="true">
+  <div class="hub-loading-inner">
+    <span class="hub-loading-spinner" aria-hidden="true"></span>
+    <span>Loading career map…</span>
+  </div>
+</div>
+<div id="hub-boot-error" class="hub-boot-error" hidden>
+  <p id="hub-boot-error-text" class="hub-boot-error-text">Career map could not load.</p>
+  <a href="dashboard.html" class="hub-boot-error-link">Refresh Career Hub</a>
+</div>
+<canvas id="map-canvas" role="img" aria-roledescription="interactive career map" aria-label="Career map. Pan with drag, zoom with scroll or pinch." tabindex="0"></canvas>
+
+<div id="hub-fit-explainer" class="hub-fit-explainer" hidden role="dialog" aria-labelledby="hub-fit-explainer-title" aria-modal="true">
+  <div class="hub-fit-explainer-card">
+    <h2 id="hub-fit-explainer-title" class="hub-fit-explainer-title">How we calculate fit</h2>
+    <p><strong>Overall fit</strong> is 75% personality cosine fit plus 25% objective cosine fit (when you have academics or resume signals). With personality only, overall fit equals personality fit.</p>
+    <p><strong>Personality fit</strong> compares your work-style vector to each career&rsquo;s O*NET profile. <strong>Objective fit</strong> compares your skills and academics vector to career requirements.</p>
+    <p class="hub-fit-explainer-note">Sector tile color and orb glow follow the overall fit rarity scale (common through mythic). Inside a sector, the same scale applies to each career orb.</p>
+    <button type="button" id="hub-fit-explainer-close" class="hub-hud-btn hub-fit-explainer-close">Got it</button>
+  </div>
+</div>
+
+<div id="hub-map-hud" class="hub-map-hud" aria-live="polite">
+  <button type="button" id="hub-sector-back" class="hub-hud-btn" hidden aria-label="Back to all sectors">← All sectors</button>
+  <p id="hub-sector-title" class="hub-sector-title" hidden></p>
+  <p id="hub-map-hint" class="hub-map-hint" hidden>Click a sector to explore careers</p>
+  <p id="hub-search-hud" class="hub-search-hud" hidden></p>
+</div>
+
+<!-- NON-OBVIOUS FITS (objective-vector stretch surfacing) -->
+<aside id="hub-stretch-fits" class="hub-stretch-fits" aria-label="Non-obvious fits from your background" hidden>
+  <div class="hub-stretch-head">
+    <h2 class="hub-stretch-title">Non-obvious fits</h2>
+    <button type="button" id="hub-stretch-dismiss" class="hub-stretch-dismiss" aria-label="Dismiss non-obvious fits">×</button>
+  </div>
+  <p class="hub-stretch-sub">Careers your background points to that the quiz alone might miss.</p>
+  <ul id="hub-stretch-list" class="hub-stretch-list"></ul>
+</aside>
+
+<!-- TOOLTIP -->
+<div id="tooltip" role="tooltip" aria-hidden="true">
+  <div class="tt-accent" id="tt-accent"></div>
+  <div class="tt-body">
+    <div class="tt-name" id="tt-name"></div>
+    <div class="tt-fit-row" id="tt-fit-personality" hidden>
+      <span class="tt-fit-label">Personality fit</span>
+      <span class="tt-fit-val" id="tt-personality-val"></span>
+    </div>
+    <div class="tt-fit-row" id="tt-fit-objective" hidden>
+      <span class="tt-fit-label">Objective fit</span>
+      <span class="tt-fit-val" id="tt-objective-val"></span>
+    </div>
+    <div class="tt-score" id="tt-score"></div>
+    <div class="tt-industry" id="tt-industry"></div>
+  </div>
+</div>
+
+<!-- DETAIL PANEL -->
+<div id="detail-panel" class="hub-drawer-panel">
+  <div class="panel-header">
+    <button class="panel-close" id="panel-close" aria-label="Close career details">✕</button>
+    <div class="panel-industry-badge" id="panel-industry"></div>
+    <div class="panel-career-name" id="panel-career-name"></div>
+    <span id="panel-ai-derived" class="panel-ai-derived" hidden>AI-derived</span>
+    <div id="panel-dual-fit" class="panel-dual-fit" hidden>
+      <div class="panel-fit-row panel-fit-row--overall">
+        <span class="panel-fit-label">Overall fit</span>
+        <span class="panel-fit-pct" id="panel-overall-fit">—</span>
+      </div>
+      <div class="panel-fit-row">
+        <span class="panel-fit-label">Personality fit</span>
+        <span class="panel-fit-pct" id="panel-personality-fit">—</span>
+      </div>
+      <div class="panel-fit-bar-bg panel-fit-bar-bg--mini">
+        <div class="panel-fit-bar-fill panel-fit-bar-fill--personality" id="panel-personality-bar"></div>
+      </div>
+      <div class="panel-fit-row">
+        <span class="panel-fit-label">Objective fit</span>
+        <span class="panel-fit-pct" id="panel-objective-fit">—</span>
+      </div>
+      <div class="panel-fit-bar-bg panel-fit-bar-bg--mini">
+        <div class="panel-fit-bar-fill panel-fit-bar-fill--objective" id="panel-objective-bar"></div>
+      </div>
+      <div class="panel-fit-row panel-fit-row--readiness" id="panel-readiness-row" hidden>
+        <span class="panel-fit-label">Readiness</span>
+        <span class="panel-fit-pct" id="panel-preparedness-fit">—</span>
+      </div>
+      <p id="panel-tradeoff" class="panel-tradeoff" hidden></p>
+    </div>
+    <div class="panel-fit-wrap panel-fit-wrap--legacy">
+      <div class="panel-fit-label">
+        <span>Overall fit</span>
+        <span class="panel-fit-pct" id="panel-fit-pct"></span>
+      </div>
+      <div class="panel-fit-bar-bg">
+        <div class="panel-fit-bar-fill" id="panel-fit-bar"></div>
+      </div>
+    </div>
+  </div>
+  <div class="panel-body">
+    <div class="panel-section-label">Key skills</div>
+    <div class="skills-wrap" id="panel-skills"></div>
+    <div class="panel-section-label">About this career</div>
+    <div class="panel-description" id="panel-description"></div>
+    <div id="panel-related" class="panel-related" hidden>
+      <div class="panel-section-label">Related careers</div>
+      <div class="panel-related-chips" id="panel-related-chips"></div>
+    </div>
+    <div id="panel-fragments" class="panel-related panel-fragments" hidden>
+      <div class="panel-section-label">AI specializations</div>
+      <div class="panel-related-chips" id="panel-fragments-chips"></div>
+    </div>
+  </div>
+  <div class="panel-footer">
+    <a class="btn-deep-dive" id="panel-deep-dive" href="career.html">View career deep dive →</a>
+    <a class="btn-deep-dive" id="panel-roadmap" href="roadmap.html">Build roadmap →</a>
+    <button class="btn-daylife" id="panel-daylife" type="button">
+      Try this career for 20 minutes →
+    </button>
+  </div>
+</div>
+
+<script src="assets/js/shared/auth.js?v=20260703p" defer></script>
+<script src="assets/js/shared/profile-alignment.js?v=20260703p" defer></script>
+<script src="assets/js/quiz/quiz-data.js?v=20260703p" defer></script>
+<script src="assets/js/shared/career-target.js?v=20260703p" defer></script>
+<script src="assets/js/shared/sector-fit-sheet.js?v=20260703p" defer></script>
+<script src="assets/js/shared/academics-map.js?v=20260703p" defer></script>
+<script src="assets/js/shared/refine-map.js?v=20260703p" defer></script>
+<script src="assets/js/hub/hub-careers.js?v=20260703p" defer></script>
+<script src="assets/js/shared/onet-math.js?v=20260703p" defer></script>
+<script src="assets/js/shared/onet-catalog.js?v=20260705a" defer></script>
+<script src="assets/js/shared/onet-vectors.js?v=20260705a" defer></script>
+<script src="assets/js/shared/career-focus-migrate.js?v=20260703p" defer></script>
+<script src="assets/js/shared/hub-zone-fit.js?v=20260703p" defer></script>
+<script src="assets/js/hub/hub-onet-map.js?v=20260705i" defer></script>
+  <script src="assets/js/hub/career-deep-dives.js?v=20260703p" defer></script>
+  <script src="assets/js/shared/hub-drawer.js?v=20260703p" defer></script>
+  <script src="assets/js/shared/hub-canvas-bg.js?v=20260703p" defer></script>
+  <script src="assets/js/hub/hub-canvas.js?v=20260705g" defer></script>
+  <script src="assets/js/hub/hub-dashboard.js?v=20260705g" defer></script>
+<script src="assets/js/hub/hub-refine.js?v=20260703p" defer></script>
+<script src="assets/js/hub/hub-academics.js?v=20260703p" defer></script>
+<script src="assets/js/hub/marco.js?v=20260703p" defer></script>
+<script src="assets/js/shared/brand.js?v=20260703p" defer></script>
+<script src="assets/js/shared/theme.js?v=20260703p" defer></script>
+<script src="assets/js/shared/app-nav.js?v=20260703p" defer></script>
+<script src="assets/js/shared/auth-nav.js?v=20260703p" defer></script>
+<script>
+  // Join the unified session: pull the server profile into local caches so the
+  // hub reflects the signed-in user's data on this and subsequent visits.
+  // Deferred scripts finish before DOMContentLoaded, so FWAuth exists here.
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.FWAuth && typeof FWAuth.authBoot === 'function') {
+      FWAuth.authBoot().catch(function (err) { console.warn('hub auth boot failed', err); });
+    }
+  });
+</script>
+</body>
+</html>

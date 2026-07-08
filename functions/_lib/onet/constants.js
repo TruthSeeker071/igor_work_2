@@ -1,0 +1,9 @@
+export const SCHEMA_ID = 'onet-lv-161-v1';
+export const DIM_COUNT = 161;
+export const MAX_SOC_BATCH = 40;
+export const GEMINI_CAREER_BATCH_DISABLED = true;
+export const VECTOR_ARTIFACT_PREFIX = 'onet/v1/';
+export const STATIC_ARTIFACT_BASE = '/data/onet/artifacts/';
+export const PREPAREDNESS_WEIGHTS = { fit: 0.6, magnitude: 0.25, demand: 0.15 };
+export const SIMILARITY_ADJACENT = 0.75;
+export const SIMILARITY_CROSS_SECTOR = 0.55;

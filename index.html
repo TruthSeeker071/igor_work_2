@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FlightWay — Your dream, turbocharged</title>
+  <meta name="description" content="FlightWay is the talent development platform that helps students and college career centers turn ambition into outcomes.">
+  <meta property="og:title" content="FlightWay — Your dream, turbocharged">
+  <meta property="og:description" content="The talent development platform for students and college career centers.">
+  <meta property="og:type" content="website">
+  <link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260703p">
+  <script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
+  <script src="assets/js/shared/flags.js?v=20260703p"></script>
+<script src="assets/js/shared/events.js?v=20260708a" defer></script>
+</head>
+<body>
+  <canvas id="fw-data-field" aria-hidden="true"></canvas>
+
+  <header class="fw-nav" id="fw-nav">
+    <div class="fw-container">
+      <nav class="fw-nav-inner">
+        <a href="/" class="fw-brand" data-fw-brand data-fw-brand-href="/" aria-label="FlightWay home"></a>
+        <ul class="fw-nav-links">
+          <li><a href="#features">Features</a></li>
+          <li><a href="pricing.html">Pricing</a></li>
+        </ul>
+        <div class="fw-nav-actions" id="fw-nav-actions">
+          <button type="button" class="fw-theme-toggle" aria-label="Switch to light mode" aria-pressed="true">
+            <span class="fw-theme-icon" aria-hidden="true"></span>
+          </button>
+          <a href="auth.html#signin" class="fw-btn fw-btn-ghost fw-btn-sm">Sign in</a>
+          <a href="quiz.html" class="fw-btn fw-btn-primary fw-btn-sm">Get started</a>
+        </div>
+        <button type="button" class="fw-menu-btn" id="fw-menu-btn" aria-label="Open menu" aria-expanded="false">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </nav>
+    </div>
+    <div class="fw-mobile-menu" id="fw-mobile-menu">
+      <ul>
+        <li><a href="#features">Features</a></li>
+        <li><a href="pricing.html">Pricing</a></li>
+        <li>
+          <button type="button" class="fw-theme-toggle fw-btn fw-btn-secondary fw-btn-md" style="width:100%;margin-top:8px" aria-label="Switch to light mode" aria-pressed="true">
+            <span class="fw-theme-icon" aria-hidden="true"></span>
+            Toggle theme
+          </button>
+        </li>
+        <li class="fw-mobile-ctas" id="fw-mobile-ctas">
+          <a href="quiz.html" class="fw-btn fw-btn-primary fw-btn-md">Get started</a>
+          <a href="auth.html#signin" class="fw-btn fw-btn-secondary fw-btn-md">Sign in</a>
+        </li>
+      </ul>
+    </div>
+  </header>
+
+  <main>
+    <section class="fw-hero">
+      <div class="fw-container fw-hero-content">
+        <p class="fw-eyebrow fw-hero-fade" style="--fw-delay:0.1s">
+          <span class="fw-eyebrow-line" aria-hidden="true"></span>
+          Built for students
+        </p>
+        <h1 class="fw-hero-title" aria-label="Your dream, turbocharged.">
+          <span class="fw-mask-line">
+            <span class="fw-mask"><span class="fw-mask-inner" style="--fw-i:0">Your</span></span>
+            <span class="fw-mask"><span class="fw-mask-inner" style="--fw-i:1">dream,</span></span>
+          </span>
+          <span class="fw-mask-line">
+            <span class="fw-mask"><span class="fw-mask-inner peach" style="--fw-i:2">turbocharged.</span></span>
+          </span>
+        </h1>
+        <p class="fw-hero-sub fw-hero-fade" style="--fw-delay:0.65s">
+          Whether you know exactly where you're headed or haven't picked a major yet, FlightWay turns it into a plan — a personal roadmap, matched internships, and real coaching from your campus career center.
+        </p>
+        <div class="fw-hero-ctas fw-hero-fade" id="fw-hero-ctas" style="--fw-delay:0.8s">
+          <a href="quiz.html" class="fw-btn fw-btn-primary fw-btn-lg">
+            Get started
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+          <a href="#pricing" class="fw-text-link">
+            For career centers
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+        </div>
+      </div>
+      <div class="fw-scroll-cue" aria-hidden="true"></div>
+    </section>
+
+    <section class="fw-section fw-reveal" id="features">
+      <div class="fw-container">
+        <div class="fw-heading fw-reveal-item">
+          <h2>Everything a career center needs, in one cockpit</h2>
+          <p>Stop stitching together spreadsheets, job boards, and email. FlightWay brings advising, opportunities, and analytics together.</p>
+        </div>
+        <div class="fw-features-grid fw-reveal-stagger">
+          <article class="fw-feature-card fw-reveal-item">
+            <span class="fw-feature-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"/></svg>
+            </span>
+            <h3>Guided career paths</h3>
+            <p>Personalized roadmaps turn a vague ambition into concrete next steps, skills to build, and roles to target.</p>
+          </article>
+          <article class="fw-feature-card fw-reveal-item">
+            <span class="fw-feature-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
+            </span>
+            <h3>Opportunity engine</h3>
+            <p>Matched internships, jobs, and events surface automatically — students apply faster and advisors track every step.</p>
+          </article>
+          <article class="fw-feature-card fw-reveal-item">
+            <span class="fw-feature-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+            </span>
+            <h3>Outcomes analytics</h3>
+            <p>Dashboards help career teams track engagement and student progress in one place.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="fw-section fw-reveal" id="pricing">
+      <div class="fw-container">
+        <div class="fw-heading fw-reveal-item">
+          <h2>Pricing that scales with your campus</h2>
+          <p>Start free as a student. Upgrade when your career center is ready to launch everyone.</p>
+        </div>
+        <div class="fw-pricing-grid fw-reveal-stagger">
+          <article class="fw-pricing-card fw-reveal-item">
+            <h3>Student</h3>
+            <p class="desc">For individual students mapping their own path.</p>
+            <div class="fw-price"><span class="amount">$0</span><span class="cadence">forever</span></div>
+            <ul class="fw-pricing-features">
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Personalized career roadmap</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Job &amp; internship matches</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Resume &amp; interview tools</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Community access</li>
+            </ul>
+            <a href="auth.html#signin" class="fw-btn fw-btn-secondary fw-btn-md" style="width:100%">Sign in free</a>
+          </article>
+          <article class="fw-pricing-card highlighted fw-reveal-item">
+            <h3>Career Center</h3>
+            <p class="desc">For college career centers supporting their whole student body.</p>
+            <div class="fw-price"><span class="amount">$8</span><span class="cadence">per student / yr</span></div>
+            <ul class="fw-pricing-features">
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Everything in Student</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Advisor dashboards</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Outcomes &amp; placement analytics</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Employer pipeline tools</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>SSO &amp; roster sync</li>
+            </ul>
+            <a href="#pricing" class="fw-btn fw-btn-primary fw-btn-md" style="width:100%">Book a demo</a>
+          </article>
+          <article class="fw-pricing-card fw-reveal-item">
+            <h3>Enterprise</h3>
+            <p class="desc">For university systems and multi-campus deployments.</p>
+            <div class="fw-price"><span class="amount">Custom</span></div>
+            <ul class="fw-pricing-features">
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Everything in Career Center</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Multi-campus reporting</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Custom integrations</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Dedicated success manager</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>SLA &amp; security review</li>
+            </ul>
+            <a href="#pricing" class="fw-btn fw-btn-secondary fw-btn-md" style="width:100%">Contact sales</a>
+          </article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="fw-footer">
+    <div class="fw-container">
+      <div class="fw-footer-grid">
+        <div>
+          <a href="/" class="fw-brand" data-fw-brand data-fw-brand-href="/" aria-label="FlightWay"></a>
+          <p class="fw-footer-tagline">The talent development platform for students and career centers.</p>
+        </div>
+        <div class="fw-footer-col">
+          <h3>Product</h3>
+          <ul>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#pricing">Pricing</a></li>
+            <li><a href="quiz.html">Career Quiz</a></li>
+            <li><a href="auth.html#signin">Sign in</a></li>
+          </ul>
+        </div>
+        <div class="fw-footer-col">
+          <h3>Company</h3>
+          <ul>
+            <li><a href="#">About</a></li>
+            <li><a href="#">Careers</a></li>
+            <li><a href="#">Contact</a></li>
+          </ul>
+        </div>
+        <div class="fw-footer-col">
+          <h3>Legal</h3>
+          <ul>
+            <li><a href="#">Privacy</a></li>
+            <li><a href="#">Terms</a></li>
+            <li><a href="#">Security</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="fw-footer-bar">
+        <p>© 2026 FlightWay, Inc. All rights reserved.</p>
+        <p>The talent development platform.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/js/shared/brand.js?v=20260703p" defer></script>
+  <script src="assets/js/shared/theme.js?v=20260703p" defer></script>
+  <script src="assets/js/shared/data-field.js?v=20260703p" defer></script>
+  <script src="assets/js/landing/reveal.js?v=20260703p" defer></script>
+  <script src="assets/js/landing/landing.js?v=20260703p" defer></script>
+  <script src="assets/js/landing/auth-cta.js?v=20260703p" defer></script>
+</body>
+</html>

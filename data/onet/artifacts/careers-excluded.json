@@ -1,0 +1,1878 @@
+{
+  "builtAt": "2026-07-01T17:39:35.444Z",
+  "count": 234,
+  "careers": [
+    {
+      "soc": "13-1074.00",
+      "title": "Farm Labor Contractors",
+      "hubZone": "agriculture",
+      "socMajor": "13",
+      "collarCategory": "blue",
+      "exclusionReason": "title_blue_collar"
+    },
+    {
+      "soc": "17-1011.00",
+      "title": "Architects, Except Landscape and Naval",
+      "hubZone": "engineering",
+      "socMajor": "17",
+      "collarCategory": "blue",
+      "exclusionReason": "title_blue_collar"
+    },
+    {
+      "soc": "17-1012.00",
+      "title": "Landscape Architects",
+      "hubZone": "engineering",
+      "socMajor": "17",
+      "collarCategory": "blue",
+      "exclusionReason": "title_blue_collar"
+    },
+    {
+      "soc": "17-2111.00",
+      "title": "Health and Safety Engineers, Except Mining Safety Engineers and Inspectors",
+      "hubZone": "healthcare",
+      "socMajor": "17",
+      "collarCategory": "blue",
+      "exclusionReason": "title_blue_collar"
+    },
+    {
+      "soc": "17-2151.00",
+      "title": "Mining and Geological Engineers, Including Mining Safety Engineers",
+      "hubZone": "engineering",
+      "socMajor": "17",
+      "collarCategory": "blue",
+      "exclusionReason": "title_blue_collar"
+    },
+    {
+      "soc": "35-2011.00",
+      "title": "Cooks, Fast Food",
+      "hubZone": "government",
+      "socMajor": "35",
+      "collarCategory": "blue",
+      "exclusionReason": "title_blue_collar"
+    },
+    {
+      "soc": "35-3023.00",
+      "title": "Fast Food and Counter Workers",
+      "hubZone": "government",
+      "socMajor": "35",
+      "collarCategory": "blue",
+      "exclusionReason": "title_blue_collar"
+    },
+    {
+      "soc": "35-9011.00",
+      "title": "Dining Room and Cafeteria Attendants and Bartender Helpers",
+      "hubZone": "government",
+      "socMajor": "35",
+      "collarCategory": "blue",
+      "exclusionReason": "title_blue_collar"
+    },
+    {
+      "soc": "35-9021.00",
+      "title": "Dishwashers",
+      "hubZone": "government",
+      "socMajor": "35",
+      "collarCategory": "blue",
+      "exclusionReason": "title_blue_collar"
+    },
+    {
+      "soc": "37-1011.00",
+      "title": "First-Line Supervisors of Housekeeping and Janitorial Workers",
+      "hubZone": "operations",
+      "socMajor": "37",
+      "collarCategory": "blue",
+      "exclusionReason": "title_blue_collar"
+    },
+    {
+      "soc": "37-1012.00",
+      "title": "First-Line Supervisors of Landscaping, Lawn Service, and Groundskeeping Workers",
+      "hubZone": "operations",
+      "socMajor": "37",
+      "collarCategory": "blue",
+      "exclusionReason": "title_blue_collar"
+    },
+    {
+      "soc": "37-2011.00",
+      "title": "Janitors and Cleaners, Except Maids and Housekeeping Cleaners",
+      "hubZone": "operations",
+      "socMajor": "37",
+      "collarCategory": "blue",
+      "exclusionReason": "title_blue_collar"
+    },
+    {
+      "soc": "37-2012.00",
+      "title": "Maids and Housekeeping Cleaners",
+      "hubZone": "operations",
+      "socMajor": "37",
+      "collarCategory": "blue",
+      "exclusionReason": "title_blue_collar"
+    },
+    {
+      "soc": "37-3011.00",
+      "title": "Landscaping and Groundskeeping Workers",
+      "hubZone": "operations",
+      "socMajor": "37",
+      "collarCategory": "blue",
+      "exclusionReason": "title_blue_collar"
+    },
+    {
+      "soc": "45-2092.00",
+      "title": "Farmworkers and Laborers, Crop, Nursery, and Greenhouse",
+      "hubZone": "healthcare",
+      "socMajor": "45",
+      "collarCategory": "blue",
+      "exclusionReason": "title_blue_collar"
+    },
+    {
+      "soc": "45-2093.00",
+      "title": "Farmworkers, Farm, Ranch, and Aquacultural Animals",
+      "hubZone": "agriculture",
+      "socMajor": "45",
+      "collarCategory": "blue",
+      "exclusionReason": "title_blue_collar"
+    },
+    {
+      "soc": "47-1011.00",
+      "title": "First-Line Supervisors of Construction Trades and Extraction Workers",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-1011.03",
+      "title": "Solar Energy Installation Managers",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2011.00",
+      "title": "Boilermakers",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2021.00",
+      "title": "Brickmasons and Blockmasons",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2022.00",
+      "title": "Stonemasons",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2031.00",
+      "title": "Carpenters",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2041.00",
+      "title": "Carpet Installers",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2042.00",
+      "title": "Floor Layers, Except Carpet, Wood, and Hard Tiles",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2043.00",
+      "title": "Floor Sanders and Finishers",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2044.00",
+      "title": "Tile and Stone Setters",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2051.00",
+      "title": "Cement Masons and Concrete Finishers",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2053.00",
+      "title": "Terrazzo Workers and Finishers",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2061.00",
+      "title": "Construction Laborers",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2071.00",
+      "title": "Paving, Surfacing, and Tamping Equipment Operators",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2072.00",
+      "title": "Pile Driver Operators",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2073.00",
+      "title": "Operating Engineers and Other Construction Equipment Operators",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2081.00",
+      "title": "Drywall and Ceiling Tile Installers",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2082.00",
+      "title": "Tapers",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2111.00",
+      "title": "Electricians",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2121.00",
+      "title": "Glaziers",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2131.00",
+      "title": "Insulation Workers, Floor, Ceiling, and Wall",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2132.00",
+      "title": "Insulation Workers, Mechanical",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2141.00",
+      "title": "Painters, Construction and Maintenance",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2142.00",
+      "title": "Paperhangers",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2151.00",
+      "title": "Pipelayers",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2152.00",
+      "title": "Plumbers, Pipefitters, and Steamfitters",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2152.04",
+      "title": "Solar Thermal Installers and Technicians",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2161.00",
+      "title": "Plasterers and Stucco Masons",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2171.00",
+      "title": "Reinforcing Iron and Rebar Workers",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2181.00",
+      "title": "Roofers",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2211.00",
+      "title": "Sheet Metal Workers",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2221.00",
+      "title": "Structural Iron and Steel Workers",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-2231.00",
+      "title": "Solar Photovoltaic Installers",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-3011.00",
+      "title": "Helpers--Brickmasons, Blockmasons, Stonemasons, and Tile and Marble Setters",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-3012.00",
+      "title": "Helpers--Carpenters",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-3013.00",
+      "title": "Helpers--Electricians",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-3014.00",
+      "title": "Helpers--Painters, Paperhangers, Plasterers, and Stucco Masons",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-3015.00",
+      "title": "Helpers--Pipelayers, Plumbers, Pipefitters, and Steamfitters",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-3016.00",
+      "title": "Helpers--Roofers",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-3019.00",
+      "title": "Helpers, Construction Trades, All Other",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-4011.00",
+      "title": "Construction and Building Inspectors",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-4011.01",
+      "title": "Energy Auditors",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-4021.00",
+      "title": "Elevator and Escalator Installers and Repairers",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-4031.00",
+      "title": "Fence Erectors",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-4041.00",
+      "title": "Hazardous Materials Removal Workers",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-4051.00",
+      "title": "Highway Maintenance Workers",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-4061.00",
+      "title": "Rail-Track Laying and Maintenance Equipment Operators",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-4071.00",
+      "title": "Septic Tank Servicers and Sewer Pipe Cleaners",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-4091.00",
+      "title": "Segmental Pavers",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-4099.00",
+      "title": "Construction and Related Workers, All Other",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-4099.03",
+      "title": "Weatherization Installers and Technicians",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-5011.00",
+      "title": "Derrick Operators, Oil and Gas",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-5012.00",
+      "title": "Rotary Drill Operators, Oil and Gas",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-5013.00",
+      "title": "Service Unit Operators, Oil and Gas",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-5022.00",
+      "title": "Excavating and Loading Machine and Dragline Operators, Surface Mining",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-5023.00",
+      "title": "Earth Drillers, Except Oil and Gas",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-5032.00",
+      "title": "Explosives Workers, Ordnance Handling Experts, and Blasters",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-5041.00",
+      "title": "Continuous Mining Machine Operators",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-5043.00",
+      "title": "Roof Bolters, Mining",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-5044.00",
+      "title": "Loading and Moving Machine Operators, Underground Mining",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-5049.00",
+      "title": "Underground Mining Machine Operators, All Other",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-5051.00",
+      "title": "Rock Splitters, Quarry",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-5071.00",
+      "title": "Roustabouts, Oil and Gas",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-5081.00",
+      "title": "Helpers--Extraction Workers",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "47-5099.00",
+      "title": "Extraction Workers, All Other",
+      "hubZone": "trades",
+      "socMajor": "47",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_47"
+    },
+    {
+      "soc": "49-1011.00",
+      "title": "First-Line Supervisors of Mechanics, Installers, and Repairers",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-2011.00",
+      "title": "Computer, Automated Teller, and Office Machine Repairers",
+      "hubZone": "tech",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-2021.00",
+      "title": "Radio, Cellular, and Tower Equipment Installers and Repairers",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-2022.00",
+      "title": "Telecommunications Equipment Installers and Repairers, Except Line Installers",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-2091.00",
+      "title": "Avionics Technicians",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-2092.00",
+      "title": "Electric Motor, Power Tool, and Related Repairers",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-2093.00",
+      "title": "Electrical and Electronics Installers and Repairers, Transportation Equipment",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-2094.00",
+      "title": "Electrical and Electronics Repairers, Commercial and Industrial Equipment",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-2095.00",
+      "title": "Electrical and Electronics Repairers, Powerhouse, Substation, and Relay",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-2096.00",
+      "title": "Electronic Equipment Installers and Repairers, Motor Vehicles",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-2097.00",
+      "title": "Audiovisual Equipment Installers and Repairers",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-2098.00",
+      "title": "Security and Fire Alarm Systems Installers",
+      "hubZone": "cybersecurity",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-3011.00",
+      "title": "Aircraft Mechanics and Service Technicians",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-3021.00",
+      "title": "Automotive Body and Related Repairers",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-3022.00",
+      "title": "Automotive Glass Installers and Repairers",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-3023.00",
+      "title": "Automotive Service Technicians and Mechanics",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-3031.00",
+      "title": "Bus and Truck Mechanics and Diesel Engine Specialists",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-3041.00",
+      "title": "Farm Equipment Mechanics and Service Technicians",
+      "hubZone": "agriculture",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-3042.00",
+      "title": "Mobile Heavy Equipment Mechanics, Except Engines",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-3043.00",
+      "title": "Rail Car Repairers",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-3051.00",
+      "title": "Motorboat Mechanics and Service Technicians",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-3052.00",
+      "title": "Motorcycle Mechanics",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-3053.00",
+      "title": "Outdoor Power Equipment and Other Small Engine Mechanics",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-3091.00",
+      "title": "Bicycle Repairers",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-3092.00",
+      "title": "Recreational Vehicle Service Technicians",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-3093.00",
+      "title": "Tire Repairers and Changers",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-9011.00",
+      "title": "Mechanical Door Repairers",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-9012.00",
+      "title": "Control and Valve Installers and Repairers, Except Mechanical Door",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-9021.00",
+      "title": "Heating, Air Conditioning, and Refrigeration Mechanics and Installers",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-9031.00",
+      "title": "Home Appliance Repairers",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-9041.00",
+      "title": "Industrial Machinery Mechanics",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-9043.00",
+      "title": "Maintenance Workers, Machinery",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-9044.00",
+      "title": "Millwrights",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-9045.00",
+      "title": "Refractory Materials Repairers, Except Brickmasons",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-9051.00",
+      "title": "Electrical Power-Line Installers and Repairers",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-9052.00",
+      "title": "Telecommunications Line Installers and Repairers",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-9061.00",
+      "title": "Camera and Photographic Equipment Repairers",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-9062.00",
+      "title": "Medical Equipment Repairers",
+      "hubZone": "healthcare",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-9063.00",
+      "title": "Musical Instrument Repairers and Tuners",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-9064.00",
+      "title": "Watch and Clock Repairers",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-9069.00",
+      "title": "Precision Instrument and Equipment Repairers, All Other",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-9071.00",
+      "title": "Maintenance and Repair Workers, General",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-9081.00",
+      "title": "Wind Turbine Service Technicians",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-9091.00",
+      "title": "Coin, Vending, and Amusement Machine Servicers and Repairers",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-9092.00",
+      "title": "Commercial Divers",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-9094.00",
+      "title": "Locksmiths and Safe Repairers",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-9095.00",
+      "title": "Manufactured Building and Mobile Home Installers",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-9096.00",
+      "title": "Riggers",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-9097.00",
+      "title": "Signal and Track Switch Repairers",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-9098.00",
+      "title": "Helpers--Installation, Maintenance, and Repair Workers",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-9099.00",
+      "title": "Installation, Maintenance, and Repair Workers, All Other",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "49-9099.01",
+      "title": "Geothermal Technicians",
+      "hubZone": "trades",
+      "socMajor": "49",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_49"
+    },
+    {
+      "soc": "51-1011.00",
+      "title": "First-Line Supervisors of Production and Operating Workers",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-2011.00",
+      "title": "Aircraft Structure, Surfaces, Rigging, and Systems Assemblers",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-2021.00",
+      "title": "Coil Winders, Tapers, and Finishers",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-2022.00",
+      "title": "Electrical and Electronic Equipment Assemblers",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-2023.00",
+      "title": "Electromechanical Equipment Assemblers",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-2031.00",
+      "title": "Engine and Other Machine Assemblers",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-2041.00",
+      "title": "Structural Metal Fabricators and Fitters",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-2051.00",
+      "title": "Fiberglass Laminators and Fabricators",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-2061.00",
+      "title": "Timing Device Assemblers and Adjusters",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-2092.00",
+      "title": "Team Assemblers",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-2099.00",
+      "title": "Assemblers and Fabricators, All Other",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-3011.00",
+      "title": "Bakers",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-3021.00",
+      "title": "Butchers and Meat Cutters",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-3022.00",
+      "title": "Meat, Poultry, and Fish Cutters and Trimmers",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-3023.00",
+      "title": "Slaughterers and Meat Packers",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-3091.00",
+      "title": "Food and Tobacco Roasting, Baking, and Drying Machine Operators and Tenders",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-3092.00",
+      "title": "Food Batchmakers",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-3093.00",
+      "title": "Food Cooking Machine Operators and Tenders",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-3099.00",
+      "title": "Food Processing Workers, All Other",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-5111.00",
+      "title": "Prepress Technicians and Workers",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-5112.00",
+      "title": "Printing Press Operators",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-5113.00",
+      "title": "Print Binding and Finishing Workers",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-6011.00",
+      "title": "Laundry and Dry-Cleaning Workers",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-6021.00",
+      "title": "Pressers, Textile, Garment, and Related Materials",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-6031.00",
+      "title": "Sewing Machine Operators",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-6041.00",
+      "title": "Shoe and Leather Workers and Repairers",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-6042.00",
+      "title": "Shoe Machine Operators and Tenders",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-6051.00",
+      "title": "Sewers, Hand",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-6052.00",
+      "title": "Tailors, Dressmakers, and Custom Sewers",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-6061.00",
+      "title": "Textile Bleaching and Dyeing Machine Operators and Tenders",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-6062.00",
+      "title": "Textile Cutting Machine Setters, Operators, and Tenders",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-6063.00",
+      "title": "Textile Knitting and Weaving Machine Setters, Operators, and Tenders",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-6064.00",
+      "title": "Textile Winding, Twisting, and Drawing Out Machine Setters, Operators, and Tenders",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-6091.00",
+      "title": "Extruding and Forming Machine Setters, Operators, and Tenders, Synthetic and Glass Fibers",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-6092.00",
+      "title": "Fabric and Apparel Patternmakers",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-6093.00",
+      "title": "Upholsterers",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-6099.00",
+      "title": "Textile, Apparel, and Furnishings Workers, All Other",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-7011.00",
+      "title": "Cabinetmakers and Bench Carpenters",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-7021.00",
+      "title": "Furniture Finishers",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-7031.00",
+      "title": "Model Makers, Wood",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-7032.00",
+      "title": "Patternmakers, Wood",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-7041.00",
+      "title": "Sawing Machine Setters, Operators, and Tenders, Wood",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-7042.00",
+      "title": "Woodworking Machine Setters, Operators, and Tenders, Except Sawing",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "51-7099.00",
+      "title": "Woodworkers, All Other",
+      "hubZone": "trades",
+      "socMajor": "51",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_51_production_operator"
+    },
+    {
+      "soc": "53-1041.00",
+      "title": "Aircraft Cargo Handling Supervisors",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-1042.00",
+      "title": "First-Line Supervisors of Helpers, Laborers, and Material Movers, Hand",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-1042.01",
+      "title": "Recycling Coordinators",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-1043.00",
+      "title": "First-Line Supervisors of Material-Moving Machine and Vehicle Operators",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-1044.00",
+      "title": "First-Line Supervisors of Passenger Attendants",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-1049.00",
+      "title": "First-Line Supervisors of Transportation Workers, All Other",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-2011.00",
+      "title": "Airline Pilots, Copilots, and Flight Engineers",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-2012.00",
+      "title": "Commercial Pilots",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-2021.00",
+      "title": "Air Traffic Controllers",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-2022.00",
+      "title": "Airfield Operations Specialists",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-2031.00",
+      "title": "Flight Attendants",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-3011.00",
+      "title": "Ambulance Drivers and Attendants, Except Emergency Medical Technicians",
+      "hubZone": "healthcare",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-3031.00",
+      "title": "Driver/Sales Workers",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-3032.00",
+      "title": "Heavy and Tractor-Trailer Truck Drivers",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-3033.00",
+      "title": "Light Truck Drivers",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-3051.00",
+      "title": "Bus Drivers, School",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-3052.00",
+      "title": "Bus Drivers, Transit and Intercity",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-3053.00",
+      "title": "Shuttle Drivers and Chauffeurs",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-3054.00",
+      "title": "Taxi Drivers",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-3099.00",
+      "title": "Motor Vehicle Operators, All Other",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-4011.00",
+      "title": "Locomotive Engineers",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-4013.00",
+      "title": "Rail Yard Engineers, Dinkey Operators, and Hostlers",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-4022.00",
+      "title": "Railroad Brake, Signal, and Switch Operators and Locomotive Firers",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-4031.00",
+      "title": "Railroad Conductors and Yardmasters",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-4041.00",
+      "title": "Subway and Streetcar Operators",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-4099.00",
+      "title": "Rail Transportation Workers, All Other",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-5011.00",
+      "title": "Sailors and Marine Oilers",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-5021.00",
+      "title": "Captains, Mates, and Pilots of Water Vessels",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-5022.00",
+      "title": "Motorboat Operators",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-5031.00",
+      "title": "Ship Engineers",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-6011.00",
+      "title": "Bridge and Lock Tenders",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-6021.00",
+      "title": "Parking Attendants",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-6031.00",
+      "title": "Automotive and Watercraft Service Attendants",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-6032.00",
+      "title": "Aircraft Service Attendants",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-6041.00",
+      "title": "Traffic Technicians",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-6051.00",
+      "title": "Transportation Inspectors",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-6051.01",
+      "title": "Aviation Inspectors",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-6051.07",
+      "title": "Transportation Vehicle, Equipment and Systems Inspectors, Except Aviation",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-6061.00",
+      "title": "Passenger Attendants",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-6099.00",
+      "title": "Transportation Workers, All Other",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-7011.00",
+      "title": "Conveyor Operators and Tenders",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-7021.00",
+      "title": "Crane and Tower Operators",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-7031.00",
+      "title": "Dredge Operators",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-7041.00",
+      "title": "Hoist and Winch Operators",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-7051.00",
+      "title": "Industrial Truck and Tractor Operators",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-7061.00",
+      "title": "Cleaners of Vehicles and Equipment",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-7062.00",
+      "title": "Laborers and Freight, Stock, and Material Movers, Hand",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-7062.04",
+      "title": "Recycling and Reclamation Workers",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-7063.00",
+      "title": "Machine Feeders and Offbearers",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-7064.00",
+      "title": "Packers and Packagers, Hand",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-7065.00",
+      "title": "Stockers and Order Fillers",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-7071.00",
+      "title": "Gas Compressor and Gas Pumping Station Operators",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-7072.00",
+      "title": "Pump Operators, Except Wellhead Pumpers",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-7073.00",
+      "title": "Wellhead Pumpers",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-7081.00",
+      "title": "Refuse and Recyclable Material Collectors",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-7121.00",
+      "title": "Tank Car, Truck, and Ship Loaders",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    },
+    {
+      "soc": "53-7199.00",
+      "title": "Material Moving Workers, All Other",
+      "hubZone": "operations",
+      "socMajor": "53",
+      "collarCategory": "blue",
+      "exclusionReason": "soc_major_53"
+    }
+  ]
+}

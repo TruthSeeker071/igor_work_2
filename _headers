@@ -1,0 +1,22 @@
+# Cloudflare Pages cache policy.
+# Convention (docs/CONVERSATION_HANDOFF.md): any change to a file under /assets
+# must bump the ?v= cache-buster on every HTML tag that references it. That
+# convention is what makes the aggressive max-age below safe.
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Everything under /data (O*NET artifacts, dimension registry, hub map) only
+# changes on ETL rebuilds (npm run onet:build). One rule — overlapping rules
+# would concatenate into an ambiguous doubled Cache-Control header. A day of
+# freshness with a week of stale-while-revalidate keeps repeat visits free
+# without risking a stale catalog for more than a day after a rebuild.
+/data/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+# HTML must always revalidate so bumped ?v= references take effect immediately.
+/*.html
+  Cache-Control: no-cache
+
+/
+  Cache-Control: no-cache

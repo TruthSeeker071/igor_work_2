@@ -1,0 +1,146 @@
+/* FlightWay 2.0 — Week 1 styles (A1 why-this-match, A2 confidence tiers,
+   C2 share button, fake-door pricing). Kept in a separate file so the 170KB
+   flightway-pages.css stays untouched and Jacob-mergeable. Theme-neutral:
+   uses translucent neutrals + a small accent set that read in light and dark. */
+
+:root {
+  --fw2-anchored: #35c184;
+  --fw2-inferred: #e0a63a;
+  --fw2-estimated: #8a93ac;
+  --fw2-accent: #6ea8ff;
+}
+
+/* ─────────────────────────  A2 · Confidence tiers  ───────────────────────── */
+.onet-dim-legend {
+  display: flex; flex-wrap: wrap; gap: 14px;
+  margin: 0 0 10px; font-size: 12px; opacity: 0.85;
+}
+.onet-dim-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.onet-conf-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.onet-conf-dot--anchored { background: var(--fw2-anchored); }
+.onet-conf-dot--inferred { background: var(--fw2-inferred); }
+.onet-conf-dot--estimated { background: var(--fw2-estimated); }
+
+/* dim low-confidence bars so the eye trusts the anchored ones */
+.onet-dim-row[data-confidence="inferred"] .onet-dim-fill { opacity: 0.72; }
+.onet-dim-row[data-confidence="estimated"] .onet-dim-fill { opacity: 0.45; }
+.onet-dim-row[data-confidence="estimated"] .onet-dim-label {
+  text-decoration: underline dotted currentColor; text-underline-offset: 3px;
+}
+
+.onet-conf-chip {
+  display: inline-block; margin-left: 6px; padding: 1px 6px;
+  font-size: 10px; font-weight: 600; letter-spacing: .02em; border-radius: 999px;
+  vertical-align: middle; line-height: 1.5;
+}
+.onet-conf-chip--inferred { background: rgba(224,166,58,.16); color: var(--fw2-inferred); }
+.onet-conf-chip--estimated { background: rgba(138,147,172,.18); color: var(--fw2-estimated); }
+
+.onet-dim-firmup {
+  display: inline-block; margin-top: 10px; font-size: 12.5px; font-weight: 600;
+  color: var(--fw2-accent); text-decoration: none;
+}
+.onet-dim-firmup:hover { text-decoration: underline; }
+
+/* ─────────────────────────  A1 · Why this match  ─────────────────────────── */
+.fw-why-block { margin: 12px 0 4px; }
+.fw-why-toggle {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(110,168,255,.10); border: 1px solid rgba(110,168,255,.28);
+  color: inherit; font: inherit; font-weight: 600; font-size: 13px;
+  padding: 7px 12px; border-radius: 999px; cursor: pointer;
+}
+.fw-why-toggle:hover { background: rgba(110,168,255,.18); }
+.fw-why-caret { transition: transform .18s ease; font-size: 16px; line-height: 1; }
+.fw-why-block.is-open .fw-why-caret { transform: rotate(90deg); }
+
+.fw-why-body {
+  margin-top: 10px; padding: 14px 16px; border-radius: 12px;
+  background: rgba(127,140,175,.08); border: 1px solid rgba(127,140,175,.18);
+}
+.fw-why-lead { margin: 0 0 10px; font-size: 14px; }
+.fw-why-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.fw-why-item { display: flex; flex-direction: column; gap: 2px; }
+.fw-why-name { font-weight: 600; font-size: 13.5px; }
+.fw-why-nums { font-size: 12.5px; opacity: 0.8; }
+.fw-why-note { margin: 12px 0 0; font-size: 11.5px; opacity: 0.62; }
+.fw-why-chip {
+  display: inline-block; margin-left: 6px; padding: 1px 6px; font-size: 10px;
+  font-weight: 600; border-radius: 999px; vertical-align: middle;
+}
+.fw-why-chip--inferred { background: rgba(224,166,58,.16); color: var(--fw2-inferred); }
+.fw-why-chip--estimated { background: rgba(138,147,172,.18); color: var(--fw2-estimated); }
+
+/* ─────────────────────────  C2 · Share button  ──────────────────────────── */
+.fw-share-btn {
+  display: inline-flex; align-items: center; gap: 8px; margin-top: 12px;
+  background: rgba(110,168,255,.12); border: 1px solid rgba(110,168,255,.30);
+  color: inherit; font: inherit; font-weight: 600; font-size: 13px;
+  padding: 8px 14px; border-radius: 10px; cursor: pointer;
+}
+.fw-share-btn:hover { background: rgba(110,168,255,.20); }
+.fw-share-btn::before { content: "↗"; font-size: 14px; }
+
+/* ─────────────────────────  Fake-door pricing  ──────────────────────────── */
+.fw-hero--compact { padding-top: 64px; padding-bottom: 8px; }
+
+.fw-price-toggle {
+  display: inline-flex; gap: 4px; margin-top: 22px; padding: 4px;
+  border-radius: 999px; background: rgba(127,140,175,.12); border: 1px solid rgba(127,140,175,.20);
+}
+.fw-price-toggle-btn {
+  border: 0; background: transparent; color: inherit; font: inherit; font-weight: 600;
+  font-size: 13.5px; padding: 8px 16px; border-radius: 999px; cursor: pointer; opacity: .7;
+}
+.fw-price-toggle-btn.is-on { background: var(--fw2-accent); color: #06122b; opacity: 1; }
+.fw-price-toggle-save { font-size: 11px; font-weight: 700; opacity: .9; margin-left: 4px; }
+
+.fw-pricing-card { position: relative; }
+.fw-pricing-badge {
+  position: absolute; top: -11px; left: 50%; transform: translateX(-50%);
+  background: var(--fw2-accent); color: #06122b; font-size: 11px; font-weight: 700;
+  padding: 3px 12px; border-radius: 999px; white-space: nowrap;
+}
+.fw-pricing-badge--alt { background: var(--fw2-inferred); }
+.fw-price-fine { margin: 12px 0 0; font-size: 11.5px; opacity: .6; text-align: center; }
+
+.fw-sprint-card {
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  flex-wrap: wrap; margin-top: 26px; padding: 20px 24px; border-radius: 16px;
+  background: rgba(127,140,175,.08); border: 1px dashed rgba(127,140,175,.32);
+}
+.fw-sprint-card h3 { margin: 0 0 4px; }
+.fw-sprint-card p { margin: 0; opacity: .8; font-size: 14px; }
+.fw-sprint-price { font-size: 13px; font-weight: 700; color: var(--fw2-accent); margin-left: 8px; }
+
+.fw-legal-note { margin: 26px auto 0; max-width: 640px; text-align: center; font-size: 12px; opacity: .58; }
+
+/* intent modal */
+.fw-intent-modal {
+  position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;
+  background: rgba(6,10,22,.62); padding: 20px;
+}
+.fw-intent-modal[hidden] { display: none; }
+.fw-intent-dialog {
+  position: relative; width: 100%; max-width: 420px; padding: 28px 26px;
+  border-radius: 18px; background: #0e1730; color: #f2f6ff; border: 1px solid #26365f;
+  box-shadow: 0 20px 60px rgba(0,0,0,.5);
+}
+.fw-intent-dialog h3 { margin: 0 0 8px; font-size: 20px; }
+.fw-intent-dialog p { margin: 0 0 16px; font-size: 14px; opacity: .82; }
+.fw-intent-close {
+  position: absolute; top: 12px; right: 14px; background: none; border: 0;
+  color: #aab6d8; font-size: 24px; line-height: 1; cursor: pointer;
+}
+.fw-intent-form { display: flex; gap: 8px; }
+.fw-intent-form input {
+  flex: 1; padding: 11px 13px; border-radius: 10px; border: 1px solid #2c3e66;
+  background: #0b1327; color: #f2f6ff; font: inherit; font-size: 14px;
+}
+.fw-intent-form input:focus { outline: 2px solid var(--fw2-accent); outline-offset: 1px; }
+.fw-intent-done { margin: 4px 0 0; color: var(--fw2-anchored); font-weight: 600; }
+
+@media (max-width: 560px) {
+  .fw-sprint-card { flex-direction: column; align-items: flex-start; }
+  .fw-sprint-card .fw-btn { width: 100%; }
+}

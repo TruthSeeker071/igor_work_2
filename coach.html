@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlightWay — Marco, your AI advisor</title>
+<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260703p">
+<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260705c">
+<script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
+<script src="assets/js/shared/global-shim.js?v=20260703p"></script>
+<script src="assets/js/shared/flags.js?v=20260703p"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body class="coach-page">
+
+<nav>
+  <div class="nav-inner">
+    <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay home"></a>
+    <div class="nav-links app-nav" aria-label="App">
+      <a href="portal.html" class="app-nav-tab" data-app-nav="home"><span class="app-nav-label">Home</span></a>
+      <a href="dashboard.html" class="app-nav-tab" data-app-nav="hub"><span class="app-nav-label">Career Hub</span></a>
+      <a href="coach.html" class="app-nav-tab" data-app-nav="advisor"><span class="app-nav-label">Marco</span></a>
+      <a href="roadmap.html" class="app-nav-tab" data-app-nav="roadmap"><span class="app-nav-label">Career Roadmap</span></a>
+      <a href="quiz.html" class="app-nav-tab app-nav-tab--muted" data-app-nav="quiz"><span class="app-nav-label">Career Quiz</span></a>
+      <a href="auth.html#signin" class="app-nav-tab nav-signin-link" id="nav-signin-link">Sign in</a>
+      <button type="button" class="fw-theme-toggle" aria-label="Switch to dark mode" aria-pressed="false">
+        <span class="fw-theme-icon" aria-hidden="true"></span>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<div id="page-coach" class="page active">
+  <div class="coach-shell">
+    <div class="coach-header">
+      <div>
+        <div class="coach-eye">Your AI Career Advisor</div>
+        <h2 class="coach-title" id="coach-title">Marco</h2>
+        <div class="coach-sub" id="coach-sub">Personalized for <span id="coach-user-email">your account</span>.</div>
+      </div>
+      <div class="coach-header-actions">
+        <button class="coach-gear" onclick="coachOpenSettings()" title="Settings">⚙</button>
+      </div>
+    </div>
+    <div class="coach-progress">
+      <div class="coach-progress-bar"><div class="coach-progress-fill" id="coach-progress-fill" style="width:0%"></div></div>
+      <div class="coach-progress-label" id="coach-progress-label">Exchange 0 / 5 — memory refreshes after 5 (dossier + roadmap)</div>
+    </div>
+    <div class="coach-chat" id="coach-chat">
+      <div class="coach-empty" id="coach-empty">
+        Say hi to Marco — he already knows your quiz results. Ask anything about your top industries, majors, or next steps.
+      </div>
+    </div>
+    <div class="coach-updating" id="coach-updating">
+      <div class="coach-spinner"></div>
+      <div>Updating dossier — your coach is committing what it learned to memory…</div>
+    </div>
+    <form class="coach-input-row" id="coach-input-row" onsubmit="event.preventDefault(); coachSend();">
+      <textarea id="coach-input" class="coach-input" rows="1" placeholder="Ask your coach anything…" maxlength="2000"></textarea>
+      <button type="submit" id="coach-send-btn" class="coach-send-btn">Send</button>
+    </form>
+    <div class="coach-error" id="coach-error"></div>
+  </div>
+  <div class="coach-overlay" id="coach-settings-overlay" onclick="coachSettingsOverlayClick(event)">
+    <div class="coach-settings-modal">
+      <div class="coach-settings-head">
+        <div class="coach-settings-title">Coach Settings</div>
+        <button class="coach-x" onclick="coachCloseSettings()" aria-label="Close settings">×</button>
+      </div>
+      <div class="coach-settings-body">
+        <div class="coach-settings-row">
+          <div>
+            <div class="coach-settings-label">Your dossier</div>
+            <div class="coach-settings-help">This is the one-page profile your coach reads before every reply.</div>
+          </div>
+          <button class="coach-secondary-btn" onclick="coachLoadDossier()">↻ Reload</button>
+        </div>
+        <textarea id="coach-dossier-text" class="coach-dossier-text" spellcheck="false" placeholder="Loading dossier…"></textarea>
+        <div class="coach-dossier-actions">
+          <div class="coach-dossier-status" id="coach-dossier-status"></div>
+          <button class="coach-primary-btn" id="coach-dossier-save-btn" onclick="coachSaveDossier()">Save dossier</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="coach-overlay" id="coach-signup-overlay" onclick="coachSignupOverlayClick(event)">
+  <div class="coach-signup-modal">
+    <div class="coach-settings-head">
+      <div class="coach-settings-title">Create your free coach account</div>
+      <button class="coach-x" onclick="coachCloseSignup()" aria-label="Close sign-up">×</button>
+    </div>
+    <div class="coach-settings-body">
+      <div class="coach-settings-help">Create an account with email and password to save your results and unlock unlimited chats with your AI career coach.</div>
+      <input type="email" id="coach-signup-email" class="coach-email-input" placeholder="you@example.com" autocomplete="email">
+      <input type="password" id="coach-signup-password" class="coach-email-input" placeholder="Password (8+ characters)" autocomplete="new-password" style="margin-top:10px">
+      <input type="password" id="coach-signup-password-confirm" class="coach-email-input" placeholder="Confirm password" autocomplete="new-password" style="margin-top:10px">
+      <div class="coach-error" id="coach-signup-error"></div>
+      <div class="coach-dossier-actions">
+        <div></div>
+        <button class="coach-primary-btn" id="coach-signup-btn" onclick="coachSignup()">Create account →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="assets/js/shared/page-boot.js?v=20260703p" defer></script>
+<script src="assets/js/shared/auth.js?v=20260703p" defer></script>
+<script src="assets/js/shared/profile-alignment.js?v=20260703p" defer></script>
+<script src="assets/js/quiz/quiz-data.js?v=20260703p" defer></script>
+<script src="assets/js/shared/auth-nav.js?v=20260703p" defer></script>
+<script src="assets/js/coach/coach.js?v=20260703p" defer></script>
+<script src="assets/js/shared/brand.js?v=20260703p" defer></script>
+<script src="assets/js/shared/app-nav.js?v=20260703p" defer></script>
+<script src="assets/js/shared/theme.js?v=20260703p" defer></script>
+</body>
+</html>

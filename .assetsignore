@@ -1,0 +1,4 @@
+.onet-cache/
+node_modules/
+.DS_Store
+.cursor/

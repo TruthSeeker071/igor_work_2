@@ -1,0 +1,1294 @@
+{
+  "schemaId": "onet-lv-161-v1",
+  "onetRelease": "30.3",
+  "dimensions": [
+    {
+      "index": 0,
+      "elementId": "2.A.1.a",
+      "name": "Reading Comprehension",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 1,
+      "elementId": "2.A.1.b",
+      "name": "Active Listening",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 2,
+      "elementId": "2.A.1.c",
+      "name": "Writing",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 3,
+      "elementId": "2.A.1.d",
+      "name": "Speaking",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 4,
+      "elementId": "2.A.1.e",
+      "name": "Mathematics",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 5,
+      "elementId": "2.A.1.f",
+      "name": "Science",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 6,
+      "elementId": "2.A.2.a",
+      "name": "Critical Thinking",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 7,
+      "elementId": "2.A.2.b",
+      "name": "Active Learning",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 8,
+      "elementId": "2.A.2.c",
+      "name": "Learning Strategies",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 9,
+      "elementId": "2.A.2.d",
+      "name": "Monitoring",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 10,
+      "elementId": "2.B.1.a",
+      "name": "Social Perceptiveness",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 11,
+      "elementId": "2.B.1.b",
+      "name": "Coordination",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 12,
+      "elementId": "2.B.1.c",
+      "name": "Persuasion",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 13,
+      "elementId": "2.B.1.d",
+      "name": "Negotiation",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 14,
+      "elementId": "2.B.1.e",
+      "name": "Instructing",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 15,
+      "elementId": "2.B.1.f",
+      "name": "Service Orientation",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 16,
+      "elementId": "2.B.2.i",
+      "name": "Complex Problem Solving",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 17,
+      "elementId": "2.B.3.a",
+      "name": "Operations Analysis",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 18,
+      "elementId": "2.B.3.b",
+      "name": "Technology Design",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 19,
+      "elementId": "2.B.3.c",
+      "name": "Equipment Selection",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 20,
+      "elementId": "2.B.3.d",
+      "name": "Installation",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 21,
+      "elementId": "2.B.3.e",
+      "name": "Programming",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 22,
+      "elementId": "2.B.3.g",
+      "name": "Operations Monitoring",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 23,
+      "elementId": "2.B.3.h",
+      "name": "Operation and Control",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 24,
+      "elementId": "2.B.3.j",
+      "name": "Equipment Maintenance",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 25,
+      "elementId": "2.B.3.k",
+      "name": "Troubleshooting",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 26,
+      "elementId": "2.B.3.l",
+      "name": "Repairing",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 27,
+      "elementId": "2.B.3.m",
+      "name": "Quality Control Analysis",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 28,
+      "elementId": "2.B.4.e",
+      "name": "Judgment and Decision Making",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 29,
+      "elementId": "2.B.4.g",
+      "name": "Systems Analysis",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 30,
+      "elementId": "2.B.4.h",
+      "name": "Systems Evaluation",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 31,
+      "elementId": "2.B.5.a",
+      "name": "Time Management",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 32,
+      "elementId": "2.B.5.b",
+      "name": "Management of Financial Resources",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 33,
+      "elementId": "2.B.5.c",
+      "name": "Management of Material Resources",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 34,
+      "elementId": "2.B.5.d",
+      "name": "Management of Personnel Resources",
+      "domain": "skills",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 35,
+      "elementId": "2.C.1.a",
+      "name": "Administration and Management",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 36,
+      "elementId": "2.C.1.b",
+      "name": "Administrative",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 37,
+      "elementId": "2.C.1.c",
+      "name": "Economics and Accounting",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 38,
+      "elementId": "2.C.1.d",
+      "name": "Sales and Marketing",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 39,
+      "elementId": "2.C.1.e",
+      "name": "Customer and Personal Service",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 40,
+      "elementId": "2.C.1.f",
+      "name": "Personnel and Human Resources",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 41,
+      "elementId": "2.C.10",
+      "name": "Transportation",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 42,
+      "elementId": "2.C.2.a",
+      "name": "Production and Processing",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 43,
+      "elementId": "2.C.2.b",
+      "name": "Food Production",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 44,
+      "elementId": "2.C.3.a",
+      "name": "Computers and Electronics",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 45,
+      "elementId": "2.C.3.b",
+      "name": "Engineering and Technology",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 46,
+      "elementId": "2.C.3.c",
+      "name": "Design",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 47,
+      "elementId": "2.C.3.d",
+      "name": "Building and Construction",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 48,
+      "elementId": "2.C.3.e",
+      "name": "Mechanical",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 49,
+      "elementId": "2.C.4.a",
+      "name": "Mathematics",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 50,
+      "elementId": "2.C.4.b",
+      "name": "Physics",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 51,
+      "elementId": "2.C.4.c",
+      "name": "Chemistry",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 52,
+      "elementId": "2.C.4.d",
+      "name": "Biology",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 53,
+      "elementId": "2.C.4.e",
+      "name": "Psychology",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 54,
+      "elementId": "2.C.4.f",
+      "name": "Sociology and Anthropology",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 55,
+      "elementId": "2.C.4.g",
+      "name": "Geography",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 56,
+      "elementId": "2.C.5.a",
+      "name": "Medicine and Dentistry",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 57,
+      "elementId": "2.C.5.b",
+      "name": "Therapy and Counseling",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 58,
+      "elementId": "2.C.6",
+      "name": "Education and Training",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 59,
+      "elementId": "2.C.7.a",
+      "name": "English Language",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 60,
+      "elementId": "2.C.7.b",
+      "name": "Foreign Language",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 61,
+      "elementId": "2.C.7.c",
+      "name": "Fine Arts",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 62,
+      "elementId": "2.C.7.d",
+      "name": "History and Archeology",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 63,
+      "elementId": "2.C.7.e",
+      "name": "Philosophy and Theology",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 64,
+      "elementId": "2.C.8.a",
+      "name": "Public Safety and Security",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 65,
+      "elementId": "2.C.8.b",
+      "name": "Law and Government",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 66,
+      "elementId": "2.C.9.a",
+      "name": "Telecommunications",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 67,
+      "elementId": "2.C.9.b",
+      "name": "Communications and Media",
+      "domain": "knowledge",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 68,
+      "elementId": "1.A.1.a.1",
+      "name": "Oral Comprehension",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 69,
+      "elementId": "1.A.1.a.2",
+      "name": "Written Comprehension",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 70,
+      "elementId": "1.A.1.a.3",
+      "name": "Oral Expression",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 71,
+      "elementId": "1.A.1.a.4",
+      "name": "Written Expression",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 72,
+      "elementId": "1.A.1.b.1",
+      "name": "Fluency of Ideas",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 73,
+      "elementId": "1.A.1.b.2",
+      "name": "Originality",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 74,
+      "elementId": "1.A.1.b.3",
+      "name": "Problem Sensitivity",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 75,
+      "elementId": "1.A.1.b.4",
+      "name": "Deductive Reasoning",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 76,
+      "elementId": "1.A.1.b.5",
+      "name": "Inductive Reasoning",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 77,
+      "elementId": "1.A.1.b.6",
+      "name": "Information Ordering",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 78,
+      "elementId": "1.A.1.b.7",
+      "name": "Category Flexibility",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 79,
+      "elementId": "1.A.1.c.1",
+      "name": "Mathematical Reasoning",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 80,
+      "elementId": "1.A.1.c.2",
+      "name": "Number Facility",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 81,
+      "elementId": "1.A.1.d.1",
+      "name": "Memorization",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 82,
+      "elementId": "1.A.1.e.1",
+      "name": "Speed of Closure",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 83,
+      "elementId": "1.A.1.e.2",
+      "name": "Flexibility of Closure",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 84,
+      "elementId": "1.A.1.e.3",
+      "name": "Perceptual Speed",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 85,
+      "elementId": "1.A.1.f.1",
+      "name": "Spatial Orientation",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 86,
+      "elementId": "1.A.1.f.2",
+      "name": "Visualization",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 87,
+      "elementId": "1.A.1.g.1",
+      "name": "Selective Attention",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 88,
+      "elementId": "1.A.1.g.2",
+      "name": "Time Sharing",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 89,
+      "elementId": "1.A.2.a.1",
+      "name": "Arm-Hand Steadiness",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 90,
+      "elementId": "1.A.2.a.2",
+      "name": "Manual Dexterity",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 91,
+      "elementId": "1.A.2.a.3",
+      "name": "Finger Dexterity",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 92,
+      "elementId": "1.A.2.b.1",
+      "name": "Control Precision",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 93,
+      "elementId": "1.A.2.b.2",
+      "name": "Multilimb Coordination",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 94,
+      "elementId": "1.A.2.b.3",
+      "name": "Response Orientation",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 95,
+      "elementId": "1.A.2.b.4",
+      "name": "Rate Control",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 96,
+      "elementId": "1.A.2.c.1",
+      "name": "Reaction Time",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 97,
+      "elementId": "1.A.2.c.2",
+      "name": "Wrist-Finger Speed",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 98,
+      "elementId": "1.A.2.c.3",
+      "name": "Speed of Limb Movement",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 99,
+      "elementId": "1.A.3.a.1",
+      "name": "Static Strength",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 100,
+      "elementId": "1.A.3.a.2",
+      "name": "Explosive Strength",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 101,
+      "elementId": "1.A.3.a.3",
+      "name": "Dynamic Strength",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 102,
+      "elementId": "1.A.3.a.4",
+      "name": "Trunk Strength",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 103,
+      "elementId": "1.A.3.b.1",
+      "name": "Stamina",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 104,
+      "elementId": "1.A.3.c.1",
+      "name": "Extent Flexibility",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 105,
+      "elementId": "1.A.3.c.2",
+      "name": "Dynamic Flexibility",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 106,
+      "elementId": "1.A.3.c.3",
+      "name": "Gross Body Coordination",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 107,
+      "elementId": "1.A.3.c.4",
+      "name": "Gross Body Equilibrium",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 108,
+      "elementId": "1.A.4.a.1",
+      "name": "Near Vision",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 109,
+      "elementId": "1.A.4.a.2",
+      "name": "Far Vision",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 110,
+      "elementId": "1.A.4.a.3",
+      "name": "Visual Color Discrimination",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 111,
+      "elementId": "1.A.4.a.4",
+      "name": "Night Vision",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 112,
+      "elementId": "1.A.4.a.5",
+      "name": "Peripheral Vision",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 113,
+      "elementId": "1.A.4.a.6",
+      "name": "Depth Perception",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 114,
+      "elementId": "1.A.4.a.7",
+      "name": "Glare Sensitivity",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 115,
+      "elementId": "1.A.4.b.1",
+      "name": "Hearing Sensitivity",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 116,
+      "elementId": "1.A.4.b.2",
+      "name": "Auditory Attention",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 117,
+      "elementId": "1.A.4.b.3",
+      "name": "Sound Localization",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 118,
+      "elementId": "1.A.4.b.4",
+      "name": "Speech Recognition",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 119,
+      "elementId": "1.A.4.b.5",
+      "name": "Speech Clarity",
+      "domain": "abilities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 120,
+      "elementId": "4.A.1.a.1",
+      "name": "Getting Information",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 121,
+      "elementId": "4.A.1.a.2",
+      "name": "Monitoring Processes, Materials, or Surroundings",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 122,
+      "elementId": "4.A.1.b.1",
+      "name": "Identifying Objects, Actions, and Events",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 123,
+      "elementId": "4.A.1.b.2",
+      "name": "Inspecting Equipment, Structures, or Materials",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 124,
+      "elementId": "4.A.1.b.3",
+      "name": "Estimating the Quantifiable Characteristics of Products, Events, or Information",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 125,
+      "elementId": "4.A.2.a.1",
+      "name": "Judging the Qualities of Objects, Services, or People",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 126,
+      "elementId": "4.A.2.a.2",
+      "name": "Processing Information",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 127,
+      "elementId": "4.A.2.a.3",
+      "name": "Evaluating Information to Determine Compliance with Standards",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 128,
+      "elementId": "4.A.2.a.4",
+      "name": "Analyzing Data or Information",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 129,
+      "elementId": "4.A.2.b.1",
+      "name": "Making Decisions and Solving Problems",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 130,
+      "elementId": "4.A.2.b.2",
+      "name": "Thinking Creatively",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 131,
+      "elementId": "4.A.2.b.3",
+      "name": "Updating and Using Relevant Knowledge",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 132,
+      "elementId": "4.A.2.b.4",
+      "name": "Developing Objectives and Strategies",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 133,
+      "elementId": "4.A.2.b.5",
+      "name": "Scheduling Work and Activities",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 134,
+      "elementId": "4.A.2.b.6",
+      "name": "Organizing, Planning, and Prioritizing Work",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 135,
+      "elementId": "4.A.3.a.1",
+      "name": "Performing General Physical Activities",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 136,
+      "elementId": "4.A.3.a.2",
+      "name": "Handling and Moving Objects",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 137,
+      "elementId": "4.A.3.a.3",
+      "name": "Controlling Machines and Processes",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 138,
+      "elementId": "4.A.3.a.4",
+      "name": "Operating Vehicles, Mechanized Devices, or Equipment",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 139,
+      "elementId": "4.A.3.b.1",
+      "name": "Working with Computers",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 140,
+      "elementId": "4.A.3.b.2",
+      "name": "Drafting, Laying Out, and Specifying Technical Devices, Parts, and Equipment",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 141,
+      "elementId": "4.A.3.b.4",
+      "name": "Repairing and Maintaining Mechanical Equipment",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 142,
+      "elementId": "4.A.3.b.5",
+      "name": "Repairing and Maintaining Electronic Equipment",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 143,
+      "elementId": "4.A.3.b.6",
+      "name": "Documenting/Recording Information",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 144,
+      "elementId": "4.A.4.a.1",
+      "name": "Interpreting the Meaning of Information for Others",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 145,
+      "elementId": "4.A.4.a.2",
+      "name": "Communicating with Supervisors, Peers, or Subordinates",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 146,
+      "elementId": "4.A.4.a.3",
+      "name": "Communicating with People Outside the Organization",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 147,
+      "elementId": "4.A.4.a.4",
+      "name": "Establishing and Maintaining Interpersonal Relationships",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 148,
+      "elementId": "4.A.4.a.5",
+      "name": "Assisting and Caring for Others",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 149,
+      "elementId": "4.A.4.a.6",
+      "name": "Selling or Influencing Others",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 150,
+      "elementId": "4.A.4.a.7",
+      "name": "Resolving Conflicts and Negotiating with Others",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 151,
+      "elementId": "4.A.4.a.8",
+      "name": "Performing for or Working Directly with the Public",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 152,
+      "elementId": "4.A.4.b.1",
+      "name": "Coordinating the Work and Activities of Others",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 153,
+      "elementId": "4.A.4.b.2",
+      "name": "Developing and Building Teams",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 154,
+      "elementId": "4.A.4.b.3",
+      "name": "Training and Teaching Others",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 155,
+      "elementId": "4.A.4.b.4",
+      "name": "Guiding, Directing, and Motivating Subordinates",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 156,
+      "elementId": "4.A.4.b.5",
+      "name": "Coaching and Developing Others",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 157,
+      "elementId": "4.A.4.b.6",
+      "name": "Providing Consultation and Advice to Others",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 158,
+      "elementId": "4.A.4.c.1",
+      "name": "Performing Administrative Activities",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 159,
+      "elementId": "4.A.4.c.2",
+      "name": "Staffing Organizational Units",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    },
+    {
+      "index": 160,
+      "elementId": "4.A.4.c.3",
+      "name": "Monitoring and Controlling Resources",
+      "domain": "workActivities",
+      "lvMin": 0,
+      "lvMax": 7
+    }
+  ]
+}

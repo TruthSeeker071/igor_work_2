@@ -1,0 +1,36 @@
+name: Deploy Jacob_Work prototype to Cloudflare Pages
+
+on:
+  push:
+    branches: [Jacob_Work]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npm run hub:verify
+      - run: npx playwright install chromium
+      - run: npm run hub:smoke
+        env:
+          SMOKE_HUB_URL: https://flightwayjacobprototype.pages.dev/dashboard
+
+  deploy:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy prototype branch to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy . --project-name=flightwayjacobprototype --branch=Jacob_Work

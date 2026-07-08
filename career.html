@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlightWay — Career Guide</title>
+<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260703p">
+<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260705c">
+<script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
+<script src="assets/js/shared/global-shim.js?v=20260703p"></script>
+<script src="assets/js/shared/flags.js?v=20260703p"></script>
+<link rel="stylesheet" href="assets/css/flightway-2.css?v=20260708a">
+<script src="assets/js/shared/events.js?v=20260708a" defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="assets/vendor/lucide-lite.js?v=20260703p" defer></script>
+</head>
+<body class="career-page">
+
+<nav>
+  <div class="nav-inner">
+    <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay home"></a>
+    <div class="nav-links app-nav" aria-label="App">
+      <a href="portal.html" class="app-nav-tab" data-app-nav="home"><span class="app-nav-label">Home</span></a>
+      <a href="dashboard.html" class="app-nav-tab" data-app-nav="hub"><span class="app-nav-label">Career Hub</span></a>
+      <a href="coach.html" class="app-nav-tab" data-app-nav="advisor"><span class="app-nav-label">Marco</span></a>
+      <a href="roadmap.html" class="app-nav-tab" data-app-nav="roadmap"><span class="app-nav-label">Career Roadmap</span></a>
+      <a href="quiz.html" class="app-nav-tab app-nav-tab--muted" data-app-nav="quiz"><span class="app-nav-label">Career Quiz</span></a>
+      <a href="auth.html#signin" class="app-nav-tab nav-signin-link" id="nav-signin-link">Sign in</a>
+      <button type="button" class="fw-theme-toggle" aria-label="Switch to dark mode" aria-pressed="false">
+        <span class="fw-theme-icon" aria-hidden="true"></span>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<div id="page-career" class="page active"><div id="career-content"></div></div>
+
+<script src="assets/js/shared/page-boot.js?v=20260703p" defer></script>
+<script src="assets/js/shared/auth.js?v=20260703p" defer></script>
+<script src="assets/js/shared/format-scale.js?v=20260703p" defer></script>
+<script src="assets/js/shared/profile-alignment.js?v=20260703p" defer></script>
+<script src="assets/js/app/salary-tiers.js?v=20260703p" defer></script>
+<script src="assets/js/hub/hub-careers.js?v=20260703p" defer></script>
+<script src="assets/js/shared/hub-zone-fit.js?v=20260703p" defer></script>
+<script src="assets/js/shared/onet-math.js?v=20260708a" defer></script>
+<script src="assets/js/shared/onet-catalog.js?v=20260705a" defer></script>
+<script src="assets/js/shared/onet-vectors.js?v=20260705a" defer></script>
+<script src="assets/js/shared/onet-dimension-viewer.js?v=20260708a" defer></script>
+<script src="assets/js/hub/career-deep-dives.js?v=20260703p" defer></script>
+<script src="assets/js/shared/why-this-match.js?v=20260708a" defer></script>
+<script src="assets/js/hub/career-personalize.js?v=20260708a" defer></script>
+<script src="assets/js/app/app-pages.js?v=20260703q" defer></script>
+<script src="assets/js/shared/career-target.js?v=20260703p" defer></script>
+<script src="assets/js/shared/sector-fit-sheet.js?v=20260703p" defer></script>
+<script src="assets/js/shared/auth-nav.js?v=20260703p" defer></script>
+<script src="assets/js/shared/brand.js?v=20260703p" defer></script>
+<script src="assets/js/shared/app-nav.js?v=20260703p" defer></script>
+<script src="assets/js/shared/theme.js?v=20260703p" defer></script>
+<script>
+  // Deferred scripts finish before DOMContentLoaded, so globals exist here.
+  document.addEventListener('DOMContentLoaded', function () {
+    var slug = '';
+    var params = new URLSearchParams(location.search || '');
+    slug = params.get('slug') || '';
+    if (!slug) {
+      var h = (location.hash || '').replace(/^#/, '');
+      if (h.indexOf('career-') === 0) slug = h.slice(7);
+    }
+    if (!slug) {
+      location.replace('dashboard.html');
+      return;
+    }
+    function openCareer() {
+      var socParam = params.get('soc') || '';
+      var runShow = function (resolvedSoc) {
+        if (typeof showCareer === 'function') showCareer(slug, 'hub', { soc: resolvedSoc || socParam });
+        else location.replace('dashboard.html');
+      };
+      if (window.FWOnetVectors && typeof FWOnetVectors.resolveTargetSoc === 'function') {
+        FWOnetVectors.resolveTargetSoc(slug, socParam).then(runShow).catch(function () { runShow(socParam); });
+      } else {
+        runShow(socParam);
+      }
+    }
+    function bootCareer() {
+      if (window.FWOnetCatalog && typeof FWOnetCatalog.load === 'function') {
+        FWOnetCatalog.load().then(openCareer).catch(openCareer);
+      } else {
+        openCareer();
+      }
+    }
+    if (window.FWPageBoot && typeof FWPageBoot.authBootThen === 'function') {
+      FWPageBoot.authBootThen(bootCareer);
+    } else {
+      bootCareer();
+    }
+    if (window.FWAppNav) FWAppNav.sync('hub');
+  });
+</script>
+</body>
+</html>

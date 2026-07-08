@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "flightway/salary-tiers",
+  "title": "Salary tier bands by industry",
+  "type": "object",
+  "additionalProperties": {
+    "type": "object",
+    "required": ["elite", "mid", "small"],
+    "properties": {
+      "elite": { "$ref": "#/$defs/tier" },
+      "mid": { "$ref": "#/$defs/tier" },
+      "small": { "$ref": "#/$defs/tier" }
+    }
+  },
+  "$defs": {
+    "tier": {
+      "type": "object",
+      "required": ["firms", "range", "bar"],
+      "properties": {
+        "firms": { "type": "string" },
+        "range": { "type": "string" },
+        "bar": { "type": "number" }
+      }
+    }
+  }
+}

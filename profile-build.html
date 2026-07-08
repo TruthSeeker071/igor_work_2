@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlightWay — Help us know you better</title>
+<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260703p">
+<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260705c">
+<link rel="stylesheet" href="assets/css/profile-building.css?v=20260703p">
+<script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
+<script src="assets/js/shared/flags.js?v=20260703p"></script>
+<script src="assets/js/shared/events.js?v=20260708a" defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body class="profile-page">
+
+<nav>
+  <div class="nav-inner">
+    <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay home"></a>
+    <div class="nav-links app-nav" aria-label="App">
+      <a href="portal.html" class="app-nav-tab" data-app-nav="home"><span class="app-nav-label">Home</span></a>
+      <a href="dashboard.html" class="app-nav-tab" data-app-nav="hub"><span class="app-nav-label">Career Hub</span></a>
+      <a href="coach.html" class="app-nav-tab" data-app-nav="advisor"><span class="app-nav-label">Marco</span></a>
+      <a href="roadmap.html" class="app-nav-tab" data-app-nav="roadmap"><span class="app-nav-label">Career Roadmap</span></a>
+      <a href="quiz.html" class="app-nav-tab app-nav-tab--muted" data-app-nav="quiz"><span class="app-nav-label">Career Quiz</span></a>
+      <a href="auth.html#signin" class="app-nav-tab nav-signin-link" id="nav-signin-link">Sign in</a>
+      <button type="button" class="fw-theme-toggle" aria-label="Switch to dark mode" aria-pressed="false">
+        <span class="fw-theme-icon" aria-hidden="true"></span>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<div id="page-profile-build" class="page active">
+  <div id="pb-root"></div>
+</div>
+
+<script src="assets/js/shared/page-boot.js?v=20260703p" defer></script>
+<script src="assets/js/shared/auth.js?v=20260703p" defer></script>
+<script src="assets/js/shared/profile-alignment.js?v=20260703p" defer></script>
+<script src="assets/js/shared/auth-nav.js?v=20260703p" defer></script>
+<script src="assets/js/shared/sector-fit-sheet.js?v=20260703p" defer></script>
+<script src="assets/js/shared/onet-math.js?v=20260703p" defer></script>
+<script src="assets/js/hub/hub-careers.js?v=20260703p" defer></script>
+<script src="assets/js/shared/onet-catalog.js?v=20260705a" defer></script>
+<script src="assets/js/shared/onet-vectors.js?v=20260705a" defer></script>
+<script src="assets/js/profile/profile-building-fallback.js?v=20260703p" defer></script>
+<script src="assets/js/profile/profile-building.js?v=20260708a" defer></script>
+<script src="assets/js/shared/brand.js?v=20260703p" defer></script>
+<script src="assets/js/shared/app-nav.js?v=20260703p" defer></script>
+<script src="assets/js/shared/theme.js?v=20260703p" defer></script>
+<script>
+  // Deferred scripts finish before DOMContentLoaded, so globals exist here.
+  document.addEventListener('DOMContentLoaded', function () {
+    FWPageBoot.authBootThen(function () {
+      if (!FWPageBoot.requireAuth('profile-build.html')) return;
+      if (window.FWProfileBuilding && typeof FWProfileBuilding.open === 'function') {
+        FWProfileBuilding.open();
+      }
+    });
+  });
+</script>
+</body>
+</html>

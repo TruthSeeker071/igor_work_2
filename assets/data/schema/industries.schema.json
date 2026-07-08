@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "flightway/industries",
+  "title": "Quiz industry registry",
+  "type": "object",
+  "additionalProperties": {
+    "type": "object",
+    "required": ["name", "icon"],
+    "properties": {
+      "name": { "type": "string", "minLength": 1 },
+      "icon": { "type": "string", "minLength": 1 }
+    }
+  },
+  "minProperties": 1
+}

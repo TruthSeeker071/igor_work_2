@@ -1,0 +1,24 @@
+name: Deploy igor_work prototype to Cloudflare Pages
+
+on:
+  push:
+    branches: [igor_work]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # Deploys as a branch preview of the existing prototype project
+      # (same project + token permissions Jacob_Work already uses).
+      # Preview URL: https://igor-work.<project-domain>.pages.dev
+      - name: Deploy igor_work branch preview to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy . --project-name=flightway-prototype --branch=igor_work

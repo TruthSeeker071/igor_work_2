@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlightWay — Career Tester</title>
+<meta name="description" content="Try a real slice of a career before you commit to it — real documents, real decisions, honest feedback. Start with a 2-minute look.">
+<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260706s">
+<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260706s">
+<link rel="stylesheet" href="assets/css/simulation.css?v=20260706s">
+<script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
+<script src="assets/js/shared/global-shim.js?v=20260703p"></script>
+<script src="assets/js/shared/flags.js?v=20260703p"></script>
+<link rel="stylesheet" href="assets/css/flightway-2.css?v=20260708a">
+<script src="assets/js/shared/events.js?v=20260708a" defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body class="sim-page">
+
+<canvas id="fw-data-field" aria-hidden="true"></canvas>
+
+<nav>
+  <div class="nav-inner">
+    <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay home"></a>
+    <div class="nav-links app-nav" aria-label="App">
+      <a href="portal.html" class="app-nav-tab" data-app-nav="home"><span class="app-nav-label">Home</span></a>
+      <a href="dashboard.html" class="app-nav-tab" data-app-nav="hub"><span class="app-nav-label">Career Hub</span></a>
+      <a href="coach.html" class="app-nav-tab" data-app-nav="advisor"><span class="app-nav-label">Marco</span></a>
+      <a href="roadmap.html" class="app-nav-tab" data-app-nav="roadmap"><span class="app-nav-label">Career Roadmap</span></a>
+      <a href="quiz.html" class="app-nav-tab app-nav-tab--muted" data-app-nav="quiz"><span class="app-nav-label">Career Quiz</span></a>
+      <a href="auth.html#signin" class="app-nav-tab nav-signin-link" id="nav-signin-link">Sign in</a>
+      <button type="button" class="fw-theme-toggle" aria-label="Switch to dark mode" aria-pressed="false">
+        <span class="fw-theme-icon" aria-hidden="true"></span>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<div class="fw-shell">
+  <main id="fw-root" aria-live="polite">
+    <div class="fw-loading"><span class="fw-spinner"></span><span>Loading the Career Tester…</span></div>
+  </main>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-left">
+      <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay"></a>
+      <p>&copy; 2026 FlightWay. All rights reserved.</p>
+    </div>
+    <div class="footer-links"><a href="mailto:hello@flightway.app">Contact</a></div>
+  </div>
+</footer>
+
+<script src="assets/js/shared/page-boot.js?v=20260703p" defer></script>
+<script src="assets/js/shared/auth.js?v=20260705c" defer></script>
+<script src="assets/js/shared/auth-nav.js?v=20260703p" defer></script>
+<script src="assets/js/shared/onet-catalog.js?v=20260705c" defer></script>
+<script src="assets/js/quiz/quiz-data.js?v=20260703p" defer></script>
+<script src="assets/js/hub/hub-careers.js?v=20260705c" defer></script>
+<script src="assets/js/sim/sim-engine.js?v=20260708a" defer></script>
+<script src="assets/js/sim/sim-share.js?v=20260708a" defer></script>
+<script src="assets/js/shared/data-field.js?v=20260703p" defer></script>
+<script src="assets/js/shared/brand.js?v=20260703p" defer></script>
+<script src="assets/js/shared/app-nav.js?v=20260703p" defer></script>
+<script src="assets/js/shared/theme.js?v=20260703p" defer></script>
+<script>
+  // Anonymous users welcome — auth boot only personalizes fit chips.
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.FWPageBoot && typeof FWPageBoot.authBootThen === 'function') {
+      FWPageBoot.authBootThen(function () {
+        if (window.FWFlights && typeof FWFlights.boot === 'function') FWFlights.boot();
+      });
+    } else if (window.FWFlights) {
+      FWFlights.boot();
+    }
+  });
+</script>
+</body>
+</html>

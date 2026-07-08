@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlightWay — Sign in</title>
+<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260703p">
+<link rel="stylesheet" href="assets/css/auth-pages.css?v=20260703p">
+<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260705c">
+<script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
+<script src="assets/js/shared/flags.js?v=20260703p"></script>
+<script>(function(){var h=(location.hash||'').replace(/^#/,'').split('?')[0];if(['signin','register','forgot-password','reset-password'].indexOf(h)!==-1)document.documentElement.setAttribute('data-boot-page',h);})();</script>
+<style id="fw-boot-css">html[data-boot-page] .auth-page{display:none!important}html[data-boot-page="signin"] #auth-page-signin{display:block!important}html[data-boot-page="register"] #auth-page-register{display:block!important}html[data-boot-page="forgot-password"] #auth-page-forgot-password{display:block!important}html[data-boot-page="reset-password"] #auth-page-reset-password{display:block!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay home"></a>
+    <div class="nav-links app-nav" aria-label="App">
+      <a href="portal.html" class="app-nav-tab" data-app-nav="home"><span class="app-nav-label">Home</span></a>
+      <a href="dashboard.html" class="app-nav-tab" data-app-nav="hub"><span class="app-nav-label">Career Hub</span></a>
+      <a href="coach.html" class="app-nav-tab" data-app-nav="advisor"><span class="app-nav-label">Marco</span></a>
+      <a href="roadmap.html" class="app-nav-tab" data-app-nav="roadmap"><span class="app-nav-label">Career Roadmap</span></a>
+      <a href="quiz.html" class="app-nav-tab app-nav-tab--muted" data-app-nav="quiz"><span class="app-nav-label">Career Quiz</span></a>
+      <a href="auth.html#signin" class="app-nav-tab nav-signin-link" id="nav-signin-link">Sign in</a>
+      <button type="button" class="fw-theme-toggle" aria-label="Switch to dark mode" aria-pressed="false">
+        <span class="fw-theme-icon" aria-hidden="true"></span>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<section class="auth-page auth-page" id="auth-page-signin">
+  <div class="hero auth-shell">
+    <h1 class="auth-hero-title">Sign in to FlightWay</h1>
+    <p class="auth-hero-sub">Sign in with your email and password to access your Career Hub and Marco, your AI career advisor.</p>
+    <div class="auth-form-shell">
+      <input type="email" id="signin-email" class="coach-email-input auth-field" placeholder="you@example.com" autocomplete="email" onkeydown="if(event.key==='Enter')document.getElementById('signin-password').focus()">
+      <input type="password" id="signin-password" class="coach-email-input auth-field auth-field--tight" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')coachSignInFromPage()">
+      <p class="auth-link-row"><a href="#" onclick="coachOpenForgotPassword();return false">Forgot password?</a></p>
+      <div class="coach-error" id="signin-error"></div>
+      <button type="button" class="coach-primary-btn auth-btn-full" id="signin-btn" onclick="coachSignInFromPage()">Sign in →</button>
+      <p class="auth-footnote">Don&rsquo;t have an account? <a href="auth.html#register">Create one</a></p>
+      <p class="auth-footnote auth-footnote--muted"><a href="index.html">← Back to home page</a></p>
+    </div>
+  </div>
+</section>
+
+<section class="auth-page" id="auth-page-register" hidden>
+  <div class="hero auth-shell">
+    <h1 style="font-family:var(--font-display);font-size:clamp(2rem,5vw,2.75rem);margin-bottom:12px">Create your account</h1>
+    <p style="color:var(--text-secondary);max-width:420px;margin:0 auto 32px;font-size:1.05rem">Register with your email and password to save your results and unlock your Career Hub.</p>
+    <div style="max-width:400px;margin:0 auto;text-align:left">
+      <input type="email" id="register-email" class="coach-email-input" placeholder="you@example.com" autocomplete="email" style="width:100%;margin-bottom:12px">
+      <input type="password" id="register-password" class="coach-email-input" placeholder="Password (8+ characters)" autocomplete="new-password" style="width:100%;margin-bottom:12px">
+      <input type="password" id="register-password-confirm" class="coach-email-input" placeholder="Confirm password" autocomplete="new-password" style="width:100%;margin-bottom:8px" onkeydown="if(event.key==='Enter')coachRegisterFromPage()">
+      <div class="coach-error" id="register-error"></div>
+      <button type="button" class="coach-primary-btn" id="register-btn" style="width:100%" onclick="coachRegisterFromPage()">Create account →</button>
+      <p style="text-align:center;margin-top:16px;font-size:0.88rem;color:var(--text-secondary)">Already have an account? <a href="auth.html#signin" style="color:rgb(var(--primary));font-weight:600;text-decoration:none">Sign in</a></p>
+    </div>
+  </div>
+</section>
+
+<section class="auth-page" id="auth-page-forgot-password" hidden>
+  <div class="hero auth-shell">
+    <h1 style="font-family:var(--font-display);font-size:clamp(2rem,5vw,2.75rem);margin-bottom:12px">Forgot password</h1>
+    <p style="color:var(--text-secondary);max-width:420px;margin:0 auto 32px;font-size:1.05rem">Enter your email and we will send you a reset link if an account exists.</p>
+    <div style="max-width:400px;margin:0 auto;text-align:left">
+      <input type="email" id="forgot-email" class="coach-email-input" placeholder="you@example.com" autocomplete="email" style="width:100%;margin-bottom:12px" onkeydown="if(event.key==='Enter')coachForgotPasswordSubmit()">
+      <div class="coach-error" id="forgot-error"></div>
+      <div class="coach-dossier-status ok" id="forgot-success" style="display:none;margin-bottom:12px"></div>
+      <button type="button" class="coach-primary-btn" id="forgot-btn" style="width:100%" onclick="coachForgotPasswordSubmit()">Send reset link →</button>
+      <p style="text-align:center;margin-top:20px;font-size:0.85rem;color:var(--text-tertiary)"><a href="auth.html#signin" style="color:var(--text-secondary);text-decoration:none">← Back to sign in</a></p>
+    </div>
+  </div>
+</section>
+
+<section class="auth-page" id="auth-page-reset-password" hidden>
+  <div class="hero auth-shell">
+    <h1 style="font-family:var(--font-display);font-size:clamp(2rem,5vw,2.75rem);margin-bottom:12px">Reset your password</h1>
+    <p style="color:var(--text-secondary);max-width:420px;margin:0 auto 32px;font-size:1.05rem">Choose a new password for your Flightway account.</p>
+    <div style="max-width:400px;margin:0 auto;text-align:left">
+      <input type="password" id="reset-password-new" class="coach-email-input" placeholder="New password (8+ characters)" autocomplete="new-password" style="width:100%;margin-bottom:12px">
+      <input type="password" id="reset-password-confirm" class="coach-email-input" placeholder="Confirm new password" autocomplete="new-password" style="width:100%;margin-bottom:12px" onkeydown="if(event.key==='Enter')coachResetPasswordSubmit()">
+      <div class="coach-error" id="reset-password-error"></div>
+      <button type="button" class="coach-primary-btn" id="reset-password-btn" style="width:100%" onclick="coachResetPasswordSubmit()">Update password →</button>
+    </div>
+  </div>
+</section>
+
+<script src="assets/js/shared/page-boot.js?v=20260703p" defer></script>
+<script src="assets/js/shared/auth.js?v=20260703p" defer></script>
+<script src="assets/js/shared/auth-pages.js?v=20260703p" defer></script>
+<script src="assets/js/shared/auth-nav.js?v=20260703p" defer></script>
+<script src="assets/js/shared/brand.js?v=20260703p" defer></script>
+<script src="assets/js/shared/app-nav.js?v=20260703p" defer></script>
+<script src="assets/js/shared/theme.js?v=20260703p" defer></script>
+</body>
+</html>

@@ -1,0 +1,1244 @@
+{
+  "version": 2,
+  "sims": [
+    {
+      "id": "pm-northstar",
+      "domain": "TECH / PRODUCT",
+      "tag": "FAMILIAR",
+      "minutes": 25,
+      "title": "Product Manager",
+      "org": "Northstar",
+      "orgPlain": "a company that makes software other businesses pay to use",
+      "hook": "Everyone says they want this job. Here's what 2pm on a Tuesday actually feels like.",
+      "youWill": "Make a hard call when a promise to your biggest customer falls apart — then tell everyone.",
+      "orientation": {
+        "company": "Northstar makes software that other companies use to organize their data. Customers pay a yearly subscription — so keeping big customers happy is how Northstar survives.",
+        "role": "A product manager doesn't code and doesn't manage people. You decide WHAT gets built, in what order, and you're the one who explains the plan to customers, engineers, and bosses. When things go wrong, everyone looks at you.",
+        "people": [
+          "Maya Chen — engineering lead. Builds the product. Honest, a little intimidating.",
+          "Sam Okafor — salesperson who manages the Meridian account. Stressed.",
+          "Dana Vasquez — the customer. Head of security at Meridian Health."
+        ]
+      },
+      "brief": "This morning, your engineer Maya found a security flaw in the Data Export feature — the feature you promised to your biggest customer, Meridian Health. Fixing it properly adds 3 weeks. Meridian pays Northstar $240,000 a year (almost a fifth of all the money the company makes), and they need this feature by July 15 for a legal inspection. Your designer wants to ship a smaller version on time. Your salesperson is panicking. In 50 minutes, you present your plan to the company's leaders.",
+      "task": "Decide what Northstar should do, then communicate it three ways: to the customer, to the leaders, and to yourself (why this option beats the others).",
+      "glossary": [
+        {
+          "term": "ARR",
+          "plain": "Annual Recurring Revenue — how much money a customer pays per year. Meridian's $240k ARR means $240,000 every year."
+        },
+        {
+          "term": "pts",
+          "plain": "'Points' — how engineers estimate effort. Bigger number = more work. The team can finish about 34 points before the deadline."
+        },
+        {
+          "term": "CISO",
+          "plain": "Chief Information Security Officer — the person at a company in charge of keeping data safe."
+        },
+        {
+          "term": "SOC 2",
+          "plain": "A formal security inspection companies go through to prove they handle data safely. Inspectors check for specific evidence."
+        },
+        {
+          "term": "scope",
+          "plain": "The size of what you're building. 'Cutting scope' = shipping a smaller version to hit the deadline."
+        },
+        {
+          "term": "exec sync",
+          "plain": "A regular meeting with company leaders where you report status and decisions."
+        },
+        {
+          "term": "renewal",
+          "plain": "When a customer's yearly contract ends and they decide whether to keep paying or leave."
+        }
+      ],
+      "docs": [
+        {
+          "label": "CHAT",
+          "title": "#proj-dataexport · this morning",
+          "kind": "thread",
+          "body": [
+            "Maya Chen 9:12 AM — Found it. The export feature touches our old permissions code. If we ship as-is, any workspace admin can export data they aren't even allowed to SEE in the app. That's a real security hole. Fixing it is ~18 pts of work. I'm not shipping without the fix.",
+            "Jordan Reyes (Design) 9:40 AM — Proposal: cut scope to a basic one-time export for launch. Drop the automatic weekly exports. Smaller, safer, keeps the date.",
+            "Sam Okafor (Sales) 9:58 AM — guys. Meridian's renewal call is the 24th. Their CISO has asked about automatic exports in our last THREE calls. If we slip this we are having a very different renewal conversation.",
+            "Maya Chen 10:03 AM — Not my call what we promise customers. My call is what's safe to ship. Both can't be 'everything, on time.'"
+          ]
+        },
+        {
+          "label": "EMAIL",
+          "title": "From the customer — Dana Vasquez, CISO @ Meridian Health",
+          "kind": "doc",
+          "body": [
+            "Subject: Re: Export feature — inspection timeline",
+            "Hi Sam — flagging again that our SOC 2 inspection starts July 15. The inspectors require proof that our access logs export automatically every week, with no human pressing a button. A person manually exporting won't count — UNLESS your company runs it for us and signs a formal statement each time.",
+            "We built our whole inspection plan around your June promise. If that's at risk, I need to know this week, not on the renewal call. — Dana"
+          ]
+        },
+        {
+          "label": "MATH",
+          "title": "What the team can build before the deadline",
+          "kind": "data",
+          "body": [
+            "TEAM CAPACITY LEFT: 34 pts",
+            "",
+            "PIECES OF WORK (effort estimates)",
+            "  Basic one-time export ........ 21 pts",
+            "  Automatic weekly exports ..... 13 pts",
+            "  Security fix (new) ........... 18 pts",
+            "  Export history log ............ 8 pts",
+            "",
+            "OPTIONS PEOPLE HAVE SUGGESTED",
+            "  A) Build everything ... 60 pts → 3 weeks LATE",
+            "  B) Basic + security fix 39 pts → a few days late,",
+            "       but NO automatic exports (the thing Meridian needs)",
+            "  C) Basic + automatic .. 34 pts → ON TIME,",
+            "       but ships WITH the security hole",
+            "",
+            "NOTE: nobody has checked whether there's a 4th option.",
+            "Dana's email contains a clue."
+          ]
+        }
+      ],
+      "starters": [
+        "Can you explain the security problem like I'm new here?",
+        "What happens if we ship option C anyway?",
+        "Dana mentioned a signed statement — could WE run the exports for them?"
+      ],
+      "workSections": [
+        {
+          "id": "call",
+          "label": "YOUR CALL",
+          "prompt": "Which option do you pick — A, B, C, or something nobody suggested? What ships, and when?",
+          "hint": "Re-read Dana's email slowly. Is there a way to satisfy the inspectors WITHOUT the automatic feature being finished?",
+          "core": true
+        },
+        {
+          "id": "customer",
+          "label": "MESSAGE TO THE CUSTOMER",
+          "prompt": "Write 3-5 sentences to Dana. Be honest about the situation without burying her in technical detail.",
+          "hint": "Customers forgive delays more than surprises. Lead with what she gets and when — then how you'll cover her inspection.",
+          "core": true
+        },
+        {
+          "id": "leaders",
+          "label": "WHAT YOU TELL THE LEADERS",
+          "prompt": "2-4 sentences for the exec sync: the situation, your decision, the risk you're accepting.",
+          "hint": "Leaders want the decision first, the story second. One sentence on what could still go wrong shows you've thought it through."
+        },
+        {
+          "id": "why",
+          "label": "WHY THIS BEATS THE OTHERS",
+          "prompt": "Show your reasoning. Use the math doc — what does each option cost you?",
+          "hint": "Check option B's math against the 34-pt capacity. Does it actually fit?"
+        }
+      ],
+      "moments": [
+        "Decoding what the customer actually needs vs. what they asked for",
+        "Working through the capacity math",
+        "Choosing who gets disappointed",
+        "Writing the update for the bosses",
+        "Pushing back on a senior engineer"
+      ],
+      "colleague": {
+        "name": "Maya Chen",
+        "role": "Engineering Lead"
+      },
+      "taxi": {
+        "docLabel": "MATH",
+        "brief": "You're the product manager at Northstar. Your engineer found a security flaw in the feature you promised your biggest customer ($240,000/year) — they need it by July 15 for a legal inspection. Fixing it properly makes you 3 weeks late. Below is what your team can actually build before the deadline. In 50 minutes you present a plan to the company's leaders.",
+        "payoff": "That capacity check — catching that a suggested plan **doesn't even fit the math** — is a thing PMs do weekly while everyone around them argues opinions. The real version of this sim adds the customer's email (it hides a way out nobody noticed), a blunt engineer you can DM, and leaders waiting for your plan."
+      },
+      "interactions": [
+        {
+          "question": "Leadership likes Option B (basic export + security fix, a few days late). Check it against the team's 34-point capacity. Does it fit?",
+          "options": [
+            {
+              "label": "Yes — it's the safe middle option",
+              "reaction": "Add it up: 21 + 18 = 39 points. The team can do 34 before the deadline. Option B is 5 points of work over capacity — it isn't 'a few days late', it's fiction. Half of PM work is being the one person who actually did the arithmetic.",
+              "correct": false
+            },
+            {
+              "label": "No — 21 + 18 = 39 points, and the team has 34",
+              "reaction": "Correct. Option B doesn't fit — whoever proposed it never added the numbers. PMs earn trust by being the person who checks. (And option C ships a security hole to a health company, so the real answer is hiding somewhere else entirely…)",
+              "correct": true
+            },
+            {
+              "label": "Can't tell from this document",
+              "reaction": "It's all here: Basic (21 pts) + security fix (18 pts) = 39, against 34 capacity. Reading tables slowly IS the job — nobody hands you the conclusion.",
+              "correct": false
+            }
+          ]
+        },
+        {
+          "question": "Re-read Dana's email. What does her inspection actually require?",
+          "options": [
+            {
+              "label": "The automatic export feature, finished and live",
+              "reaction": "Look again: inspectors need proof exports run weekly with no human pressing a button — 'UNLESS your company runs it for us and signs a formal statement each time.' She told you the escape hatch herself.",
+              "correct": false
+            },
+            {
+              "label": "Weekly exports with no customer effort — which Northstar could run manually and certify",
+              "reaction": "Exactly. The 'concierge bridge': Northstar staff run Meridian's export weekly and sign the statement until the real feature ships. The customer's own email contained the option nobody on the team saw. Careful reading beats clever arguing.",
+              "correct": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "forensic-halverson",
+      "domain": "FINANCE / INVESTIGATION",
+      "tag": "HIDDEN",
+      "minutes": 25,
+      "title": "Forensic Accountant",
+      "org": "Whitmore & Associates",
+      "orgPlain": "an accounting firm companies hire to investigate suspicious money behavior",
+      "hook": "A career you've never considered: financial detective work, one suspicious receipt at a time.",
+      "youWill": "Hunt for an expense-fraud pattern hidden inside 14 ordinary-looking lines.",
+      "orientation": {
+        "company": "Whitmore & Associates is an accounting firm. When a company suspects someone inside is stealing or cheating with money, they hire firms like this to investigate quietly and prove it (or rule it out).",
+        "role": "A forensic accountant is a detective whose crime scene is paperwork. You read expense reports, receipts, and records, looking for patterns that don't add up — then you build a careful, evidence-based case. Most lines are innocent. Your job is to be skeptical without being paranoid.",
+        "people": [
+          "Priya Raman — senior investigator, your mentor on this case. Dry humor. Has seen every trick.",
+          "The file — 14 expense lines from a company called Halverson, where a tipster says something's wrong."
+        ]
+      },
+      "brief": "An anonymous tip claims someone at Halverson Logistics is cheating on work-expense reimbursements — charging the company for things they shouldn't. You've pulled one month of expenses, the company's expense rulebook, and two receipts. Most of it is probably fine. Some of it is not. Your job is to find the PATTERN, not just one bad line — and to be careful: accusing the wrong person ends careers, including yours.",
+      "task": "Write up your findings: which lines look wrong, what pattern connects them, what evidence you'd request next, and what you are deliberately NOT concluding yet.",
+      "glossary": [
+        {
+          "term": "reimbursement",
+          "plain": "When you spend your own money for work (a flight, a client dinner) and the company pays you back."
+        },
+        {
+          "term": "approval threshold",
+          "plain": "A spending limit. Here, anything over $500 needs a boss's sign-off first. Cheaters try to sneak under limits."
+        },
+        {
+          "term": "split transaction",
+          "plain": "Breaking one big purchase into smaller ones so each stays under the approval limit. A classic fraud move — and a fireable offense here."
+        },
+        {
+          "term": "badge log",
+          "plain": "The record of when someone's ID badge entered and left the office building. Useful for checking where people really were."
+        },
+        {
+          "term": "AP",
+          "plain": "Accounts Payable — the department at a company that pays bills. They know which vendor meetings actually happened."
+        },
+        {
+          "term": "vendor",
+          "plain": "An outside company that sells services or goods to your company."
+        },
+        {
+          "term": "mileage",
+          "plain": "Money paid back per mile when you drive your own car for work. Requires a log of the trips."
+        }
+      ],
+      "docs": [
+        {
+          "label": "LEDGER",
+          "title": "Expense lines — April (14 lines)",
+          "kind": "data",
+          "body": [
+            " 1  04/02  R.Calloway  Skyline Catering   $498.00  Client appreciation",
+            " 2  04/02  R.Calloway  Skyline Catering   $495.50  Team materials",
+            " 3  04/05  J.Whitfield Delta Airlines     $642.18  Flight — site visit",
+            " 4  04/08  R.Calloway  Marriott hotel     $389.99  Lodging, 1 night",
+            " 5  04/11  M.Osei      Office Depot        $84.32  Supplies",
+            " 6  04/13  R.Calloway  The Brass Rail     $312.40  Client dinner",
+            " 7  04/15  J.Whitfield Uber                $48.75  Airport ride",
+            " 8  04/15  J.Whitfield Uber                $48.75  Client site ride",
+            " 9  04/18  R.Calloway  Apex Consulting  $2,000.00  Advisory services",
+            "10  04/21  M.Osei      Shell gas           $61.10  Fuel, work route",
+            "11  04/22  R.Calloway  Mileage 412mi      $276.04  Client visits",
+            "12  04/25  T.Brandt    Panera             $156.20  Team lunch (8 ppl)",
+            "13  04/27  R.Calloway  Skyline Catering   $497.25  Client workshop",
+            "14  04/30  J.Whitfield Hilton hotel     $1,150.00  Conference, 2 nights",
+            "",
+            "INVESTIGATOR NOTES:",
+            "· 04/13 was a Saturday.",
+            "· Badge log: Calloway was IN the office 04/22, 8:42am-5:15pm.",
+            "· Halverson's AP team says no vendor meetings happened 04/13.",
+            "· 'Apex Consulting LLC' is not on the approved vendor list."
+          ]
+        },
+        {
+          "label": "RULEBOOK",
+          "title": "Halverson expense policy (the parts that matter)",
+          "kind": "doc",
+          "body": [
+            "§3.1 — Receipts required for anything over $75.",
+            "§3.4 — Anything over $500 needs a partner's written approval BEFORE spending.",
+            "§4.2 — Weekend client entertainment needs advance written approval.",
+            "§5.1 — Mileage claims require a trip log. Mileage may NOT be claimed on days the badge log shows you were in the office.",
+            "§6.3 — Any vendor charging over $1,000 must be on the approved vendor list.",
+            "§7.2 — A split transaction (breaking one purchase into pieces to stay under the approval threshold) is a fireable offense."
+          ]
+        },
+        {
+          "label": "RECEIPTS",
+          "title": "Two receipts pulled from the file",
+          "kind": "doc",
+          "body": [
+            "RECEIPT A — The Brass Rail, 04/13, 11:48 PM. Party of 2. Items: 6 cocktails, 2 appetizers. Total $312.40. Handwritten on the stub: 'client dinner'.",
+            "RECEIPT B — Skyline Catering. Invoice #2241 ($498.00) and Invoice #2242 ($495.50). Invoice numbers are back-to-back, both dated 04/02, same delivery address, same signature."
+          ]
+        }
+      ],
+      "starters": [
+        "What's a 'split transaction' exactly?",
+        "How suspicious is a round number like $2,000?",
+        "What evidence usually settles a case like this?"
+      ],
+      "workSections": [
+        {
+          "id": "flags",
+          "label": "LINES YOU'D FLAG",
+          "prompt": "List the line numbers that bother you, with one short reason each.",
+          "hint": "Compare lines 1, 2, and 13 against rulebook §3.4 and §7.2. Then check line 6 against the investigator notes, and line 11 against §5.1.",
+          "core": true
+        },
+        {
+          "id": "pattern",
+          "label": "THE PATTERN",
+          "prompt": "What connects your flagged lines? Is this one person? One technique? Say it in 2-3 sentences.",
+          "hint": "Count how many flags share a name. Then ask: what do amounts like $498, $495.50, and $497.25 have in common with a $500 limit?",
+          "core": true
+        },
+        {
+          "id": "next",
+          "label": "EVIDENCE TO REQUEST NEXT",
+          "prompt": "What records or interviews would confirm or kill your theory?",
+          "hint": "Think: who could verify the Saturday 'client dinner'? What would prove Apex Consulting is real work — or not?"
+        },
+        {
+          "id": "notyet",
+          "label": "WHAT YOU'RE NOT CONCLUDING YET",
+          "prompt": "Good investigators state their own limits. What innocent explanations are still possible?",
+          "hint": "Could two same-amount Ubers in one day (line 7-8) be legitimate? When is a duplicate not a duplicate?"
+        }
+      ],
+      "moments": [
+        "Scanning line-by-line, waiting for something to snag",
+        "The moment an anomaly clicks into a pattern",
+        "Cross-referencing the rulebook's fine print",
+        "Writing accusations carefully without overclaiming",
+        "The sheer tedium of verification"
+      ],
+      "colleague": {
+        "name": "Priya Raman",
+        "role": "Senior Investigator"
+      },
+      "taxi": {
+        "docLabel": "LEDGER",
+        "brief": "You're a forensic accountant — a detective whose crime scene is paperwork. An anonymous tip says someone at Halverson Logistics is cheating on expenses. Here's one month of expense lines with your investigator notes. Company rule that matters most: **anything over $500 needs a partner's approval first.** Most of these lines are innocent.",
+        "payoff": "You just did real forensic accounting: not 'finding a bad number', but noticing a **pattern built to stay invisible**. The full version adds the company rulebook, two suspicious receipts, a mentor who's seen every scheme — and the discipline of writing accusations you can defend."
+      },
+      "interactions": [
+        {
+          "question": "Skyline Catering shows up three times: $498.00, $495.50, and $497.25. The approval limit is $500. What's your read?",
+          "options": [
+            {
+              "label": "Catering is expensive; these look like normal client events",
+              "reaction": "Each alone, maybe. Together: three payments to the same vendor, all $2–5 under the exact approval threshold — two invoiced back-to-back on the same day. That's the classic shape of split transactions: breaking a big purchase into pieces to dodge the sign-off. Innocent explanations exist, but this pattern is what investigators are paid to catch.",
+              "correct": false
+            },
+            {
+              "label": "Three same-vendor charges hugging the $500 limit — classic threshold-dodging",
+              "reaction": "That's the instinct. Numbers that cluster just under a limit are one of the oldest fraud tells in the book — invoice #2241 and #2242, same day, same signature, make it louder. Next step isn't accusing anyone; it's corroborating. That discipline is the actual job.",
+              "correct": true
+            },
+            {
+              "label": "The amounts are all different, so there's no pattern",
+              "reaction": "Look at what they share, not how they differ: same vendor, same month, every one within $5 of the approval cutoff. Fraud rarely repeats a number exactly — it repeats a *shape*.",
+              "correct": false
+            }
+          ]
+        },
+        {
+          "question": "Line 11: Calloway claimed 412 miles of driving on April 22. Check the investigator notes.",
+          "options": [
+            {
+              "label": "The badge log shows Calloway in the office 8:42–5:15 that day — the claim can't be true",
+              "reaction": "Right. You can't drive 412 miles while badged into a building. This is 'corroboration': one boring record destroying one confident claim. Forensic work is mostly this.",
+              "correct": true
+            },
+            {
+              "label": "Mileage claims are usually estimates, so it's fine",
+              "reaction": "Estimates are normal; *impossible* is not. The badge log has Calloway at a desk all day. When a record contradicts a claim, the record usually wins.",
+              "correct": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "uxr-forkful",
+      "domain": "TECH / RESEARCH",
+      "tag": "FAMILIAR",
+      "minutes": 20,
+      "title": "UX Researcher",
+      "org": "Forkful",
+      "orgPlain": "the app students use to track campus meal credits",
+      "hook": "Less 'asking people what they want' — more finding the truth inside five contradictory interviews.",
+      "youWill": "Turn messy interview notes into 3 honest findings — including the one your boss won't like.",
+      "orientation": {
+        "company": "Forkful is the app students use to check and spend their campus meal credits. The company wins when students open the app, like it, and the university keeps the contract.",
+        "role": "A UX (user experience) researcher figures out what users actually need — by interviewing them, watching them, and studying what they do. The hard part isn't the interviews. It's telling the truth about what you found, especially when it's not what your team wanted to hear.",
+        "people": [
+          "Alex Park — the product manager. Friendly, ambitious, and already in love with an idea.",
+          "P1 through P5 — five students you interviewed. Their words are your evidence."
+        ]
+      },
+      "brief": "You interviewed 5 students about Forkful. Your teammate Alex is already convinced the answer is adding a social feed — because a competitor added one and their numbers went up. The interview notes are messy and contradictory (that's normal). Your job: find what the evidence actually says, including the part Alex won't want to hear — and say it anyway, with receipts.",
+      "task": "Pull the top 3 themes out of the notes with evidence, make one recommendation, and answer the social-feed question directly.",
+      "glossary": [
+        {
+          "term": "synthesis",
+          "plain": "The step after interviews: boiling messy notes down into a few clear findings. The hardest and most valuable part of research."
+        },
+        {
+          "term": "theme",
+          "plain": "A pattern that shows up across multiple people — not just one person's opinion."
+        },
+        {
+          "term": "engagement",
+          "plain": "How much people use an app — opens, taps, time spent. Companies obsess over it. More engagement isn't always better for users."
+        },
+        {
+          "term": "social feed",
+          "plain": "A scrolling stream of posts from other people, like Instagram. Alex wants to add one to a meal-credit app."
+        },
+        {
+          "term": "stakeholder",
+          "plain": "Anyone with a stake in your work's outcome — here, Alex, who needs your findings but also has an agenda."
+        }
+      ],
+      "docs": [
+        {
+          "label": "NOTES",
+          "title": "Raw interview notes — 5 students",
+          "kind": "thread",
+          "body": [
+            "P1, sophomore — 'I just want to see my balance without logging in. It's six taps.' Built a home-screen widget workaround. Checks balance 'every time I'm in line.'",
+            "P2, junior — Gets anxious around week 9 'when I'm suddenly always broke.' Screenshots her balance every Sunday and keeps them in an album 'to see how fast it's going.' Wants to know 'will I make it to finals.'",
+            "P3, freshman — 'Me and my roommates compare what we have left.' When probed: it's coordination — who has guest passes, who can cover dinner. They use a group text for this. Said 'a feed would be funny I guess' then changed the subject.",
+            "P4, senior — 'I turned off every notification the first week. Apps that nudge me get deleted.' Opens Forkful only at the register.",
+            "P5, sophomore — Skipped meals the last two weeks of fall semester after running out of credits. 'I wish it had told me earlier I was burning through them fast.'"
+          ]
+        },
+        {
+          "label": "CHAT",
+          "title": "DM from Alex Park, 8:51 AM",
+          "kind": "thread",
+          "body": [
+            "Alex — morning!! ok so Munch (competitor) shipped a social feed and their engagement is up 20%, a board member sent the article to our CEO 🙃 I'm writing the plan for ours this week. Your interviews wrapped, right? The research will back this up — students are social, dining is social, it writes itself. Findings by end of day? 🙏"
+          ]
+        },
+        {
+          "label": "GOALS",
+          "title": "The research questions (you wrote these before interviewing)",
+          "kind": "doc",
+          "body": [
+            "1. How do students track and manage meal credits across a semester?",
+            "2. What are the top moments of friction or anxiety?",
+            "3. What are the 3 most important things to build next?",
+            "Method: 5 interviews, 25 minutes each. Notes are close to word-for-word."
+          ]
+        }
+      ],
+      "starters": [
+        "Why does everyone care so much about engagement?",
+        "What did Munch's feed actually do for users?",
+        "What happens if my findings don't support the feed?"
+      ],
+      "workSections": [
+        {
+          "id": "themes",
+          "label": "TOP 3 THEMES",
+          "prompt": "Three patterns across the interviews. For each: the theme in one sentence + which participants support it.",
+          "hint": "Look for what multiple people DO, not just say. Four of the five describe the same underlying worry — can you name it?",
+          "core": true
+        },
+        {
+          "id": "rec",
+          "label": "YOUR ONE RECOMMENDATION",
+          "prompt": "If Forkful builds one thing next, what is it and why?",
+          "hint": "P1's widget, P2's screenshots, and P5's regret are all homemade versions of the same missing feature."
+        },
+        {
+          "id": "alex",
+          "label": "THE ALEX CONVERSATION",
+          "prompt": "Answer the feed question directly. 3-4 sentences you'd actually send Alex — honest, evidence-based, not preachy.",
+          "hint": "P3 is the trap — 'social' showed up, but what was it really about? And what did P4 say about apps that demand attention?",
+          "core": true
+        }
+      ],
+      "moments": [
+        "Sifting contradictory quotes into themes",
+        "Noticing what people do vs. what they say",
+        "Telling a teammate the evidence disagrees with them",
+        "The slog of re-reading raw notes",
+        "Crafting the one-sentence insight that sticks"
+      ],
+      "colleague": {
+        "name": "Alex Park",
+        "role": "Product Manager"
+      },
+      "taxi": {
+        "docLabel": "NOTES",
+        "brief": "You're the UX researcher at Forkful, the app students use to manage campus meal credits. You interviewed five students. Your teammate Alex is already convinced the next feature should be a social feed (a competitor added one). Your job is to find what the evidence actually says. Here are your raw notes.",
+        "payoff": "What you just did — reading five messy humans and finding the one worry underneath — is the core skill of UX research. The full version adds Alex (who really, really wants that social feed) pushing back in DMs, and the hardest part of the job: telling a teammate the evidence disagrees with them."
+      },
+      "interactions": [
+        {
+          "question": "Four of these five students share one underlying worry. What is it?",
+          "options": [
+            {
+              "label": "They want the app to be more social and fun",
+              "reaction": "Only P3 mentions anything social — and probed, it's really coordination (who has guest passes, who covers dinner), which their group text already handles. One student changing the subject isn't a theme.",
+              "correct": false
+            },
+            {
+              "label": "They're anxious about running out of credits before the semester ends",
+              "reaction": "That's the thread: P1 checks his balance in every line, P2 screenshots hers weekly to see 'how fast it's going', P3's roommates coordinate who can cover dinner, P5 literally skipped meals. Four homemade versions of the same missing feature — a burn-rate warning. Research is pattern-spotting across what people DO.",
+              "correct": true
+            },
+            {
+              "label": "They find the app hard to navigate",
+              "reaction": "P1's six-taps complaint touches this, but nobody else does. A theme needs multiple people — that's what makes it evidence rather than an anecdote.",
+              "correct": false
+            }
+          ]
+        },
+        {
+          "question": "P3 said 'a feed would be funny I guess' then changed the subject. P4 deletes apps that send notifications. If you tell Alex the feed isn't supported by the research, what's your strongest evidence style?",
+          "options": [
+            {
+              "label": "Quote the users directly — their words, not your opinion",
+              "reaction": "Yes. 'P4: apps that nudge me get deleted' survives a fight; 'I don't think users want it' doesn't. Researchers win arguments with receipts, not vibes.",
+              "correct": true
+            },
+            {
+              "label": "Explain that competitors' metrics don't transfer between products",
+              "reaction": "True and useful — but abstract arguments bounce off someone in love with an idea. The quotes are the crowbar. Lead with receipts, then the logic.",
+              "correct": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "supply-cobalt",
+      "domain": "OPERATIONS / LOGISTICS",
+      "tag": "HIDDEN",
+      "minutes": 25,
+      "title": "Supply Chain Analyst",
+      "org": "Cobalt Coffee Co.",
+      "orgPlain": "a coffee roasting company that ships beans to subscribers",
+      "hook": "The invisible job that decides whether the thing you ordered actually shows up.",
+      "youWill": "Do the math on a stuck shipment and make a call worth thousands of dollars.",
+      "orientation": {
+        "company": "Cobalt Coffee buys raw coffee beans from farms abroad, roasts them, and ships bags to customers. Their July promotion stars a specific Colombian bean — and the ad money is already spent.",
+        "role": "A supply chain analyst makes sure materials arrive where they're needed, when they're needed, at a cost that makes sense. It's part math, part negotiation, part fortune-telling. When a shipment gets stuck, you're the one who figures out what to do — with real money on the line.",
+        "people": [
+          "Dre Coleman — operations manager. Practical, numbers-first, your sanity check.",
+          "Tomás — head roaster. Cares about taste and honesty above all.",
+          "Bree — marketing chief. Has already spent $18,000 promoting July 2."
+        ]
+      },
+      "brief": "The shipment of Colombian beans — the star of the July 2 promotion — is stuck at a port. New arrival date: July 9, a week AFTER the promotion starts. Marketing says the date can't move (paid influencers post July 2). The head roaster hates the idea of secretly substituting a different bean. You have price quotes for flying beans in early, current inventory numbers, and three weeks. Someone has to do the math and make a call. That someone is you.",
+      "task": "Work out when the beans actually run out, pick an option (or invent a hybrid), put a price on it, and write the two messages that sell your plan to the roaster and the marketing chief.",
+      "glossary": [
+        {
+          "term": "burn rate",
+          "plain": "How fast you use something up. Cobalt 'burns' 2,400 lbs of this bean in a normal week."
+        },
+        {
+          "term": "air freight",
+          "plain": "Shipping by plane. Fast but expensive. Ships ('ocean freight') are slow but cheap."
+        },
+        {
+          "term": "gross margin",
+          "plain": "Roughly: what you sell something for minus what it cost to make. Cobalt makes about $6.40 per pound of roasted coffee."
+        },
+        {
+          "term": "stockout",
+          "plain": "Running out of a product people are trying to buy. During a paid promotion, it's the worst outcome — you paid to disappoint people."
+        },
+        {
+          "term": "lead time",
+          "plain": "How long between ordering something and it actually arriving."
+        },
+        {
+          "term": "cupping score",
+          "plain": "A 0-100 taste rating professionals give coffee. 88 is excellent; 85 is very good. Three points is noticeable to coffee nerds."
+        },
+        {
+          "term": "SKU",
+          "plain": "One specific product version on the shelf — e.g., '12oz Colombian Huila, whole bean' is one SKU."
+        }
+      ],
+      "docs": [
+        {
+          "label": "INVENTORY",
+          "title": "What's in the warehouse — as of today (Jun 11)",
+          "kind": "data",
+          "body": [
+            "ON HAND",
+            "  Huila (the Colombian star) ... 6,200 lbs",
+            "  Cerrado (Brazilian backup) ... 4,000 lbs",
+            "     · cupping score 85 vs Huila's 88",
+            "",
+            "BURN RATE (Huila)",
+            "  Normal weeks ........ 2,400 lbs/week",
+            "  Promo weeks (fcst) .. 3,400 lbs/week, Jul 2-15",
+            "",
+            "TIMELINE",
+            "  Today → promo start ....... 3 normal weeks",
+            "  Stuck shipment arrives .... July 9",
+            "",
+            "DO THE MATH: 3 normal weeks + promo week 1 — ",
+            "when does the 6,200 lbs hit zero?"
+          ]
+        },
+        {
+          "label": "QUOTES",
+          "title": "Shipping quotes — Bogotá freight office",
+          "kind": "data",
+          "body": [
+            "OCEAN (current plan) — already paid, arrives July 9.",
+            "AIR — minimum 5,000 lbs, costs an EXTRA $2.10/lb",
+            "      = $10,500 total premium. Arrives June 22.",
+            "SPLIT — not offered. 5,000 lbs is the airline minimum.",
+            "",
+            "CONTEXT FOR YOUR MATH:",
+            "  Gross margin ≈ $6.40 per roasted lb",
+            "  Promotion ad spend, already committed: $18,000"
+          ]
+        },
+        {
+          "label": "EMAIL",
+          "title": "Thread: 'Summer promo — bean situation'",
+          "kind": "thread",
+          "body": [
+            "Tomás (Head Roaster) — The Cerrado is a fine coffee. It is NOT the coffee on the bags we printed. Earthier, less bright, scores 3 points lower. If we quietly ship it under the Huila label I will be very unhappy and our reviews will show it. A clearly-labeled blend? ...Maybe.",
+            "Bree (Marketing) — The promo date cannot move. Twelve creators post July 2, contracts signed, $18k spent. I don't care what's in the bag as long as customers love it and nobody accuses us of a bait-and-switch.",
+            "Tomás — Those two sentences are in tension, Bree."
+          ]
+        }
+      ],
+      "starters": [
+        "Can you walk me through how burn rate math works?",
+        "How bad is a stockout really, in dollars?",
+        "Could we do a clearly-labeled blend for part of the promo?"
+      ],
+      "workSections": [
+        {
+          "id": "math",
+          "label": "THE MATH",
+          "prompt": "Week by week: how many pounds of Huila are left? Under the current plan, what date do you hit zero?",
+          "hint": "3 normal weeks × 2,400 = 7,200 lbs... but you only have 6,200. You run dry BEFORE the promo even starts. Now what does that change?",
+          "core": true
+        },
+        {
+          "id": "call",
+          "label": "YOUR CALL + THE PRICE TAG",
+          "prompt": "Pick your option (air, substitute, blend, delay, hybrid). What does it cost? What does it risk?",
+          "hint": "Compare the $10,500 air premium against $18,000 of ad spend pointed at empty shelves. Also: nothing says options can't be combined.",
+          "core": true
+        },
+        {
+          "id": "tomas",
+          "label": "MESSAGE TO TOMÁS",
+          "prompt": "2-3 sentences to the roaster. He cares about honesty and taste.",
+          "hint": "He already told you his line: no secret substitutes, maybe a labeled blend. Work with his line, not against it."
+        },
+        {
+          "id": "bree",
+          "label": "MESSAGE TO BREE",
+          "prompt": "2-3 sentences to marketing. She cares about July 2 and customer love.",
+          "hint": "Give her certainty about the date and a story she can tell customers proudly."
+        }
+      ],
+      "moments": [
+        "Running the burn-rate math by hand",
+        "Trading taste and honesty against money",
+        "Finding the option nobody put on the table",
+        "The grind of unit math",
+        "Writing a call you'd be accountable for"
+      ],
+      "colleague": {
+        "name": "Dre Coleman",
+        "role": "Operations Manager"
+      },
+      "taxi": {
+        "docLabel": "INVENTORY",
+        "brief": "You're the supply chain analyst at Cobalt Coffee. The Colombian bean starring in the July 2 promotion is stuck at a port until July 9 — a week late. Marketing already spent $18,000 promoting the date. Here's the warehouse math. Before anyone debates options, someone has to find out how bad this actually is. That someone is you.",
+        "payoff": "You just caught what the whole company missed: the plan was broken **before** the shipment got stuck. That's what supply chain analysts do — run the boring math that changes the argument. The full version adds shipping quotes, a roaster who won't fake the label, an $18k-committed marketer, and a call with real money on it."
+      },
+      "interactions": [
+        {
+          "question": "6,200 lbs on hand. Normal weeks burn 2,400 lbs, and there are 3 normal weeks before the promo even starts. When do you run out?",
+          "options": [
+            {
+              "label": "During promo week 1 — tight but survivable",
+              "reaction": "Run it again: 3 × 2,400 = 7,200 lbs needed before the promo starts… and you only have 6,200. You run dry BEFORE day one of the promotion. The crisis isn't the stuck shipment — the plan never worked.",
+              "correct": false
+            },
+            {
+              "label": "Before the promo even starts — 3 normal weeks need 7,200 lbs and you have 6,200",
+              "reaction": "Correct, and this changes everything: everyone's arguing about July 9 vs July 2, but the math says the shelves go empty in week 3 regardless. Analysts earn their seat by being the first person to actually multiply.",
+              "correct": true
+            },
+            {
+              "label": "You don't run out — the July 9 shipment covers it",
+              "reaction": "July 9 is after three normal weeks (7,200 lbs of demand) hit a 6,200 lb pile. The gap opens before the rescue arrives. Timelines and burn rates have to be read together.",
+              "correct": false
+            }
+          ]
+        },
+        {
+          "question": "Air freight costs an extra $10,500 and lands June 22. What number do you weigh that against?",
+          "options": [
+            {
+              "label": "The $18,000 of ad spend already pointed at July 2",
+              "reaction": "That's the frame: $10,500 to protect $18,000 of committed marketing (plus the promo revenue itself, at $6.40/lb margin). Spending money to protect bigger money is what 'doing the math' means in operations. Whether it's the WHOLE answer… that's the full sim.",
+              "correct": true
+            },
+            {
+              "label": "The normal shipping cost you already paid",
+              "reaction": "Sunk cost — it's gone either way. The comparison that matters is the $10,500 premium against what a stockout torches: $18k of ads pointed at empty shelves, plus every lost sale. Analysts compare futures, not pasts.",
+              "correct": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "slp-maplegrove",
+      "domain": "HEALTH / EDUCATION",
+      "tag": "HIDDEN",
+      "minutes": 25,
+      "title": "Speech-Language Pathologist",
+      "org": "Maple Grove Elementary",
+      "orgPlain": "a public elementary school — you're the specialist who helps kids with speech",
+      "hook": "Part scientist, part coach, part detective — for how kids learn to talk.",
+      "youWill": "Figure out which of a 5-year-old's speech quirks are normal, design a game to fix the one that isn't, and reassure a worried mom.",
+      "orientation": {
+        "company": "Maple Grove is an elementary school. Speech-language pathologists ('SLPs') work in schools, hospitals, and clinics — it's a huge real profession most students have never heard of, helping people of every age speak, understand, and communicate.",
+        "role": "A school SLP screens kids' speech, decides what's age-typical versus what needs help, runs short therapy sessions disguised as play, and translates everything for teachers and parents. The science is real, the clients are five, and the stakes are a kid's confidence.",
+        "people": [
+          "Leo — age 5, kindergarten. Sweet, getting quieter. Says 'wabbit' and 'tat'.",
+          "Dana — Leo's mom. Worried. Grandma told her 'boys just talk late.'",
+          "Ms. Ortiz — the experienced SLP mentoring you. Warm, won't do your thinking for you."
+        ]
+      },
+      "brief": "Leo, age 5, was flagged by the school's speech screening. He says 'wabbit' for rabbit and 'tat' for cat, strangers understand only about 60% of what he says, and his teacher reports he's gone quiet at circle time — yesterday he cried after another kid laughed at him. His mom emailed: is something wrong, or is this normal? Here's the thing — SOME of what Leo does is perfectly typical for age 5. Some isn't. Your job is to tell the difference, plan what to do about the part that matters, and write his mom a note that's honest without being scary.",
+      "task": "Use the development chart to sort typical from not-typical, design one 20-minute session activity for the priority sound, and write the parent note.",
+      "glossary": [
+        {
+          "term": "screening",
+          "plain": "A quick check given to all kids to catch who might need a closer look. Failing a screening isn't a diagnosis — it's a flag."
+        },
+        {
+          "term": "intelligibility",
+          "plain": "What percentage of a child's speech a listener can understand. By age 5, strangers should catch nearly all of it."
+        },
+        {
+          "term": "fronting",
+          "plain": "Making back-of-the-mouth sounds (k, g) at the front instead — 'tat' for cat, 'doh' for go. Typical in toddlers; a flag if it lasts past age 4."
+        },
+        {
+          "term": "gliding",
+          "plain": "Swapping r or l for w — 'wabbit' for rabbit. One of the LAST patterns kids outgrow; often totally normal until 6 or 7."
+        },
+        {
+          "term": "receptive language",
+          "plain": "What a child UNDERSTANDS (as opposed to what they can say). Leo's understanding is perfect — important clue."
+        },
+        {
+          "term": "articulation",
+          "plain": "The physical production of speech sounds — getting the tongue and lips to make 'k' or 'r' correctly."
+        }
+      ],
+      "docs": [
+        {
+          "label": "SCREENING",
+          "title": "Leo M. — speech screening results (age 5 yrs, 3 mos)",
+          "kind": "data",
+          "body": [
+            "SOUND PATTERNS OBSERVED",
+            "  r → w  ('wabbit')        consistent   [gliding]",
+            "  k → t  ('tat' for cat)   consistent   [fronting]",
+            "  g → d  ('do' for go)     consistent   [fronting]",
+            "  l → w  ('wike')          sometimes    [gliding]",
+            "",
+            "INTELLIGIBILITY: ~60% to an unfamiliar adult",
+            "RECEPTIVE LANGUAGE: age-appropriate — understands",
+            "  everything, follows 3-step directions easily",
+            "VOCABULARY: strong",
+            "BEHAVIOR NOTE: teacher reports withdrawing at circle",
+            "  time; cried 6/09 after a peer laughed at him"
+          ]
+        },
+        {
+          "label": "CHART",
+          "title": "When kids typically master sounds (clinic reference)",
+          "kind": "data",
+          "body": [
+            "SOUND          TYPICALLY MASTERED BY",
+            "  k, g ........ age 3½ - 4",
+            "  l ........... age 5 - 6",
+            "  r ........... age 6 - 7 (often the very last)",
+            "",
+            "PATTERNS",
+            "  gliding (r/l → w) ... can be typical to age 6",
+            "  fronting (k → t) .... usually GONE by age 4",
+            "     · still present at 5+ → treat, don't wait",
+            "",
+            "INTELLIGIBILITY BENCHMARKS (to strangers)",
+            "  age 3: ~75%   age 4: ~90%+   age 5: ~95%+"
+          ]
+        },
+        {
+          "label": "EMAIL",
+          "title": "From: Dana M. (Leo's mom)",
+          "kind": "doc",
+          "body": [
+            "Subject: Leo's screening??",
+            "Hi — I got the letter that Leo was flagged and I've been up googling since. His grandma keeps saying 'boys talk late, his uncle was the same.' But yesterday he came home and wouldn't tell me about his day, and his teacher mentioned the crying thing.",
+            "Is something actually wrong? Did we do something? Should we wait and see like grandma says, or is that wasting time? Please be straight with me. — Dana"
+          ]
+        }
+      ],
+      "starters": [
+        "What's the difference between gliding and fronting, in normal words?",
+        "How do you get a shy 5-year-old to practice sounds?",
+        "How honest should I be with a worried parent?"
+      ],
+      "workSections": [
+        {
+          "id": "sort",
+          "label": "TYPICAL vs. NEEDS HELP",
+          "prompt": "Which of Leo's patterns are normal for 5 years 3 months, and which one is the real concern? Cite the chart.",
+          "hint": "Check each pattern's age on the chart. One of Leo's habits should have disappeared over a year ago. The 'wabbit' thing might not be the problem at all.",
+          "core": true
+        },
+        {
+          "id": "session",
+          "label": "ONE SESSION PLAN",
+          "prompt": "Design a 20-minute activity targeting the priority sound — for a 5-year-old who's recently embarrassed about talking. Make it a game.",
+          "hint": "Ms. Ortiz's rule: follow the kid's interests. What games naturally repeat k and g words? (Think: cars go, blocks crash, 'go go go!')"
+        },
+        {
+          "id": "parent",
+          "label": "NOTE TO DANA",
+          "prompt": "4-6 sentences. Honest about what needs work, clear that it's fixable, zero jargon, and address the 'wait and see' question directly.",
+          "hint": "Dana asked you to be straight. Tell her what's normal (so she can exhale), what you'll work on (so she trusts you), and why waiting isn't the move for THIS pattern.",
+          "core": true
+        }
+      ],
+      "moments": [
+        "Matching a real kid against a clinical chart",
+        "Designing a game a 5-year-old will actually want to play",
+        "Translating clinical findings for a worried parent",
+        "Holding the data and the kid's feelings at once",
+        "The paperwork side of caring work"
+      ],
+      "colleague": {
+        "name": "Ms. Ortiz",
+        "role": "Mentor SLP"
+      },
+      "taxi": {
+        "docLabel": "SCREENING",
+        "brief": "You're the speech-language pathologist at Maple Grove Elementary. Leo, age 5, got flagged by the school's speech screening — he says 'wabbit' for rabbit and 'tat' for cat, and strangers understand about 60% of what he says. His mom is up at night googling. Grandma says 'boys just talk late.' Here are his screening results and the clinical reference chart. Some of what Leo does is perfectly normal for age 5. Some isn't.",
+        "payoff": "You just made an actual clinical judgment: separating what's developmentally normal from what needs help, using a reference chart — not vibes, not grandma. The full version adds designing a therapy session disguised as a game for a shy 5-year-old, and writing his worried mom a note that's honest without being scary."
+      },
+      "interactions": [
+        {
+          "question": "Leo says 'wabbit' (r→w) and 'tat' for cat (k→t). Check both against the chart. Which one is the real concern at age 5 years, 3 months?",
+          "options": [
+            {
+              "label": "'Wabbit' — he's saying the R sound wrong",
+              "reaction": "Natural guess — it's the most noticeable. But check the chart: R is mastered at age 6–7, often the LAST sound kids get. 'Wabbit' at five is textbook normal. The quieter error is the flag: K→T fronting should be gone by age 4. Leo is over a year past that.",
+              "correct": false
+            },
+            {
+              "label": "'Tat' for cat — fronting should have disappeared by age 4",
+              "reaction": "Correct — and counterintuitive, which is the point. The error everyone notices ('wabbit') is normal; the one nobody clocks (fronting at 5+) is the treat-now flag, especially with strangers understanding only 60% (age-5 benchmark: ~95%). Charts beat instincts.",
+              "correct": true
+            },
+            {
+              "label": "Both are equally worrying",
+              "reaction": "The chart splits them cleanly: gliding (r/l→w) can be typical to age 6; fronting past 4 is the outlier. Precision here matters — it decides whether a 5-year-old gets help now or wastes a year 'waiting to grow out of it'.",
+              "correct": false
+            }
+          ]
+        },
+        {
+          "question": "Leo's receptive language (what he UNDERSTANDS) tested age-appropriate — he follows 3-step directions easily. Why does that matter so much?",
+          "options": [
+            {
+              "label": "It narrows the problem to producing sounds, not processing language — a much better prognosis",
+              "reaction": "Exactly. Understanding intact + strong vocabulary + specific sound errors = an articulation problem, very treatable with therapy. If comprehension were behind too, you'd be looking at something broader. One 'boring' normal result changes the whole picture — and it's the first thing you'll tell his mom.",
+              "correct": true
+            },
+            {
+              "label": "It means the screening probably over-flagged him",
+              "reaction": "No — the fronting and 60% intelligibility are real flags regardless. What understanding-intact does is *locate* the problem: his brain has the words; his mouth needs coaching on two sounds. That's genuinely good news, but it doesn't mean 'wait and see'.",
+              "correct": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "smm-tidewater",
+      "domain": "MARKETING / MEDIA",
+      "tag": "FAMILIAR",
+      "minutes": 20,
+      "title": "Social Media Manager",
+      "org": "Tidewater Aquarium",
+      "orgPlain": "a mid-size city aquarium — you run their accounts (180k followers)",
+      "hook": "You think it's posting memes. It's part publicist, part analyst, part crisis handler.",
+      "youWill": "Defuse an angry comment thread, fix Friday's posts, and turn a viral otter into ticket sales.",
+      "orientation": {
+        "company": "Tidewater Aquarium is a real business: ticket sales keep the lights on and the animals fed. The social accounts exist to make people love the aquarium — and then actually visit it.",
+        "role": "A social media manager writes the posts, reads the numbers, answers the public, and absorbs the heat when something lands wrong. The fun parts are real. So is the part where 220 strangers are angry and your one-sentence reply will be screenshot forever.",
+        "people": [
+          "Marcus — marketing director, your boss. Supportive. Hates surprises.",
+          "The comment section — currently on fire under the jellyfish post."
+        ]
+      },
+      "brief": "Three things are on your desk this morning. One: yesterday's otter video is your best post ever — 430,000 views and climbing. Two: a post about the new jellyfish exhibit is in trouble — the caption joked 'our jellies don't sting (much)' and a visitor commented that her kid actually WAS stung last week; the thread is at 220 angry replies and someone just tagged a local news account. Three: Friday's three scheduled posts need your approval by 2pm, and ticket sales for the jellyfish exhibit opening are 30% under goal. Welcome to Tuesday.",
+      "task": "Handle the angry thread (including writing the actual public reply, if you'd reply), fix Friday's posts, and find a way to turn otter fame into jellyfish tickets.",
+      "glossary": [
+        {
+          "term": "engagement",
+          "plain": "Likes, comments, shares, watch time — signs people interacted with a post. High engagement spreads a post further."
+        },
+        {
+          "term": "scheduled posts",
+          "plain": "Posts written in advance and queued to publish automatically — the unglamorous backbone of the job."
+        },
+        {
+          "term": "brand voice",
+          "plain": "The personality rules for how an account talks. Tidewater's: playful, but never at a guest's expense; zero jokes about safety."
+        },
+        {
+          "term": "link clicks",
+          "plain": "How many people tapped through to the website (where tickets are sold). Views impress people; clicks pay the bills."
+        },
+        {
+          "term": "ratio'd",
+          "plain": "When a post gets far more angry replies than likes — the internet's way of saying 'this landed badly.'"
+        },
+        {
+          "term": "reach",
+          "plain": "How many different people saw a post at all."
+        }
+      ],
+      "docs": [
+        {
+          "label": "NUMBERS",
+          "title": "Last 7 posts — performance",
+          "kind": "data",
+          "body": [
+            "POST                      VIEWS    LIKES   LINK CLICKS",
+            "Otter 'hands' video      430,000  61,000      210",
+            "Jellyfish promo (joke)     8,100     390      488",
+            "Feeding time reel         54,000   4,800      102",
+            "Shark facts carousel      21,000   2,100       96",
+            "Member discount post       6,400     310      512",
+            "Behind-scenes vet visit   38,000   5,200       88",
+            "Summer camp signup         5,900     280      441",
+            "",
+            "READ CLOSELY: which kind of post gets VIEWS,",
+            "and which kind actually sells TICKETS?",
+            "Exhibit opens in 9 days. Sales 30% under goal."
+          ]
+        },
+        {
+          "label": "THREAD",
+          "title": "The comment situation — jellyfish post",
+          "kind": "thread",
+          "body": [
+            "@kerri.muldoon — 'Don't sting (much)'?? My daughter was stung at your touch pool LAST WEEK. We spent the evening at urgent care. This caption is disgusting.",
+            "@reefkeeper88 — wow deleting my membership",
+            "@danaplusthree — Touch pools are interactive, stings can happen, the staff handled it well when we visited 🤷‍♀️",
+            "@kerri.muldoon — @danaplusthree staff WERE kind, that's not the point. The point is they're JOKING about it.",
+            "@portcity_scanner (local news) — 👀 DMs open if anyone wants to talk",
+            "  ... 215 more replies, mostly negative, growing ~20/hour"
+          ]
+        },
+        {
+          "label": "QUEUE",
+          "title": "Friday's scheduled posts + the brand voice rule",
+          "kind": "doc",
+          "body": [
+            "POST 1 (draft): Photo of moon jellies. Caption: 'Our new neighbors are total airheads — literally, they have no brains! Opening June 20.'",
+            "POST 2 (draft): Otter follow-up video (already edited, very cute). Caption: 'You asked, Pebble delivers. Part 2.'",
+            "POST 3 (draft): Ticket-discount graphic. Caption: 'Members save 20% on Jellyfish: Drifting Worlds. Link in bio.'",
+            "BRAND VOICE GUIDE (excerpt): Playful, curious, welcoming. Never at a guest's expense. Safety topics: zero jokes, no exceptions. Every promo post must include a reason to visit THIS month."
+          ]
+        }
+      ],
+      "starters": [
+        "What actually happened with the sting incident?",
+        "Do we ever just delete a post like this?",
+        "Which matters more for us — views or link clicks?"
+      ],
+      "workSections": [
+        {
+          "id": "crisis",
+          "label": "THE ANGRY THREAD",
+          "prompt": "Delete the post, edit it, reply publicly, or something else? If you'd reply, write the exact words.",
+          "hint": "Ask Marcus what really happened first. A good public reply usually: owns the mistake plainly, skips excuses, says what changes, and moves the rest to DMs. Deleting without a word has its own risks — what are they?",
+          "core": true
+        },
+        {
+          "id": "queue",
+          "label": "FRIDAY'S POSTS",
+          "prompt": "Approve, fix, or kill each of the three drafts. One line of reasoning per post.",
+          "hint": "Re-read Post 1's caption in the light of today's situation. Then check Post 3 against the LAST line of the brand voice guide."
+        },
+        {
+          "id": "otter",
+          "label": "OTTER → TICKETS",
+          "prompt": "One concrete idea that uses the otter's 430k-view momentum to sell jellyfish exhibit tickets. Be specific.",
+          "hint": "The numbers doc shows views and clicks come from different post types. Can one post deliver both — what would Pebble the otter doing something WITH the jellyfish exhibit look like?",
+          "core": true
+        }
+      ],
+      "moments": [
+        "Writing one public sentence 220 angry people will judge",
+        "Reading the numbers for what actually sells tickets",
+        "Killing a funny caption because of the moment",
+        "The scheduling grind nobody sees",
+        "Turning a viral moment into a business result"
+      ],
+      "colleague": {
+        "name": "Marcus Webb",
+        "role": "Marketing Director"
+      },
+      "taxi": {
+        "docLabel": "NUMBERS",
+        "brief": "You run social media for Tidewater Aquarium — 180k followers, and ticket sales keep the lights on. Your otter video just hit 430,000 views, your best post ever. The jellyfish exhibit opens in 9 days and sales are 30% under goal. Before you post anything else, read your own numbers.",
+        "payoff": "You just found the trap most social media managers fall into: **views feel like winning, clicks pay the bills.** The full version adds a comment section on fire (a joke caption met a real injured kid), a local reporter sliding into the mentions, Friday's post queue to fix, and your boss asking 'what's your read?'"
+      },
+      "interactions": [
+        {
+          "question": "The otter video: 430,000 views, 210 link clicks. The member-discount post: 6,400 views, 512 clicks. The exhibit is undersold. Which post type is actually selling tickets?",
+          "options": [
+            {
+              "label": "The otter — 430k views is enormous reach",
+              "reaction": "It's fame, not sales: 430,000 people watched and 210 clicked toward a ticket (0.05%). The 'boring' discount post converted 8% — 512 buyers from 6,400 viewers. Entertainment builds the audience; offers convert it. Confusing the two is the #1 rookie mistake in this job.",
+              "correct": false
+            },
+            {
+              "label": "The quiet promo posts — tiny views, but 2–5x the clicks",
+              "reaction": "Right. Discount post: 512 clicks from 6,400 views. Summer camp: 441 from 5,900. The otter: 210 from 430,000. Different posts have different jobs — and 9 days before an undersold opening, you need the clicking kind. The pro move (full sim) is making ONE post that does both. Pebble meets the jellyfish…",
+              "correct": true
+            },
+            {
+              "label": "Neither — social media doesn't really drive ticket sales",
+              "reaction": "The data on your own screen disagrees: hundreds of tracked clicks straight to the ticket page. Social drives sales fine — just not from the posts that go viral. Read the click column, not the view column.",
+              "correct": false
+            }
+          ]
+        },
+        {
+          "question": "Friday's queued post jokes that the new moon jellies are 'total airheads — literally, no brains!' Given that a visitor's kid was stung at the touch pool last week and the comments are angry about a previous jellyfish joke — what do you do with it?",
+          "options": [
+            {
+              "label": "It's harmless wordplay about jellyfish anatomy — keep it",
+              "reaction": "On a normal week, sure. This week, any jellyfish joke lands next to a thread about a stung child — context rewrites captions. The brand guide even says it: playful, never at a guest's expense, zero safety jokes. Scheduled posts are landmines; timing is the job.",
+              "correct": false
+            },
+            {
+              "label": "Pull or rewrite it — this week, jellyfish jokes read very differently",
+              "reaction": "Correct. Nothing is wrong with the caption in a vacuum — but posts don't publish into vacuums, they publish into moods. Killing a perfectly good joke because of the moment is a real (and underrated) social media skill.",
+              "correct": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "planner-aldercreek",
+      "domain": "GOVERNMENT / CITIES",
+      "tag": "HIDDEN",
+      "minutes": 25,
+      "title": "Urban Planner",
+      "org": "City of Alder Creek",
+      "orgPlain": "a city government office that decides how streets and neighborhoods change",
+      "hook": "Every street you've ever walked was someone's spreadsheet — and someone's shouting match.",
+      "youWill": "Use crash data and angry emails to decide a street's future, then write words that survive a town hall.",
+      "orientation": {
+        "company": "Alder Creek's planning office shapes how the city physically changes — streets, housing, parks. Planners gather data, listen to residents (who often disagree loudly), and recommend decisions to the elected city council.",
+        "role": "An urban planner is a translator between numbers and neighbors. You analyze traffic counts and safety data, read furious and heartfelt public emails, find compromises hiding in the details, and then stand in a community meeting and explain the plan in plain language. The math is the easy part.",
+        "people": [
+          "Renata Flores — senior planner, 100 of these fights behind her. Your guide.",
+          "Birch Street — nine small businesses, 24 parking spots, 11 injured cyclists in 3 years.",
+          "Thursday's community meeting — where your words meet the public."
+        ]
+      },
+      "brief": "The city council asked your office to evaluate adding a protected bike lane on Birch Street. The catch: it would remove 24 parking spots in front of 9 small businesses. In 3 years, 11 cyclists have been injured on Birch — 2 seriously. The bakery owner says parking is her lifeline. A parent says she holds her breath every time her daughter bikes to school. There's a petition against (312 signatures) and one for (540). Thursday night is the community meeting. The council wants your recommendation — and they want talking points that won't get them booed.",
+      "task": "Make a recommendation backed by the numbers, design something concrete to offer the worried businesses, and write three talking points in plain human language for Thursday.",
+      "glossary": [
+        {
+          "term": "protected bike lane",
+          "plain": "A bike lane physically separated from cars by curbs or posts — not just painted lines. Far safer, but takes more street space."
+        },
+        {
+          "term": "parking occupancy",
+          "plain": "What percentage of parking spots are actually in use. 62% average means at most hours, 1 in 3 spots sits empty."
+        },
+        {
+          "term": "loading zone",
+          "plain": "A curb space reserved for delivery trucks to stop briefly — a common compromise to keep businesses supplied when parking is removed."
+        },
+        {
+          "term": "traffic volume",
+          "plain": "How many vehicles use a street per day. Birch carries 8,400 cars daily."
+        },
+        {
+          "term": "talking points",
+          "plain": "Short, plain statements an official can say at a public meeting — accurate, calm, and hard to twist."
+        },
+        {
+          "term": "petition",
+          "plain": "A signed list of residents supporting or opposing something. Loud, but not always representative of everyone."
+        }
+      ],
+      "docs": [
+        {
+          "label": "DATA",
+          "title": "Birch Street — the numbers",
+          "kind": "data",
+          "body": [
+            "SAFETY",
+            "  Cyclist injuries, last 3 yrs ..... 11 (2 serious)",
+            "  Daily traffic volume ............. 8,400 cars",
+            "",
+            "PARKING (survey, 2 weeks)",
+            "  The 24 spots in question:",
+            "    average occupancy ..... 62% full",
+            "    peak (Saturday noon) .. 91% full",
+            "  City garage, 1 block away:",
+            "    average occupancy ..... 35% full",
+            "",
+            "PRECEDENT — Elm Street (similar lane, built 2 yrs ago)",
+            "  Business revenue after 1 yr ...... +4%",
+            "  Cyclists using the street ........ +60%",
+            "  Initial business opposition ...... fierce"
+          ]
+        },
+        {
+          "label": "INBOX",
+          "title": "Public comments (a sample of 200+)",
+          "kind": "thread",
+          "body": [
+            "Marisol (Birch St Bakery) — 'I've run this bakery 14 years. Maybe 40% of my customers drive. Take the parking and you take my livelihood. Please, please think about us.'",
+            "Devon (parent) — 'My daughter is 12 and bikes to school on Birch because there's no other route. I hold my breath every single morning. Eleven injuries. What number is enough?'",
+            "Hal (hardware store) — 'My deliveries need curb access twice a day. A truck can't park a block away with 50 bags of concrete.'",
+            "Petition AGAINST the lane: 312 signatures (mostly Birch St addresses). Petition FOR: 540 signatures (skews younger, city-wide)."
+          ]
+        },
+        {
+          "label": "MEMO",
+          "title": "Guidance from the city council",
+          "kind": "doc",
+          "body": [
+            "From the council office, re: Birch Street study —",
+            "Safety remains this council's stated priority. That said, we are not interested in a war with our own small businesses. Budget allows EITHER the full protected lane OR a cheaper paint-only lane, not both halves of something else. Loading zones and signage changes can be funded separately if recommended.",
+            "Bring us something we can defend on Thursday."
+          ]
+        }
+      ],
+      "starters": [
+        "What's the difference between a protected lane and just paint?",
+        "How do these community meetings usually go?",
+        "What do you do when both sides are kind of right?"
+      ],
+      "workSections": [
+        {
+          "id": "rec",
+          "label": "YOUR RECOMMENDATION",
+          "prompt": "Build it, modify it, or don't — and the 2-3 numbers that carry your case.",
+          "hint": "Put the parking data next to the garage data. Is the problem really a shortage of parking — or a shortage of parking AWARENESS? And what does Elm Street predict?",
+          "core": true
+        },
+        {
+          "id": "offer",
+          "label": "THE OFFER TO BUSINESSES",
+          "prompt": "Something concrete for Marisol and Hal — not sympathy, logistics.",
+          "hint": "The council memo funds loading zones and signage separately. What package addresses Hal's concrete bags AND Marisol's driving customers?"
+        },
+        {
+          "id": "points",
+          "label": "THREE TALKING POINTS",
+          "prompt": "Three sentences a council member could say Thursday — plain language, honest, hard to boo.",
+          "hint": "Renata's test: lead with the value everyone shares (no one wants a kid hurt), pair every loss with the offset, and never make the businesses the villain.",
+          "core": true
+        }
+      ],
+      "moments": [
+        "Finding the compromise hiding in the data",
+        "Reading furious emails from people who aren't wrong",
+        "Turning statistics into town-hall sentences",
+        "Weighing a kid's safety against a baker's rent",
+        "The unglamorous parking-count math"
+      ],
+      "colleague": {
+        "name": "Renata Flores",
+        "role": "Senior Planner"
+      },
+      "taxi": {
+        "docLabel": "DATA",
+        "brief": "You're the urban planner for the city of Alder Creek. The council wants your recommendation on a protected bike lane for Birch Street: 11 cyclists injured in 3 years, but the lane would remove 24 parking spots in front of 9 small businesses — and the businesses are furious. Thursday night is the public meeting. Here are the numbers both sides are shouting about (mostly without reading them).",
+        "payoff": "You just found the compromise hiding in the data — the thing both shouting sides missed. That's urban planning: the math is easy, but knowing which number defuses which fear is the craft. The full version adds the furious (and sympathetic) public emails, the council's constraints, and writing three sentences that survive a room of 80 upset neighbors."
+      },
+      "interactions": [
+        {
+          "question": "The businesses say removing 24 spots kills them. Look at the parking survey. What's the number that changes this conversation?",
+          "options": [
+            {
+              "label": "Peak occupancy hits 91% on Saturdays — parking really is scarce",
+              "reaction": "That's the number the businesses feel, and it's real for a few hours a week. But look one line down: the city garage one block away sits 35% full — hundreds of empty spaces, all week, a one-minute walk. Scarcity on the curb, abundance around the corner.",
+              "correct": false
+            },
+            {
+              "label": "The garage one block away sits 35% full — the parking exists, it's just not on the curb",
+              "reaction": "That's the unlock. The fight isn't parking vs. bikes — it's curb habit vs. a garage nobody signposted. Pair that with Elm Street's precedent (+4% business revenue a year after its lane) and you have a recommendation that answers the bakery's actual fear.",
+              "correct": true
+            },
+            {
+              "label": "8,400 cars a day — Birch is too busy for a bike lane",
+              "reaction": "Volume is why the lane needs *protection*, not why it can't exist — 11 injuries in 3 years says the current street already fails. The persuading number is in the parking section.",
+              "correct": false
+            }
+          ]
+        },
+        {
+          "question": "The hardware store owner needs truck deliveries at the curb twice a day — 50 bags of concrete can't walk a block. The council memo funds 'loading zones and signage' separately. What's your move?",
+          "options": [
+            {
+              "label": "Design the lane with dedicated loading zones at the delivery points — his problem is solvable without killing the lane",
+              "reaction": "Right. Hal's fear is specific, legitimate, and cheap to fix — which makes it the easiest 'no' to turn into a 'yes'. Every angry email contains one solvable fear; planners who find it walk into Thursday with allies instead of opponents.",
+              "correct": true
+            },
+            {
+              "label": "Deliveries can use the garage like everyone else",
+              "reaction": "Concrete disagrees. Dismissing a physical constraint costs you the room — Hal's objection is the *reasonable* kind, and the memo literally pre-funds its solution. Solve the solvable fears; save your capital for the real trade-offs.",
+              "correct": false
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

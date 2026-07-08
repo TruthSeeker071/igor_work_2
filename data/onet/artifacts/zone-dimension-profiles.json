@@ -1,0 +1,2325 @@
+{
+  "business": [
+    {
+      "index": 32,
+      "weight": 0.0629,
+      "name": "Management of Financial Resources"
+    },
+    {
+      "index": 38,
+      "weight": 0.0574,
+      "name": "Sales and Marketing"
+    },
+    {
+      "index": 37,
+      "weight": 0.057,
+      "name": "Economics and Accounting"
+    },
+    {
+      "index": 149,
+      "weight": 0.053,
+      "name": "Selling or Influencing Others"
+    },
+    {
+      "index": 159,
+      "weight": 0.053,
+      "name": "Staffing Organizational Units"
+    },
+    {
+      "index": 40,
+      "weight": 0.0504,
+      "name": "Personnel and Human Resources"
+    },
+    {
+      "index": 155,
+      "weight": 0.0485,
+      "name": "Guiding, Directing, and Motivating Subordinates"
+    },
+    {
+      "index": 35,
+      "weight": 0.0484,
+      "name": "Administration and Management"
+    },
+    {
+      "index": 33,
+      "weight": 0.0454,
+      "name": "Management of Material Resources"
+    },
+    {
+      "index": 150,
+      "weight": 0.0412,
+      "name": "Resolving Conflicts and Negotiating with Others"
+    },
+    {
+      "index": 13,
+      "weight": 0.0373,
+      "name": "Negotiation"
+    },
+    {
+      "index": 160,
+      "weight": 0.0361,
+      "name": "Monitoring and Controlling Resources"
+    },
+    {
+      "index": 152,
+      "weight": 0.0356,
+      "name": "Coordinating the Work and Activities of Others"
+    },
+    {
+      "index": 36,
+      "weight": 0.0354,
+      "name": "Administrative"
+    },
+    {
+      "index": 39,
+      "weight": 0.035,
+      "name": "Customer and Personal Service"
+    },
+    {
+      "index": 12,
+      "weight": 0.0346,
+      "name": "Persuasion"
+    },
+    {
+      "index": 34,
+      "weight": 0.0332,
+      "name": "Management of Personnel Resources"
+    },
+    {
+      "index": 158,
+      "weight": 0.0317,
+      "name": "Performing Administrative Activities"
+    },
+    {
+      "index": 153,
+      "weight": 0.031,
+      "name": "Developing and Building Teams"
+    },
+    {
+      "index": 157,
+      "weight": 0.0307,
+      "name": "Providing Consultation and Advice to Others"
+    },
+    {
+      "index": 156,
+      "weight": 0.0301,
+      "name": "Coaching and Developing Others"
+    },
+    {
+      "index": 133,
+      "weight": 0.0294,
+      "name": "Scheduling Work and Activities"
+    },
+    {
+      "index": 146,
+      "weight": 0.0282,
+      "name": "Communicating with People Outside the Organization"
+    },
+    {
+      "index": 49,
+      "weight": 0.0274,
+      "name": "Mathematics"
+    },
+    {
+      "index": 47,
+      "weight": 0.0274,
+      "name": "Building and Construction"
+    }
+  ],
+  "marketing": [
+    {
+      "index": 38,
+      "weight": 0.1167,
+      "name": "Sales and Marketing"
+    },
+    {
+      "index": 149,
+      "weight": 0.0845,
+      "name": "Selling or Influencing Others"
+    },
+    {
+      "index": 146,
+      "weight": 0.0638,
+      "name": "Communicating with People Outside the Organization"
+    },
+    {
+      "index": 67,
+      "weight": 0.0621,
+      "name": "Communications and Media"
+    },
+    {
+      "index": 39,
+      "weight": 0.0428,
+      "name": "Customer and Personal Service"
+    },
+    {
+      "index": 36,
+      "weight": 0.0401,
+      "name": "Administrative"
+    },
+    {
+      "index": 32,
+      "weight": 0.0391,
+      "name": "Management of Financial Resources"
+    },
+    {
+      "index": 12,
+      "weight": 0.0363,
+      "name": "Persuasion"
+    },
+    {
+      "index": 157,
+      "weight": 0.0346,
+      "name": "Providing Consultation and Advice to Others"
+    },
+    {
+      "index": 17,
+      "weight": 0.0345,
+      "name": "Operations Analysis"
+    },
+    {
+      "index": 37,
+      "weight": 0.034,
+      "name": "Economics and Accounting"
+    },
+    {
+      "index": 134,
+      "weight": 0.0336,
+      "name": "Organizing, Planning, and Prioritizing Work"
+    },
+    {
+      "index": 54,
+      "weight": 0.0328,
+      "name": "Sociology and Anthropology"
+    },
+    {
+      "index": 35,
+      "weight": 0.0315,
+      "name": "Administration and Management"
+    },
+    {
+      "index": 132,
+      "weight": 0.0313,
+      "name": "Developing Objectives and Strategies"
+    },
+    {
+      "index": 59,
+      "weight": 0.0311,
+      "name": "English Language"
+    },
+    {
+      "index": 150,
+      "weight": 0.0303,
+      "name": "Resolving Conflicts and Negotiating with Others"
+    },
+    {
+      "index": 13,
+      "weight": 0.03,
+      "name": "Negotiation"
+    },
+    {
+      "index": 72,
+      "weight": 0.0291,
+      "name": "Fluency of Ideas"
+    },
+    {
+      "index": 49,
+      "weight": 0.0289,
+      "name": "Mathematics"
+    },
+    {
+      "index": 147,
+      "weight": 0.0282,
+      "name": "Establishing and Maintaining Interpersonal Relationships"
+    },
+    {
+      "index": 30,
+      "weight": 0.0265,
+      "name": "Systems Evaluation"
+    },
+    {
+      "index": 152,
+      "weight": 0.0263,
+      "name": "Coordinating the Work and Activities of Others"
+    },
+    {
+      "index": 130,
+      "weight": 0.0262,
+      "name": "Thinking Creatively"
+    },
+    {
+      "index": 160,
+      "weight": 0.0258,
+      "name": "Monitoring and Controlling Resources"
+    }
+  ],
+  "cybersecurity": [
+    {
+      "index": 64,
+      "weight": 0.0817,
+      "name": "Public Safety and Security"
+    },
+    {
+      "index": 21,
+      "weight": 0.0741,
+      "name": "Programming"
+    },
+    {
+      "index": 66,
+      "weight": 0.0644,
+      "name": "Telecommunications"
+    },
+    {
+      "index": 159,
+      "weight": 0.0506,
+      "name": "Staffing Organizational Units"
+    },
+    {
+      "index": 155,
+      "weight": 0.045,
+      "name": "Guiding, Directing, and Motivating Subordinates"
+    },
+    {
+      "index": 139,
+      "weight": 0.0446,
+      "name": "Working with Computers"
+    },
+    {
+      "index": 65,
+      "weight": 0.0409,
+      "name": "Law and Government"
+    },
+    {
+      "index": 44,
+      "weight": 0.0407,
+      "name": "Computers and Electronics"
+    },
+    {
+      "index": 39,
+      "weight": 0.0381,
+      "name": "Customer and Personal Service"
+    },
+    {
+      "index": 45,
+      "weight": 0.038,
+      "name": "Engineering and Technology"
+    },
+    {
+      "index": 153,
+      "weight": 0.0375,
+      "name": "Developing and Building Teams"
+    },
+    {
+      "index": 53,
+      "weight": 0.0351,
+      "name": "Psychology"
+    },
+    {
+      "index": 127,
+      "weight": 0.0347,
+      "name": "Evaluating Information to Determine Compliance with Standards"
+    },
+    {
+      "index": 58,
+      "weight": 0.0333,
+      "name": "Education and Training"
+    },
+    {
+      "index": 122,
+      "weight": 0.0323,
+      "name": "Identifying Objects, Actions, and Events"
+    },
+    {
+      "index": 156,
+      "weight": 0.031,
+      "name": "Coaching and Developing Others"
+    },
+    {
+      "index": 40,
+      "weight": 0.0308,
+      "name": "Personnel and Human Resources"
+    },
+    {
+      "index": 47,
+      "weight": 0.0296,
+      "name": "Building and Construction"
+    },
+    {
+      "index": 142,
+      "weight": 0.0292,
+      "name": "Repairing and Maintaining Electronic Equipment"
+    },
+    {
+      "index": 157,
+      "weight": 0.0284,
+      "name": "Providing Consultation and Advice to Others"
+    },
+    {
+      "index": 150,
+      "weight": 0.0279,
+      "name": "Resolving Conflicts and Negotiating with Others"
+    },
+    {
+      "index": 35,
+      "weight": 0.0279,
+      "name": "Administration and Management"
+    },
+    {
+      "index": 123,
+      "weight": 0.0271,
+      "name": "Inspecting Equipment, Structures, or Materials"
+    },
+    {
+      "index": 100,
+      "weight": 0.0263,
+      "name": "Explosive Strength"
+    },
+    {
+      "index": 83,
+      "weight": 0.0254,
+      "name": "Flexibility of Closure"
+    },
+    {
+      "index": 140,
+      "weight": 0.0254,
+      "name": "Drafting, Laying Out, and Specifying Technical Devices, Parts, and Equipment"
+    }
+  ],
+  "tech": [
+    {
+      "index": 21,
+      "weight": 0.09,
+      "name": "Programming"
+    },
+    {
+      "index": 139,
+      "weight": 0.072,
+      "name": "Working with Computers"
+    },
+    {
+      "index": 19,
+      "weight": 0.072,
+      "name": "Technology Design"
+    },
+    {
+      "index": 44,
+      "weight": 0.0621,
+      "name": "Computers and Electronics"
+    },
+    {
+      "index": 45,
+      "weight": 0.0534,
+      "name": "Engineering and Technology"
+    },
+    {
+      "index": 17,
+      "weight": 0.0453,
+      "name": "Operations Analysis"
+    },
+    {
+      "index": 46,
+      "weight": 0.0447,
+      "name": "Design"
+    },
+    {
+      "index": 128,
+      "weight": 0.0409,
+      "name": "Analyzing Data or Information"
+    },
+    {
+      "index": 49,
+      "weight": 0.0402,
+      "name": "Mathematics"
+    },
+    {
+      "index": 126,
+      "weight": 0.0381,
+      "name": "Processing Information"
+    },
+    {
+      "index": 18,
+      "weight": 0.0374,
+      "name": "Technology Design"
+    },
+    {
+      "index": 130,
+      "weight": 0.0328,
+      "name": "Thinking Creatively"
+    },
+    {
+      "index": 144,
+      "weight": 0.0314,
+      "name": "Interpreting the Meaning of Information for Others"
+    },
+    {
+      "index": 79,
+      "weight": 0.0309,
+      "name": "Mathematical Reasoning"
+    },
+    {
+      "index": 4,
+      "weight": 0.0302,
+      "name": "Mathematics"
+    },
+    {
+      "index": 131,
+      "weight": 0.0297,
+      "name": "Updating and Using Relevant Knowledge"
+    },
+    {
+      "index": 5,
+      "weight": 0.0296,
+      "name": "Science"
+    },
+    {
+      "index": 157,
+      "weight": 0.0293,
+      "name": "Providing Consultation and Advice to Others"
+    },
+    {
+      "index": 30,
+      "weight": 0.029,
+      "name": "Systems Evaluation"
+    },
+    {
+      "index": 29,
+      "weight": 0.027,
+      "name": "Systems Analysis"
+    },
+    {
+      "index": 66,
+      "weight": 0.0268,
+      "name": "Telecommunications"
+    },
+    {
+      "index": 25,
+      "weight": 0.0236,
+      "name": "Troubleshooting"
+    },
+    {
+      "index": 80,
+      "weight": 0.0231,
+      "name": "Number Facility"
+    },
+    {
+      "index": 124,
+      "weight": 0.0211,
+      "name": "Estimating the Quantifiable Characteristics of Products, Events, or Information"
+    },
+    {
+      "index": 16,
+      "weight": 0.0199,
+      "name": "Complex Problem Solving"
+    },
+    {
+      "index": 27,
+      "weight": 0.0195,
+      "name": "Quality Control Analysis"
+    }
+  ],
+  "agriculture": [
+    {
+      "index": 43,
+      "weight": 0.0667,
+      "name": "Food Production"
+    },
+    {
+      "index": 138,
+      "weight": 0.0568,
+      "name": "Operating Vehicles, Mechanized Devices, or Equipment"
+    },
+    {
+      "index": 48,
+      "weight": 0.0541,
+      "name": "Mechanical"
+    },
+    {
+      "index": 52,
+      "weight": 0.0481,
+      "name": "Biology"
+    },
+    {
+      "index": 136,
+      "weight": 0.0479,
+      "name": "Handling and Moving Objects"
+    },
+    {
+      "index": 135,
+      "weight": 0.0445,
+      "name": "Performing General Physical Activities"
+    },
+    {
+      "index": 93,
+      "weight": 0.0444,
+      "name": "Multilimb Coordination"
+    },
+    {
+      "index": 141,
+      "weight": 0.0432,
+      "name": "Repairing and Maintaining Mechanical Equipment"
+    },
+    {
+      "index": 85,
+      "weight": 0.0426,
+      "name": "Spatial Orientation"
+    },
+    {
+      "index": 99,
+      "weight": 0.0417,
+      "name": "Static Strength"
+    },
+    {
+      "index": 96,
+      "weight": 0.0399,
+      "name": "Reaction Time"
+    },
+    {
+      "index": 95,
+      "weight": 0.0371,
+      "name": "Rate Control"
+    },
+    {
+      "index": 94,
+      "weight": 0.037,
+      "name": "Response Orientation"
+    },
+    {
+      "index": 137,
+      "weight": 0.0361,
+      "name": "Controlling Machines and Processes"
+    },
+    {
+      "index": 41,
+      "weight": 0.0356,
+      "name": "Transportation"
+    },
+    {
+      "index": 92,
+      "weight": 0.0353,
+      "name": "Control Precision"
+    },
+    {
+      "index": 23,
+      "weight": 0.0345,
+      "name": "Operation and Control"
+    },
+    {
+      "index": 47,
+      "weight": 0.0343,
+      "name": "Building and Construction"
+    },
+    {
+      "index": 42,
+      "weight": 0.0331,
+      "name": "Production and Processing"
+    },
+    {
+      "index": 104,
+      "weight": 0.0324,
+      "name": "Extent Flexibility"
+    },
+    {
+      "index": 113,
+      "weight": 0.0324,
+      "name": "Depth Perception"
+    },
+    {
+      "index": 103,
+      "weight": 0.0314,
+      "name": "Stamina"
+    },
+    {
+      "index": 112,
+      "weight": 0.0309,
+      "name": "Peripheral Vision"
+    },
+    {
+      "index": 114,
+      "weight": 0.0307,
+      "name": "Glare Sensitivity"
+    },
+    {
+      "index": 51,
+      "weight": 0.0291,
+      "name": "Chemistry"
+    }
+  ],
+  "education": [
+    {
+      "index": 63,
+      "weight": 0.0692,
+      "name": "Philosophy and Theology"
+    },
+    {
+      "index": 62,
+      "weight": 0.0687,
+      "name": "History and Archeology"
+    },
+    {
+      "index": 58,
+      "weight": 0.0634,
+      "name": "Education and Training"
+    },
+    {
+      "index": 54,
+      "weight": 0.0621,
+      "name": "Sociology and Anthropology"
+    },
+    {
+      "index": 154,
+      "weight": 0.0547,
+      "name": "Training and Teaching Others"
+    },
+    {
+      "index": 57,
+      "weight": 0.049,
+      "name": "Therapy and Counseling"
+    },
+    {
+      "index": 8,
+      "weight": 0.0444,
+      "name": "Learning Strategies"
+    },
+    {
+      "index": 59,
+      "weight": 0.0423,
+      "name": "English Language"
+    },
+    {
+      "index": 55,
+      "weight": 0.0413,
+      "name": "Geography"
+    },
+    {
+      "index": 14,
+      "weight": 0.04,
+      "name": "Instructing"
+    },
+    {
+      "index": 156,
+      "weight": 0.0379,
+      "name": "Coaching and Developing Others"
+    },
+    {
+      "index": 144,
+      "weight": 0.0374,
+      "name": "Interpreting the Meaning of Information for Others"
+    },
+    {
+      "index": 53,
+      "weight": 0.0367,
+      "name": "Psychology"
+    },
+    {
+      "index": 119,
+      "weight": 0.0351,
+      "name": "Speech Clarity"
+    },
+    {
+      "index": 71,
+      "weight": 0.0339,
+      "name": "Written Expression"
+    },
+    {
+      "index": 2,
+      "weight": 0.0322,
+      "name": "Writing"
+    },
+    {
+      "index": 130,
+      "weight": 0.0314,
+      "name": "Thinking Creatively"
+    },
+    {
+      "index": 61,
+      "weight": 0.0302,
+      "name": "Fine Arts"
+    },
+    {
+      "index": 0,
+      "weight": 0.028,
+      "name": "Reading Comprehension"
+    },
+    {
+      "index": 132,
+      "weight": 0.0279,
+      "name": "Developing Objectives and Strategies"
+    },
+    {
+      "index": 69,
+      "weight": 0.0276,
+      "name": "Written Comprehension"
+    },
+    {
+      "index": 3,
+      "weight": 0.0272,
+      "name": "Speaking"
+    },
+    {
+      "index": 70,
+      "weight": 0.0271,
+      "name": "Oral Expression"
+    },
+    {
+      "index": 60,
+      "weight": 0.0262,
+      "name": "Foreign Language"
+    },
+    {
+      "index": 67,
+      "weight": 0.0261,
+      "name": "Communications and Media"
+    }
+  ],
+  "healthcare": [
+    {
+      "index": 56,
+      "weight": 0.1145,
+      "name": "Medicine and Dentistry"
+    },
+    {
+      "index": 148,
+      "weight": 0.0813,
+      "name": "Assisting and Caring for Others"
+    },
+    {
+      "index": 57,
+      "weight": 0.0812,
+      "name": "Therapy and Counseling"
+    },
+    {
+      "index": 52,
+      "weight": 0.0795,
+      "name": "Biology"
+    },
+    {
+      "index": 53,
+      "weight": 0.0621,
+      "name": "Psychology"
+    },
+    {
+      "index": 5,
+      "weight": 0.0528,
+      "name": "Science"
+    },
+    {
+      "index": 51,
+      "weight": 0.0412,
+      "name": "Chemistry"
+    },
+    {
+      "index": 121,
+      "weight": 0.035,
+      "name": "Monitoring Processes, Materials, or Surroundings"
+    },
+    {
+      "index": 143,
+      "weight": 0.0334,
+      "name": "Documenting/Recording Information"
+    },
+    {
+      "index": 39,
+      "weight": 0.032,
+      "name": "Customer and Personal Service"
+    },
+    {
+      "index": 89,
+      "weight": 0.0316,
+      "name": "Arm-Hand Steadiness"
+    },
+    {
+      "index": 151,
+      "weight": 0.0312,
+      "name": "Performing for or Working Directly with the Public"
+    },
+    {
+      "index": 122,
+      "weight": 0.0299,
+      "name": "Identifying Objects, Actions, and Events"
+    },
+    {
+      "index": 54,
+      "weight": 0.0292,
+      "name": "Sociology and Anthropology"
+    },
+    {
+      "index": 91,
+      "weight": 0.0283,
+      "name": "Finger Dexterity"
+    },
+    {
+      "index": 90,
+      "weight": 0.027,
+      "name": "Manual Dexterity"
+    },
+    {
+      "index": 131,
+      "weight": 0.0264,
+      "name": "Updating and Using Relevant Knowledge"
+    },
+    {
+      "index": 63,
+      "weight": 0.0251,
+      "name": "Philosophy and Theology"
+    },
+    {
+      "index": 74,
+      "weight": 0.0244,
+      "name": "Problem Sensitivity"
+    },
+    {
+      "index": 136,
+      "weight": 0.0236,
+      "name": "Handling and Moving Objects"
+    },
+    {
+      "index": 15,
+      "weight": 0.0226,
+      "name": "Service Orientation"
+    },
+    {
+      "index": 92,
+      "weight": 0.0222,
+      "name": "Control Precision"
+    },
+    {
+      "index": 10,
+      "weight": 0.0221,
+      "name": "Social Perceptiveness"
+    },
+    {
+      "index": 127,
+      "weight": 0.022,
+      "name": "Evaluating Information to Determine Compliance with Standards"
+    },
+    {
+      "index": 58,
+      "weight": 0.0215,
+      "name": "Education and Training"
+    }
+  ],
+  "finance": [
+    {
+      "index": 37,
+      "weight": 0.0777,
+      "name": "Economics and Accounting"
+    },
+    {
+      "index": 4,
+      "weight": 0.0729,
+      "name": "Mathematics"
+    },
+    {
+      "index": 32,
+      "weight": 0.0729,
+      "name": "Management of Financial Resources"
+    },
+    {
+      "index": 128,
+      "weight": 0.0532,
+      "name": "Analyzing Data or Information"
+    },
+    {
+      "index": 65,
+      "weight": 0.0479,
+      "name": "Law and Government"
+    },
+    {
+      "index": 146,
+      "weight": 0.0449,
+      "name": "Communicating with People Outside the Organization"
+    },
+    {
+      "index": 36,
+      "weight": 0.0447,
+      "name": "Administrative"
+    },
+    {
+      "index": 158,
+      "weight": 0.0434,
+      "name": "Performing Administrative Activities"
+    },
+    {
+      "index": 126,
+      "weight": 0.0405,
+      "name": "Processing Information"
+    },
+    {
+      "index": 127,
+      "weight": 0.0385,
+      "name": "Evaluating Information to Determine Compliance with Standards"
+    },
+    {
+      "index": 80,
+      "weight": 0.0379,
+      "name": "Number Facility"
+    },
+    {
+      "index": 120,
+      "weight": 0.037,
+      "name": "Getting Information"
+    },
+    {
+      "index": 49,
+      "weight": 0.0362,
+      "name": "Mathematics"
+    },
+    {
+      "index": 79,
+      "weight": 0.0354,
+      "name": "Mathematical Reasoning"
+    },
+    {
+      "index": 150,
+      "weight": 0.0354,
+      "name": "Resolving Conflicts and Negotiating with Others"
+    },
+    {
+      "index": 157,
+      "weight": 0.0336,
+      "name": "Providing Consultation and Advice to Others"
+    },
+    {
+      "index": 39,
+      "weight": 0.0308,
+      "name": "Customer and Personal Service"
+    },
+    {
+      "index": 35,
+      "weight": 0.0294,
+      "name": "Administration and Management"
+    },
+    {
+      "index": 144,
+      "weight": 0.0294,
+      "name": "Interpreting the Meaning of Information for Others"
+    },
+    {
+      "index": 134,
+      "weight": 0.0276,
+      "name": "Organizing, Planning, and Prioritizing Work"
+    },
+    {
+      "index": 40,
+      "weight": 0.0266,
+      "name": "Personnel and Human Resources"
+    },
+    {
+      "index": 147,
+      "weight": 0.0262,
+      "name": "Establishing and Maintaining Interpersonal Relationships"
+    },
+    {
+      "index": 30,
+      "weight": 0.0261,
+      "name": "Systems Evaluation"
+    },
+    {
+      "index": 71,
+      "weight": 0.0261,
+      "name": "Written Expression"
+    },
+    {
+      "index": 132,
+      "weight": 0.0257,
+      "name": "Developing Objectives and Strategies"
+    }
+  ],
+  "media": [
+    {
+      "index": 67,
+      "weight": 0.1284,
+      "name": "Communications and Media"
+    },
+    {
+      "index": 61,
+      "weight": 0.0973,
+      "name": "Fine Arts"
+    },
+    {
+      "index": 66,
+      "weight": 0.0962,
+      "name": "Telecommunications"
+    },
+    {
+      "index": 130,
+      "weight": 0.0607,
+      "name": "Thinking Creatively"
+    },
+    {
+      "index": 62,
+      "weight": 0.0579,
+      "name": "History and Archeology"
+    },
+    {
+      "index": 44,
+      "weight": 0.0555,
+      "name": "Computers and Electronics"
+    },
+    {
+      "index": 142,
+      "weight": 0.0428,
+      "name": "Repairing and Maintaining Electronic Equipment"
+    },
+    {
+      "index": 59,
+      "weight": 0.0397,
+      "name": "English Language"
+    },
+    {
+      "index": 55,
+      "weight": 0.0351,
+      "name": "Geography"
+    },
+    {
+      "index": 73,
+      "weight": 0.032,
+      "name": "Originality"
+    },
+    {
+      "index": 63,
+      "weight": 0.0311,
+      "name": "Philosophy and Theology"
+    },
+    {
+      "index": 131,
+      "weight": 0.0299,
+      "name": "Updating and Using Relevant Knowledge"
+    },
+    {
+      "index": 45,
+      "weight": 0.0299,
+      "name": "Engineering and Technology"
+    },
+    {
+      "index": 72,
+      "weight": 0.0258,
+      "name": "Fluency of Ideas"
+    },
+    {
+      "index": 151,
+      "weight": 0.0239,
+      "name": "Performing for or Working Directly with the Public"
+    },
+    {
+      "index": 92,
+      "weight": 0.0234,
+      "name": "Control Precision"
+    },
+    {
+      "index": 18,
+      "weight": 0.0232,
+      "name": "Technology Design"
+    },
+    {
+      "index": 46,
+      "weight": 0.0229,
+      "name": "Design"
+    },
+    {
+      "index": 86,
+      "weight": 0.0217,
+      "name": "Visualization"
+    },
+    {
+      "index": 110,
+      "weight": 0.0216,
+      "name": "Visual Color Discrimination"
+    },
+    {
+      "index": 54,
+      "weight": 0.0208,
+      "name": "Sociology and Anthropology"
+    },
+    {
+      "index": 109,
+      "weight": 0.0204,
+      "name": "Far Vision"
+    },
+    {
+      "index": 139,
+      "weight": 0.0204,
+      "name": "Working with Computers"
+    },
+    {
+      "index": 146,
+      "weight": 0.0198,
+      "name": "Communicating with People Outside the Organization"
+    },
+    {
+      "index": 87,
+      "weight": 0.0197,
+      "name": "Selective Attention"
+    }
+  ],
+  "engineering": [
+    {
+      "index": 45,
+      "weight": 0.0806,
+      "name": "Engineering and Technology"
+    },
+    {
+      "index": 46,
+      "weight": 0.0734,
+      "name": "Design"
+    },
+    {
+      "index": 140,
+      "weight": 0.0722,
+      "name": "Drafting, Laying Out, and Specifying Technical Devices, Parts, and Equipment"
+    },
+    {
+      "index": 50,
+      "weight": 0.0719,
+      "name": "Physics"
+    },
+    {
+      "index": 48,
+      "weight": 0.0591,
+      "name": "Mechanical"
+    },
+    {
+      "index": 5,
+      "weight": 0.0534,
+      "name": "Science"
+    },
+    {
+      "index": 47,
+      "weight": 0.0452,
+      "name": "Building and Construction"
+    },
+    {
+      "index": 51,
+      "weight": 0.0397,
+      "name": "Chemistry"
+    },
+    {
+      "index": 49,
+      "weight": 0.0395,
+      "name": "Mathematics"
+    },
+    {
+      "index": 18,
+      "weight": 0.0353,
+      "name": "Technology Design"
+    },
+    {
+      "index": 4,
+      "weight": 0.0352,
+      "name": "Mathematics"
+    },
+    {
+      "index": 17,
+      "weight": 0.0335,
+      "name": "Operations Analysis"
+    },
+    {
+      "index": 79,
+      "weight": 0.0326,
+      "name": "Mathematical Reasoning"
+    },
+    {
+      "index": 142,
+      "weight": 0.0326,
+      "name": "Repairing and Maintaining Electronic Equipment"
+    },
+    {
+      "index": 27,
+      "weight": 0.0321,
+      "name": "Quality Control Analysis"
+    },
+    {
+      "index": 25,
+      "weight": 0.0317,
+      "name": "Troubleshooting"
+    },
+    {
+      "index": 42,
+      "weight": 0.0287,
+      "name": "Production and Processing"
+    },
+    {
+      "index": 123,
+      "weight": 0.0286,
+      "name": "Inspecting Equipment, Structures, or Materials"
+    },
+    {
+      "index": 141,
+      "weight": 0.0259,
+      "name": "Repairing and Maintaining Mechanical Equipment"
+    },
+    {
+      "index": 44,
+      "weight": 0.0257,
+      "name": "Computers and Electronics"
+    },
+    {
+      "index": 80,
+      "weight": 0.0256,
+      "name": "Number Facility"
+    },
+    {
+      "index": 22,
+      "weight": 0.0247,
+      "name": "Operations Monitoring"
+    },
+    {
+      "index": 86,
+      "weight": 0.0246,
+      "name": "Visualization"
+    },
+    {
+      "index": 126,
+      "weight": 0.0242,
+      "name": "Processing Information"
+    },
+    {
+      "index": 128,
+      "weight": 0.024,
+      "name": "Analyzing Data or Information"
+    }
+  ],
+  "science": [
+    {
+      "index": 5,
+      "weight": 0.0828,
+      "name": "Science"
+    },
+    {
+      "index": 52,
+      "weight": 0.077,
+      "name": "Biology"
+    },
+    {
+      "index": 51,
+      "weight": 0.056,
+      "name": "Chemistry"
+    },
+    {
+      "index": 128,
+      "weight": 0.0537,
+      "name": "Analyzing Data or Information"
+    },
+    {
+      "index": 144,
+      "weight": 0.0503,
+      "name": "Interpreting the Meaning of Information for Others"
+    },
+    {
+      "index": 126,
+      "weight": 0.0471,
+      "name": "Processing Information"
+    },
+    {
+      "index": 55,
+      "weight": 0.0452,
+      "name": "Geography"
+    },
+    {
+      "index": 49,
+      "weight": 0.045,
+      "name": "Mathematics"
+    },
+    {
+      "index": 50,
+      "weight": 0.0398,
+      "name": "Physics"
+    },
+    {
+      "index": 4,
+      "weight": 0.0375,
+      "name": "Mathematics"
+    },
+    {
+      "index": 79,
+      "weight": 0.0368,
+      "name": "Mathematical Reasoning"
+    },
+    {
+      "index": 71,
+      "weight": 0.0361,
+      "name": "Written Expression"
+    },
+    {
+      "index": 124,
+      "weight": 0.0337,
+      "name": "Estimating the Quantifiable Characteristics of Products, Events, or Information"
+    },
+    {
+      "index": 0,
+      "weight": 0.0331,
+      "name": "Reading Comprehension"
+    },
+    {
+      "index": 69,
+      "weight": 0.0331,
+      "name": "Written Comprehension"
+    },
+    {
+      "index": 2,
+      "weight": 0.032,
+      "name": "Writing"
+    },
+    {
+      "index": 143,
+      "weight": 0.0312,
+      "name": "Documenting/Recording Information"
+    },
+    {
+      "index": 146,
+      "weight": 0.0309,
+      "name": "Communicating with People Outside the Organization"
+    },
+    {
+      "index": 62,
+      "weight": 0.0297,
+      "name": "History and Archeology"
+    },
+    {
+      "index": 120,
+      "weight": 0.0294,
+      "name": "Getting Information"
+    },
+    {
+      "index": 154,
+      "weight": 0.0284,
+      "name": "Training and Teaching Others"
+    },
+    {
+      "index": 76,
+      "weight": 0.0282,
+      "name": "Inductive Reasoning"
+    },
+    {
+      "index": 157,
+      "weight": 0.028,
+      "name": "Providing Consultation and Advice to Others"
+    },
+    {
+      "index": 132,
+      "weight": 0.0275,
+      "name": "Developing Objectives and Strategies"
+    },
+    {
+      "index": 80,
+      "weight": 0.0275,
+      "name": "Number Facility"
+    }
+  ],
+  "social": [
+    {
+      "index": 57,
+      "weight": 0.1067,
+      "name": "Therapy and Counseling"
+    },
+    {
+      "index": 148,
+      "weight": 0.0948,
+      "name": "Assisting and Caring for Others"
+    },
+    {
+      "index": 151,
+      "weight": 0.0831,
+      "name": "Performing for or Working Directly with the Public"
+    },
+    {
+      "index": 53,
+      "weight": 0.0735,
+      "name": "Psychology"
+    },
+    {
+      "index": 39,
+      "weight": 0.0554,
+      "name": "Customer and Personal Service"
+    },
+    {
+      "index": 63,
+      "weight": 0.0485,
+      "name": "Philosophy and Theology"
+    },
+    {
+      "index": 54,
+      "weight": 0.0454,
+      "name": "Sociology and Anthropology"
+    },
+    {
+      "index": 103,
+      "weight": 0.0448,
+      "name": "Stamina"
+    },
+    {
+      "index": 56,
+      "weight": 0.0426,
+      "name": "Medicine and Dentistry"
+    },
+    {
+      "index": 99,
+      "weight": 0.0399,
+      "name": "Static Strength"
+    },
+    {
+      "index": 104,
+      "weight": 0.0355,
+      "name": "Extent Flexibility"
+    },
+    {
+      "index": 136,
+      "weight": 0.0354,
+      "name": "Handling and Moving Objects"
+    },
+    {
+      "index": 106,
+      "weight": 0.0344,
+      "name": "Gross Body Coordination"
+    },
+    {
+      "index": 15,
+      "weight": 0.0319,
+      "name": "Service Orientation"
+    },
+    {
+      "index": 102,
+      "weight": 0.0308,
+      "name": "Trunk Strength"
+    },
+    {
+      "index": 93,
+      "weight": 0.0285,
+      "name": "Multilimb Coordination"
+    },
+    {
+      "index": 135,
+      "weight": 0.0282,
+      "name": "Performing General Physical Activities"
+    },
+    {
+      "index": 10,
+      "weight": 0.0244,
+      "name": "Social Perceptiveness"
+    },
+    {
+      "index": 89,
+      "weight": 0.0236,
+      "name": "Arm-Hand Steadiness"
+    },
+    {
+      "index": 101,
+      "weight": 0.0233,
+      "name": "Dynamic Strength"
+    },
+    {
+      "index": 107,
+      "weight": 0.0192,
+      "name": "Gross Body Equilibrium"
+    },
+    {
+      "index": 61,
+      "weight": 0.018,
+      "name": "Fine Arts"
+    },
+    {
+      "index": 100,
+      "weight": 0.0131,
+      "name": "Explosive Strength"
+    },
+    {
+      "index": 90,
+      "weight": 0.0104,
+      "name": "Manual Dexterity"
+    },
+    {
+      "index": 60,
+      "weight": 0.0088,
+      "name": "Foreign Language"
+    }
+  ],
+  "law": [
+    {
+      "index": 65,
+      "weight": 0.0859,
+      "name": "Law and Government"
+    },
+    {
+      "index": 64,
+      "weight": 0.0647,
+      "name": "Public Safety and Security"
+    },
+    {
+      "index": 57,
+      "weight": 0.0491,
+      "name": "Therapy and Counseling"
+    },
+    {
+      "index": 148,
+      "weight": 0.0452,
+      "name": "Assisting and Caring for Others"
+    },
+    {
+      "index": 151,
+      "weight": 0.0444,
+      "name": "Performing for or Working Directly with the Public"
+    },
+    {
+      "index": 100,
+      "weight": 0.0427,
+      "name": "Explosive Strength"
+    },
+    {
+      "index": 138,
+      "weight": 0.0421,
+      "name": "Operating Vehicles, Mechanized Devices, or Equipment"
+    },
+    {
+      "index": 53,
+      "weight": 0.0418,
+      "name": "Psychology"
+    },
+    {
+      "index": 112,
+      "weight": 0.0391,
+      "name": "Peripheral Vision"
+    },
+    {
+      "index": 94,
+      "weight": 0.0385,
+      "name": "Response Orientation"
+    },
+    {
+      "index": 114,
+      "weight": 0.0379,
+      "name": "Glare Sensitivity"
+    },
+    {
+      "index": 85,
+      "weight": 0.0377,
+      "name": "Spatial Orientation"
+    },
+    {
+      "index": 135,
+      "weight": 0.0373,
+      "name": "Performing General Physical Activities"
+    },
+    {
+      "index": 96,
+      "weight": 0.0366,
+      "name": "Reaction Time"
+    },
+    {
+      "index": 150,
+      "weight": 0.0363,
+      "name": "Resolving Conflicts and Negotiating with Others"
+    },
+    {
+      "index": 127,
+      "weight": 0.0362,
+      "name": "Evaluating Information to Determine Compliance with Standards"
+    },
+    {
+      "index": 143,
+      "weight": 0.0356,
+      "name": "Documenting/Recording Information"
+    },
+    {
+      "index": 98,
+      "weight": 0.0331,
+      "name": "Speed of Limb Movement"
+    },
+    {
+      "index": 99,
+      "weight": 0.0326,
+      "name": "Static Strength"
+    },
+    {
+      "index": 117,
+      "weight": 0.0324,
+      "name": "Sound Localization"
+    },
+    {
+      "index": 111,
+      "weight": 0.0323,
+      "name": "Night Vision"
+    },
+    {
+      "index": 56,
+      "weight": 0.0314,
+      "name": "Medicine and Dentistry"
+    },
+    {
+      "index": 106,
+      "weight": 0.0294,
+      "name": "Gross Body Coordination"
+    },
+    {
+      "index": 39,
+      "weight": 0.0292,
+      "name": "Customer and Personal Service"
+    },
+    {
+      "index": 103,
+      "weight": 0.0286,
+      "name": "Stamina"
+    }
+  ],
+  "creative": [
+    {
+      "index": 61,
+      "weight": 0.2015,
+      "name": "Fine Arts"
+    },
+    {
+      "index": 67,
+      "weight": 0.0816,
+      "name": "Communications and Media"
+    },
+    {
+      "index": 46,
+      "weight": 0.0649,
+      "name": "Design"
+    },
+    {
+      "index": 38,
+      "weight": 0.0649,
+      "name": "Sales and Marketing"
+    },
+    {
+      "index": 130,
+      "weight": 0.0639,
+      "name": "Thinking Creatively"
+    },
+    {
+      "index": 73,
+      "weight": 0.0514,
+      "name": "Originality"
+    },
+    {
+      "index": 86,
+      "weight": 0.0493,
+      "name": "Visualization"
+    },
+    {
+      "index": 62,
+      "weight": 0.0418,
+      "name": "History and Archeology"
+    },
+    {
+      "index": 72,
+      "weight": 0.0398,
+      "name": "Fluency of Ideas"
+    },
+    {
+      "index": 63,
+      "weight": 0.038,
+      "name": "Philosophy and Theology"
+    },
+    {
+      "index": 110,
+      "weight": 0.0302,
+      "name": "Visual Color Discrimination"
+    },
+    {
+      "index": 89,
+      "weight": 0.0294,
+      "name": "Arm-Hand Steadiness"
+    },
+    {
+      "index": 54,
+      "weight": 0.0276,
+      "name": "Sociology and Anthropology"
+    },
+    {
+      "index": 17,
+      "weight": 0.0262,
+      "name": "Operations Analysis"
+    },
+    {
+      "index": 151,
+      "weight": 0.0224,
+      "name": "Performing for or Working Directly with the Public"
+    },
+    {
+      "index": 42,
+      "weight": 0.0209,
+      "name": "Production and Processing"
+    },
+    {
+      "index": 90,
+      "weight": 0.0198,
+      "name": "Manual Dexterity"
+    },
+    {
+      "index": 149,
+      "weight": 0.0197,
+      "name": "Selling or Influencing Others"
+    },
+    {
+      "index": 91,
+      "weight": 0.0191,
+      "name": "Finger Dexterity"
+    },
+    {
+      "index": 105,
+      "weight": 0.0177,
+      "name": "Dynamic Flexibility"
+    },
+    {
+      "index": 147,
+      "weight": 0.0152,
+      "name": "Establishing and Maintaining Interpersonal Relationships"
+    },
+    {
+      "index": 134,
+      "weight": 0.0146,
+      "name": "Organizing, Planning, and Prioritizing Work"
+    },
+    {
+      "index": 59,
+      "weight": 0.0141,
+      "name": "English Language"
+    },
+    {
+      "index": 108,
+      "weight": 0.0131,
+      "name": "Near Vision"
+    },
+    {
+      "index": 146,
+      "weight": 0.0129,
+      "name": "Communicating with People Outside the Organization"
+    }
+  ],
+  "hospitality": [
+    {
+      "index": 43,
+      "weight": 0.2187,
+      "name": "Food Production"
+    },
+    {
+      "index": 136,
+      "weight": 0.0839,
+      "name": "Handling and Moving Objects"
+    },
+    {
+      "index": 151,
+      "weight": 0.0731,
+      "name": "Performing for or Working Directly with the Public"
+    },
+    {
+      "index": 102,
+      "weight": 0.0646,
+      "name": "Trunk Strength"
+    },
+    {
+      "index": 103,
+      "weight": 0.0549,
+      "name": "Stamina"
+    },
+    {
+      "index": 106,
+      "weight": 0.054,
+      "name": "Gross Body Coordination"
+    },
+    {
+      "index": 99,
+      "weight": 0.0485,
+      "name": "Static Strength"
+    },
+    {
+      "index": 104,
+      "weight": 0.0479,
+      "name": "Extent Flexibility"
+    },
+    {
+      "index": 90,
+      "weight": 0.0438,
+      "name": "Manual Dexterity"
+    },
+    {
+      "index": 135,
+      "weight": 0.0393,
+      "name": "Performing General Physical Activities"
+    },
+    {
+      "index": 89,
+      "weight": 0.037,
+      "name": "Arm-Hand Steadiness"
+    },
+    {
+      "index": 60,
+      "weight": 0.0346,
+      "name": "Foreign Language"
+    },
+    {
+      "index": 148,
+      "weight": 0.0319,
+      "name": "Assisting and Caring for Others"
+    },
+    {
+      "index": 93,
+      "weight": 0.0242,
+      "name": "Multilimb Coordination"
+    },
+    {
+      "index": 101,
+      "weight": 0.024,
+      "name": "Dynamic Strength"
+    },
+    {
+      "index": 98,
+      "weight": 0.0198,
+      "name": "Speed of Limb Movement"
+    },
+    {
+      "index": 107,
+      "weight": 0.0195,
+      "name": "Gross Body Equilibrium"
+    },
+    {
+      "index": 105,
+      "weight": 0.0151,
+      "name": "Dynamic Flexibility"
+    },
+    {
+      "index": 15,
+      "weight": 0.0142,
+      "name": "Service Orientation"
+    },
+    {
+      "index": 51,
+      "weight": 0.0135,
+      "name": "Chemistry"
+    },
+    {
+      "index": 116,
+      "weight": 0.0115,
+      "name": "Auditory Attention"
+    },
+    {
+      "index": 92,
+      "weight": 0.0106,
+      "name": "Control Precision"
+    },
+    {
+      "index": 91,
+      "weight": 0.0059,
+      "name": "Finger Dexterity"
+    },
+    {
+      "index": 88,
+      "weight": 0.0047,
+      "name": "Time Sharing"
+    },
+    {
+      "index": 100,
+      "weight": 0.0047,
+      "name": "Explosive Strength"
+    }
+  ],
+  "government": [
+    {
+      "index": 147,
+      "weight": 0.0486,
+      "name": "Establishing and Maintaining Interpersonal Relationships"
+    },
+    {
+      "index": 39,
+      "weight": 0.0486,
+      "name": "Customer and Personal Service"
+    },
+    {
+      "index": 134,
+      "weight": 0.0445,
+      "name": "Organizing, Planning, and Prioritizing Work"
+    },
+    {
+      "index": 36,
+      "weight": 0.0436,
+      "name": "Administrative"
+    },
+    {
+      "index": 145,
+      "weight": 0.0431,
+      "name": "Communicating with Supervisors, Peers, or Subordinates"
+    },
+    {
+      "index": 131,
+      "weight": 0.0431,
+      "name": "Updating and Using Relevant Knowledge"
+    },
+    {
+      "index": 120,
+      "weight": 0.0427,
+      "name": "Getting Information"
+    },
+    {
+      "index": 126,
+      "weight": 0.0414,
+      "name": "Processing Information"
+    },
+    {
+      "index": 70,
+      "weight": 0.0411,
+      "name": "Oral Expression"
+    },
+    {
+      "index": 68,
+      "weight": 0.041,
+      "name": "Oral Comprehension"
+    },
+    {
+      "index": 59,
+      "weight": 0.04,
+      "name": "English Language"
+    },
+    {
+      "index": 108,
+      "weight": 0.0398,
+      "name": "Near Vision"
+    },
+    {
+      "index": 129,
+      "weight": 0.0391,
+      "name": "Making Decisions and Solving Problems"
+    },
+    {
+      "index": 122,
+      "weight": 0.0387,
+      "name": "Identifying Objects, Actions, and Events"
+    },
+    {
+      "index": 1,
+      "weight": 0.0378,
+      "name": "Active Listening"
+    },
+    {
+      "index": 69,
+      "weight": 0.0378,
+      "name": "Written Comprehension"
+    },
+    {
+      "index": 44,
+      "weight": 0.0374,
+      "name": "Computers and Electronics"
+    },
+    {
+      "index": 118,
+      "weight": 0.0373,
+      "name": "Speech Recognition"
+    },
+    {
+      "index": 0,
+      "weight": 0.0373,
+      "name": "Reading Comprehension"
+    },
+    {
+      "index": 121,
+      "weight": 0.0368,
+      "name": "Monitoring Processes, Materials, or Surroundings"
+    },
+    {
+      "index": 3,
+      "weight": 0.0364,
+      "name": "Speaking"
+    },
+    {
+      "index": 6,
+      "weight": 0.0363,
+      "name": "Critical Thinking"
+    },
+    {
+      "index": 127,
+      "weight": 0.0363,
+      "name": "Evaluating Information to Determine Compliance with Standards"
+    },
+    {
+      "index": 146,
+      "weight": 0.0357,
+      "name": "Communicating with People Outside the Organization"
+    },
+    {
+      "index": 139,
+      "weight": 0.0356,
+      "name": "Working with Computers"
+    }
+  ],
+  "operations": [
+    {
+      "index": 135,
+      "weight": 0.0529,
+      "name": "Performing General Physical Activities"
+    },
+    {
+      "index": 138,
+      "weight": 0.0503,
+      "name": "Operating Vehicles, Mechanized Devices, or Equipment"
+    },
+    {
+      "index": 136,
+      "weight": 0.0503,
+      "name": "Handling and Moving Objects"
+    },
+    {
+      "index": 104,
+      "weight": 0.0498,
+      "name": "Extent Flexibility"
+    },
+    {
+      "index": 141,
+      "weight": 0.0495,
+      "name": "Repairing and Maintaining Mechanical Equipment"
+    },
+    {
+      "index": 99,
+      "weight": 0.0463,
+      "name": "Static Strength"
+    },
+    {
+      "index": 93,
+      "weight": 0.0427,
+      "name": "Multilimb Coordination"
+    },
+    {
+      "index": 96,
+      "weight": 0.0421,
+      "name": "Reaction Time"
+    },
+    {
+      "index": 52,
+      "weight": 0.0397,
+      "name": "Biology"
+    },
+    {
+      "index": 95,
+      "weight": 0.0397,
+      "name": "Rate Control"
+    },
+    {
+      "index": 106,
+      "weight": 0.0378,
+      "name": "Gross Body Coordination"
+    },
+    {
+      "index": 92,
+      "weight": 0.0378,
+      "name": "Control Precision"
+    },
+    {
+      "index": 107,
+      "weight": 0.0373,
+      "name": "Gross Body Equilibrium"
+    },
+    {
+      "index": 24,
+      "weight": 0.0371,
+      "name": "Equipment Maintenance"
+    },
+    {
+      "index": 103,
+      "weight": 0.037,
+      "name": "Stamina"
+    },
+    {
+      "index": 123,
+      "weight": 0.0368,
+      "name": "Inspecting Equipment, Structures, or Materials"
+    },
+    {
+      "index": 90,
+      "weight": 0.0368,
+      "name": "Manual Dexterity"
+    },
+    {
+      "index": 98,
+      "weight": 0.0367,
+      "name": "Speed of Limb Movement"
+    },
+    {
+      "index": 23,
+      "weight": 0.036,
+      "name": "Operation and Control"
+    },
+    {
+      "index": 94,
+      "weight": 0.0356,
+      "name": "Response Orientation"
+    },
+    {
+      "index": 101,
+      "weight": 0.035,
+      "name": "Dynamic Strength"
+    },
+    {
+      "index": 113,
+      "weight": 0.0347,
+      "name": "Depth Perception"
+    },
+    {
+      "index": 26,
+      "weight": 0.0329,
+      "name": "Repairing"
+    },
+    {
+      "index": 114,
+      "weight": 0.0329,
+      "name": "Glare Sensitivity"
+    },
+    {
+      "index": 85,
+      "weight": 0.0322,
+      "name": "Spatial Orientation"
+    }
+  ],
+  "trades": [
+    {
+      "index": 137,
+      "weight": 0.0646,
+      "name": "Controlling Machines and Processes"
+    },
+    {
+      "index": 136,
+      "weight": 0.0534,
+      "name": "Handling and Moving Objects"
+    },
+    {
+      "index": 141,
+      "weight": 0.0526,
+      "name": "Repairing and Maintaining Mechanical Equipment"
+    },
+    {
+      "index": 96,
+      "weight": 0.05,
+      "name": "Reaction Time"
+    },
+    {
+      "index": 48,
+      "weight": 0.0491,
+      "name": "Mechanical"
+    },
+    {
+      "index": 23,
+      "weight": 0.0459,
+      "name": "Operation and Control"
+    },
+    {
+      "index": 95,
+      "weight": 0.0455,
+      "name": "Rate Control"
+    },
+    {
+      "index": 24,
+      "weight": 0.0446,
+      "name": "Equipment Maintenance"
+    },
+    {
+      "index": 92,
+      "weight": 0.0436,
+      "name": "Control Precision"
+    },
+    {
+      "index": 26,
+      "weight": 0.0417,
+      "name": "Repairing"
+    },
+    {
+      "index": 93,
+      "weight": 0.041,
+      "name": "Multilimb Coordination"
+    },
+    {
+      "index": 90,
+      "weight": 0.0369,
+      "name": "Manual Dexterity"
+    },
+    {
+      "index": 25,
+      "weight": 0.0362,
+      "name": "Troubleshooting"
+    },
+    {
+      "index": 89,
+      "weight": 0.0362,
+      "name": "Arm-Hand Steadiness"
+    },
+    {
+      "index": 104,
+      "weight": 0.036,
+      "name": "Extent Flexibility"
+    },
+    {
+      "index": 99,
+      "weight": 0.0359,
+      "name": "Static Strength"
+    },
+    {
+      "index": 42,
+      "weight": 0.0356,
+      "name": "Production and Processing"
+    },
+    {
+      "index": 94,
+      "weight": 0.0356,
+      "name": "Response Orientation"
+    },
+    {
+      "index": 22,
+      "weight": 0.0354,
+      "name": "Operations Monitoring"
+    },
+    {
+      "index": 135,
+      "weight": 0.0336,
+      "name": "Performing General Physical Activities"
+    },
+    {
+      "index": 19,
+      "weight": 0.0315,
+      "name": "Equipment Selection"
+    },
+    {
+      "index": 123,
+      "weight": 0.0301,
+      "name": "Inspecting Equipment, Structures, or Materials"
+    },
+    {
+      "index": 91,
+      "weight": 0.0292,
+      "name": "Finger Dexterity"
+    },
+    {
+      "index": 27,
+      "weight": 0.0283,
+      "name": "Quality Control Analysis"
+    },
+    {
+      "index": 113,
+      "weight": 0.0274,
+      "name": "Depth Perception"
+    }
+  ],
+  "academic": [
+    {
+      "index": 4,
+      "weight": 0.25,
+      "name": "Mathematics"
+    },
+    {
+      "index": 0,
+      "weight": 0.2,
+      "name": "Reading Comprehension"
+    },
+    {
+      "index": 6,
+      "weight": 0.2,
+      "name": "Critical Thinking"
+    },
+    {
+      "index": 7,
+      "weight": 0.2,
+      "name": "Active Learning"
+    },
+    {
+      "index": 8,
+      "weight": 0.15,
+      "name": "Learning Strategies"
+    }
+  ]
+}

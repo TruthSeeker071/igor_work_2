@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlightWay</title>
+<script>
+(function () {
+  var map = {
+    portal: 'portal.html',
+    roadmap: 'roadmap.html',
+    coach: 'coach.html',
+    quiz: 'quiz.html',
+    signin: 'auth.html#signin',
+    register: 'auth.html#register',
+    'forgot-password': 'auth.html#forgot-password',
+    'reset-password': 'auth.html#reset-password',
+    'profile-build': 'profile-build.html'
+  };
+  var h = (location.hash || '').replace(/^#/, '');
+  var base = h.split('?')[0];
+  var target = map[base];
+  if (target) {
+    var extra = h.indexOf('?') >= 0 ? h.slice(h.indexOf('?')) : '';
+    if (base === 'roadmap' && extra) {
+      var params = new URLSearchParams(extra.slice(1));
+      var qs = [];
+      if (params.get('focus') === '1') qs.push('focus=1');
+      if (params.get('career')) qs.push('career=' + encodeURIComponent(params.get('career')));
+      location.replace('roadmap.html' + (qs.length ? '?' + qs.join('&') : ''));
+      return;
+    }
+    if (base.indexOf('career-') === 0) {
+      location.replace('career.html?slug=' + encodeURIComponent(base.slice(7)));
+      return;
+    }
+    location.replace(target + (target.indexOf('#') >= 0 ? '' : extra));
+    return;
+  }
+  if (h.indexOf('career-') === 0) {
+    location.replace('career.html?slug=' + encodeURIComponent(h.slice(7).split('?')[0]));
+    return;
+  }
+  location.replace('index.html');
+})();
+</script>
+</head>
+<body>
+<p>Redirecting… <a href="index.html">Continue</a></p>
+</body>
+</html>

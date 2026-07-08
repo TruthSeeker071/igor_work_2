@@ -1,0 +1,21 @@
+{
+  "academic": [
+    { "index": 0, "weight": 0.2, "name": "Reading Comprehension" },
+    { "index": 4, "weight": 0.25, "name": "Mathematics" },
+    { "index": 6, "weight": 0.2, "name": "Critical Thinking" },
+    { "index": 7, "weight": 0.2, "name": "Active Learning" },
+    { "index": 8, "weight": 0.15, "name": "Learning Strategies" }
+  ],
+  "tech": [
+    { "index": 21, "weight": 0.1, "name": "Programming", "pin": true },
+    { "index": 19, "weight": 0.08, "name": "Technology Design", "pin": true },
+    { "index": 139, "weight": 0.08, "name": "Working with Computers", "pin": true }
+  ],
+  "finance": [
+    { "index": 4, "weight": 0.08, "name": "Mathematics", "pin": true },
+    { "index": 32, "weight": 0.08, "name": "Management of Financial Resources", "pin": true }
+  ],
+  "cybersecurity": [
+    { "index": 21, "weight": 0.08, "name": "Programming", "pin": true }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "tech": "#3B82F6",
+  "healthcare": "#10B981",
+  "finance": "#F59E0B",
+  "science": "#8B5CF6",
+  "engineering": "#6366F1",
+  "creative": "#EC4899",
+  "business": "#78716C",
+  "marketing": "#F97316",
+  "education": "#14B8A6",
+  "law": "#64748B",
+  "social": "#A855F7",
+  "media": "#E11D48",
+  "government": "#475569",
+  "operations": "#0EA5E9",
+  "trades": "#84CC16",
+  "agriculture": "#65A30D",
+  "cybersecurity": "#06B6D4",
+  "hospitality": "#D946EF"
+}

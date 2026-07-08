@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlightWay — Career Quiz</title>
+<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260703p">
+<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260705c">
+<script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
+<script src="assets/js/shared/global-shim.js?v=20260703p"></script>
+<script src="assets/js/shared/flags.js?v=20260703p"></script>
+<script src="assets/js/shared/events.js?v=20260708a" defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body class="quiz-page">
+
+<nav>
+  <div class="nav-inner">
+    <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay home"></a>
+    <div class="nav-links app-nav" aria-label="App">
+      <a href="portal.html" class="app-nav-tab" data-app-nav="home"><span class="app-nav-label">Home</span></a>
+      <a href="dashboard.html" class="app-nav-tab" data-app-nav="hub"><span class="app-nav-label">Career Hub</span></a>
+      <a href="coach.html" class="app-nav-tab" data-app-nav="advisor"><span class="app-nav-label">Marco</span></a>
+      <a href="roadmap.html" class="app-nav-tab" data-app-nav="roadmap"><span class="app-nav-label">Career Roadmap</span></a>
+      <a href="quiz.html" class="app-nav-tab app-nav-tab--muted" data-app-nav="quiz"><span class="app-nav-label">Career Quiz</span></a>
+      <a href="auth.html#signin" class="app-nav-tab nav-signin-link" id="nav-signin-link">Sign in</a>
+      <button type="button" class="fw-theme-toggle" aria-label="Switch to dark mode" aria-pressed="false">
+        <span class="fw-theme-icon" aria-hidden="true"></span>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<div id="page-quiz" class="page active">
+  <div class="qz-wrap">
+    <div id="qz-intro">
+      <div class="qz-intro-card">
+        <div class="qz-badge">Quick match</div>
+        <h1 class="qz-intro-title">Find the Career<br>You Were Built For</h1>
+        <p class="qz-intro-desc">A few quick questions — tap, pick, done. We'll instantly match you to careers, then you can sharpen the results in your Career Hub.</p>
+        <div class="qz-intro-trust">
+          <span class="qz-intro-time">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            ~90 seconds
+          </span>
+        </div>
+        <p class="qz-intro-note">Want more precision later? Use Sharpen matches in your Career Hub.</p>
+        <button class="qz-start-btn" onclick="qzStart()">Start</button>
+        <div style="margin-top:14px;">
+          <button class="qz-skip-quiz-btn" onclick="qzRandomizeAndShowResults()" title="Dev shortcut: generate a random answer set and jump to results">
+            🎲 Skip with random answers (dev)
+          </button>
+        </div>
+      </div>
+    </div>
+    <div id="qz-quiz" class="qz-hidden">
+      <div class="qz-hdr"><div class="qz-logo-line">FlightWay</div></div>
+      <div id="qz-encouragement" class="qz-encouragement"></div>
+      <div class="qz-prog-wrap">
+        <div class="qz-prog-meta">
+          <span id="qz-q-label">About you</span>
+          <span id="qz-q-pct"></span>
+        </div>
+        <div class="qz-prog-track"><div class="qz-prog-fill" id="qz-prog-fill" style="width:12%"></div></div>
+      </div>
+      <div class="qz-card" id="qz-qcard"></div>
+    </div>
+    <div id="qz-resume" class="qz-hidden">
+      <div class="qz-resume-card qz-card">
+        <div class="qz-resume-badge">Optional</div>
+        <h2 class="qz-resume-title">Share your experience</h2>
+        <p class="qz-resume-sub">Upload or paste your resume so we can build your <strong>objective fit</strong> scores instantly — no AI wait.</p>
+        <div id="qz-resume-ingest-root"></div>
+        <div class="qz-resume-actions">
+          <button type="button" class="qz-btn qz-btn-primary" id="qz-resume-continue" disabled>Continue →</button>
+          <button type="button" class="qz-btn qz-btn-ghost" id="qz-resume-skip">I don't have any relevant experience</button>
+        </div>
+        <p class="qz-resume-status" id="qz-resume-status" aria-live="polite"></p>
+      </div>
+    </div>
+    <div id="qz-gate" class="qz-hidden">
+      <div class="qz-gate qz-signup">
+        <div class="qz-signup-check" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        </div>
+        <div class="qz-signup-title">Assessment complete</div>
+        <div class="qz-signup-sub">Create a free account to save your answers and unlock your full career report.</div>
+        <form class="qz-signup-form" onsubmit="qzCreateAccount(event)">
+          <label class="qz-signup-label" for="qz-su-email">Email</label>
+          <input id="qz-su-email" class="qz-signup-input" type="email" autocomplete="email" placeholder="you@example.com">
+          <label class="qz-signup-label" for="qz-su-password" style="margin-top:16px">Password</label>
+          <input id="qz-su-password" class="qz-signup-input" type="password" autocomplete="new-password" placeholder="••••••••">
+          <div class="qz-signup-hint">At least 8 characters.</div>
+          <div class="qz-signup-error" id="qz-su-error"></div>
+          <button type="submit" class="qz-signup-btn" id="qz-su-btn">Create account &amp; see results <span aria-hidden="true">→</span></button>
+        </form>
+        <div class="qz-signup-foot">Already have an account? <a href="#" onclick="qzSignupLogin(event)">Log in</a></div>
+      </div>
+    </div>
+    <div id="qz-results" class="qz-hidden">
+      <div class="qz-card" id="qz-rcard"></div>
+    </div>
+  </div>
+  <div class="qz-combo-overlay" id="qz-combo-overlay">
+    <div class="qz-combo-modal">
+      <div class="qz-combo-lbl" id="qz-clbl"></div>
+      <div class="qz-combo-title" id="qz-ctitle"></div>
+      <div class="qz-combo-desc" id="qz-cdesc"></div>
+      <button class="qz-combo-btn" onclick="qzCloseCombo()">Continue &rarr;</button>
+    </div>
+  </div>
+</div>
+
+<div class="coach-overlay" id="coach-signup-overlay" onclick="coachSignupOverlayClick(event)">
+  <div class="coach-signup-modal">
+    <div class="coach-settings-head">
+      <div class="coach-settings-title">Create your free coach account</div>
+      <button class="coach-x" onclick="coachCloseSignup()" aria-label="Close sign-up">×</button>
+    </div>
+    <div class="coach-settings-body">
+      <div class="coach-settings-help">Create an account with email and password to save your results and unlock unlimited chats with your AI career coach.</div>
+      <input type="email" id="coach-signup-email" class="coach-email-input" placeholder="you@example.com" autocomplete="email">
+      <input type="password" id="coach-signup-password" class="coach-email-input" placeholder="Password (8+ characters)" autocomplete="new-password" style="margin-top:10px">
+      <input type="password" id="coach-signup-password-confirm" class="coach-email-input" placeholder="Confirm password" autocomplete="new-password" style="margin-top:10px">
+      <div class="coach-error" id="coach-signup-error"></div>
+      <div class="coach-dossier-actions">
+        <div></div>
+        <button class="coach-primary-btn" id="coach-signup-btn" onclick="coachSignup()">Create account →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="assets/js/shared/page-boot.js?v=20260703p" defer></script>
+<script src="assets/js/app/salary-tiers.js?v=20260703p" defer></script>
+<script src="assets/js/hub/hub-careers.js?v=20260703p" defer></script>
+<script src="assets/js/quiz/quiz-data.js?v=20260703p" defer></script>
+<script src="assets/js/shared/career-target.js?v=20260703p" defer></script>
+<script src="assets/js/shared/sector-fit-sheet.js?v=20260703p" defer></script>
+<script src="assets/js/shared/onet-catalog.js?v=20260705a" defer></script>
+<script src="assets/js/shared/academics-map.js?v=20260703p" defer></script>
+<script src="assets/js/shared/onet-vectors.js?v=20260705a" defer></script>
+<script src="assets/js/shared/resume-ingest.js?v=20260703p" defer></script>
+<script src="assets/js/quiz/onet-quiz-seed.js?v=20260703p" defer></script>
+<script src="assets/js/quiz/quiz-app.js?v=20260703p" defer></script>
+<script src="assets/js/shared/auth.js?v=20260703p" defer></script>
+<script src="assets/js/coach/coach.js?v=20260703p" defer></script>
+<script src="assets/js/shared/auth-nav.js?v=20260703p" defer></script>
+<script src="assets/js/shared/brand.js?v=20260703p" defer></script>
+<script src="assets/js/shared/app-nav.js?v=20260703p" defer></script>
+<script src="assets/js/shared/theme.js?v=20260703p" defer></script>
+</body>
+</html>

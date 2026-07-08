@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FlightWay Flight Plan — pricing</title>
+  <meta name="description" content="Flight Plan turns career discovery into momentum: unlimited simulations, a weekly plan, interview prep and receipts that prove it's working. Under the price of one coaching hour.">
+  <meta property="og:title" content="FlightWay Flight Plan — out-plan AI">
+  <meta property="og:description" content="A career coach costs $150/hour. Flight Plan is about $2.30/week.">
+  <meta property="og:type" content="website">
+  <link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260703p">
+  <link rel="stylesheet" href="assets/css/flightway-2.css?v=20260708a">
+  <script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
+  <script src="assets/js/shared/flags.js?v=20260708a"></script>
+  <script src="assets/js/shared/events.js?v=20260708a" defer></script>
+</head>
+<body>
+  <canvas id="fw-data-field" aria-hidden="true"></canvas>
+
+  <header class="fw-nav" id="fw-nav">
+    <div class="fw-container">
+      <nav class="fw-nav-inner">
+        <a href="/" class="fw-brand" data-fw-brand data-fw-brand-href="/" aria-label="FlightWay home"></a>
+        <ul class="fw-nav-links">
+          <li><a href="index.html#features">Features</a></li>
+          <li><a href="pricing.html" aria-current="page">Pricing</a></li>
+        </ul>
+        <div class="fw-nav-actions" id="fw-nav-actions">
+          <button type="button" class="fw-theme-toggle" aria-label="Switch to light mode" aria-pressed="true">
+            <span class="fw-theme-icon" aria-hidden="true"></span>
+          </button>
+          <a href="auth.html#signin" class="fw-btn fw-btn-ghost fw-btn-sm">Sign in</a>
+          <a href="quiz.html" class="fw-btn fw-btn-primary fw-btn-sm">Get started</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="fw-hero fw-hero--compact">
+      <div class="fw-container fw-hero-content">
+        <p class="fw-eyebrow"><span class="fw-eyebrow-line" aria-hidden="true"></span>Flight Plan</p>
+        <h1 class="fw-h1">Don't compete with AI — out-plan it.</h1>
+        <p class="fw-lede">
+          A career coach runs <strong>$80–230 an hour</strong>. Flight Plan is about
+          <strong>$2.30 a week</strong> — momentum, a weekly plan, and receipts that prove it's working.
+        </p>
+
+        <div class="fw-price-toggle" role="group" aria-label="Billing period">
+          <button type="button" class="fw-price-toggle-btn is-on" data-period="monthly" aria-pressed="true">Monthly</button>
+          <button type="button" class="fw-price-toggle-btn" data-period="annual" aria-pressed="false">Annual <span class="fw-price-toggle-save">save ~50%</span></button>
+        </div>
+      </div>
+    </section>
+
+    <section class="fw-section" id="plans">
+      <div class="fw-container">
+        <div class="fw-pricing-grid">
+
+          <article class="fw-pricing-card">
+            <h3>Free</h3>
+            <p class="desc">Enough to prove the engine before you pay a cent.</p>
+            <div class="fw-price"><span class="amount">$0</span><span class="cadence">forever</span></div>
+            <ul class="fw-pricing-features">
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Career quiz + O*NET hub</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>One full deep dive + one roadmap</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>2-minute simulation looks</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Dimension viewer with confidence tiers</li>
+            </ul>
+            <a href="quiz.html" class="fw-btn fw-btn-secondary fw-btn-md" style="width:100%">Start free</a>
+          </article>
+
+          <article class="fw-pricing-card highlighted">
+            <span class="fw-pricing-badge">Most popular</span>
+            <h3>Flight Plan</h3>
+            <p class="desc">Everything you need to actually get there — and know it's working.</p>
+            <div class="fw-price" data-plan="premium">
+              <span class="amount" data-amount-monthly="$9.99" data-amount-annual="$59">$9.99</span>
+              <span class="cadence" data-cadence-monthly="/ month" data-cadence-annual="/ year">/ month</span>
+            </div>
+            <ul class="fw-pricing-features">
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Unlimited simulations + deep dives</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Weekly Flight Plan + accountability nudges</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Interview prep + O*NET resume builder</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Receipts history — see your coordinates move</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Full roadmap branches + priority AI</li>
+            </ul>
+            <button type="button" class="fw-btn fw-btn-primary fw-btn-md fw-intent-cta" style="width:100%"
+              data-tier="monthly" data-source="pricing_flightplan">Start free trial</button>
+            <p class="fw-price-fine">Under LinkedIn's $14.99 student price · ~1/10 of one coaching hour.</p>
+          </article>
+
+          <article class="fw-pricing-card">
+            <span class="fw-pricing-badge fw-pricing-badge--alt">Founding 100</span>
+            <h3>Lifetime</h3>
+            <p class="desc">Pay once, keep Flight Plan forever. First 100 only.</p>
+            <div class="fw-price"><span class="amount">$199</span><span class="cadence">one time</span></div>
+            <ul class="fw-pricing-features">
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Everything in Flight Plan, forever</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Founding-member badge</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Direct line to shape the roadmap</li>
+            </ul>
+            <button type="button" class="fw-btn fw-btn-secondary fw-btn-md fw-intent-cta" style="width:100%"
+              data-tier="lifetime" data-source="pricing_lifetime">Claim a founding seat</button>
+          </article>
+        </div>
+
+        <div class="fw-sprint-card">
+          <div>
+            <h3>Interview Sprint <span class="fw-sprint-price">$29 one-time</span></h3>
+            <p>Two weeks of premium + focused interview prep for one target role. No subscription.</p>
+          </div>
+          <button type="button" class="fw-btn fw-btn-primary fw-btn-md fw-intent-cta"
+            data-tier="sprint" data-source="pricing_sprint">Start the sprint</button>
+        </div>
+
+        <p class="fw-legal-note">
+          Pricing is in testing and may change. The AI-proof and fit scores are self-assessments
+          to help you plan — not predictions of hiring outcomes or job loss.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <!-- intent capture (fake door) -->
+  <div class="fw-intent-modal" id="fw-intent-modal" hidden>
+    <div class="fw-intent-dialog" role="dialog" aria-modal="true" aria-labelledby="fw-intent-title">
+      <button type="button" class="fw-intent-close" id="fw-intent-close" aria-label="Close">&times;</button>
+      <h3 id="fw-intent-title">You're on the launch list</h3>
+      <p id="fw-intent-copy">Drop your email and we'll give you first access to <span id="fw-intent-tier">Flight Plan</span> when it opens. Optional — your interest is already logged.</p>
+      <form id="fw-intent-form" class="fw-intent-form">
+        <input type="email" id="fw-intent-email" placeholder="you@school.edu" autocomplete="email" aria-label="Email">
+        <button type="submit" class="fw-btn fw-btn-primary fw-btn-md">Notify me</button>
+      </form>
+      <p class="fw-intent-done" id="fw-intent-done" hidden>Got it — see you at launch. ✓</p>
+    </div>
+  </div>
+
+  <footer class="fw-footer">
+    <div class="fw-container">
+      <div class="fw-footer-bar">
+        <p>© 2026 FlightWay, Inc. All rights reserved.</p>
+        <p><a href="index.html#pricing">Career-center pricing →</a></p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/js/shared/brand.js?v=20260703p" defer></script>
+  <script src="assets/js/shared/theme.js?v=20260703p" defer></script>
+  <script src="assets/js/shared/data-field.js?v=20260703p" defer></script>
+  <script>
+    (function () {
+      function log(type, data) { try { if (window.FWEvents) FWEvents.log(type, data); } catch (_) {} }
+      log('pricing_view', { page: 'pricing.html' });
+
+      // billing period toggle
+      var period = 'monthly';
+      var toggles = document.querySelectorAll('.fw-price-toggle-btn');
+      var amountEl = document.querySelector('[data-plan="premium"] .amount');
+      var cadenceEl = document.querySelector('[data-plan="premium"] .cadence');
+      var premiumCta = document.querySelector('.fw-intent-cta[data-source="pricing_flightplan"]');
+      toggles.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          period = btn.getAttribute('data-period');
+          toggles.forEach(function (b) {
+            var on = b === btn;
+            b.classList.toggle('is-on', on);
+            b.setAttribute('aria-pressed', on ? 'true' : 'false');
+          });
+          if (amountEl) amountEl.textContent = amountEl.getAttribute('data-amount-' + period);
+          if (cadenceEl) cadenceEl.textContent = cadenceEl.getAttribute('data-cadence-' + period);
+          if (premiumCta) premiumCta.setAttribute('data-tier', period === 'annual' ? 'annual' : 'monthly');
+          log('pricing_period', { period: period });
+        });
+      });
+
+      // intent modal
+      var modal = document.getElementById('fw-intent-modal');
+      var tierLabelEl = document.getElementById('fw-intent-tier');
+      var form = document.getElementById('fw-intent-form');
+      var emailEl = document.getElementById('fw-intent-email');
+      var doneEl = document.getElementById('fw-intent-done');
+      var current = { tier: 'monthly', source: 'pricing' };
+      var TIER_NAME = { monthly: 'Flight Plan (monthly)', annual: 'Flight Plan (annual)', lifetime: 'Lifetime', sprint: 'Interview Sprint' };
+
+      function post(payload) {
+        return fetch('/waitlist-intent', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).catch(function () {});
+      }
+      function openModal() { if (modal) { modal.hidden = false; if (doneEl) doneEl.hidden = true; if (emailEl) emailEl.value = ''; } }
+      function closeModal() { if (modal) modal.hidden = true; }
+
+      document.querySelectorAll('.fw-intent-cta').forEach(function (cta) {
+        cta.addEventListener('click', function () {
+          current.tier = cta.getAttribute('data-tier') || 'monthly';
+          current.source = cta.getAttribute('data-source') || 'pricing';
+          // capture the click-through immediately (this is the CTR metric)
+          log('pricing_click', { tier: current.tier, source: current.source });
+          post({ tier: current.tier, source: current.source });
+          if (tierLabelEl) tierLabelEl.textContent = TIER_NAME[current.tier] || 'Flight Plan';
+          openModal();
+        });
+      });
+
+      if (form) form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var email = (emailEl && emailEl.value || '').trim();
+        log('pricing_intent_email', { tier: current.tier });
+        post({ tier: current.tier, source: current.source, email: email });
+        if (doneEl) doneEl.hidden = false;
+        if (form) form.hidden = true;
+        setTimeout(closeModal, 1400);
+      });
+      document.getElementById('fw-intent-close')?.addEventListener('click', closeModal);
+      modal?.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+/* Auth pages — extracted from inline styles in auth.html */
+
+.auth-hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 2.75rem);
+  margin-bottom: var(--space-3);
+}
+
+.auth-hero-sub {
+  color: var(--text-secondary);
+  max-width: 420px;
+  margin: 0 auto var(--space-7);
+  font-size: var(--text-lg);
+}
+
+.auth-form-shell {
+  max-width: 400px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.auth-field {
+  width: 100%;
+  margin-bottom: var(--space-3);
+}
+
+.auth-field--tight {
+  margin-bottom: var(--space-2);
+}
+
+.auth-link-row {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.auth-link-row a {
+  color: var(--text-secondary);
+}
+
+.auth-btn-full {
+  width: 100%;
+}
+
+.auth-footnote {
+  text-align: center;
+  margin-top: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.auth-footnote a {
+  color: rgb(var(--primary));
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-footnote--muted {
+  margin-top: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.auth-footnote--muted a {
+  color: var(--text-secondary);
+  font-weight: 400;
+  text-decoration: none;
+}
+
+.auth-status-ok {
+  display: none;
+  margin-bottom: var(--space-3);
+}

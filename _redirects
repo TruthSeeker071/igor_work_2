@@ -1,0 +1,13 @@
+# Cloudflare Pages — static routes (Functions in /functions/ are auto-mounted)
+/dashboard.html  /dashboard.html  200
+/Flightway.html  /Flightway.html  200
+/portal.html     /portal.html     200
+/roadmap.html    /roadmap.html    200
+/coach.html      /coach.html      200
+/profile-build.html  /profile-build.html  200
+/profile.html        /profile-build.html  301
+/quiz.html       /quiz.html       200
+/auth.html       /auth.html       200
+/career.html     /career.html     200
+/dreamforce.html /Flightway.html  301
+/assets/flightway-theme.css  /assets/css/flightway-theme.css  301

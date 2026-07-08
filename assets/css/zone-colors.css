@@ -1,0 +1,23 @@
+/**
+ * Hub sector palette — synced with data/onet/artifacts/zone-colors.json
+ */
+:root {
+  --zone-tech: #3B82F6;
+  --zone-healthcare: #10B981;
+  --zone-finance: #F59E0B;
+  --zone-science: #8B5CF6;
+  --zone-engineering: #6366F1;
+  --zone-creative: #EC4899;
+  --zone-business: #78716C;
+  --zone-marketing: #F97316;
+  --zone-education: #14B8A6;
+  --zone-law: #64748B;
+  --zone-social: #A855F7;
+  --zone-media: #E11D48;
+  --zone-government: #475569;
+  --zone-operations: #0EA5E9;
+  --zone-trades: #84CC16;
+  --zone-agriculture: #65A30D;
+  --zone-cybersecurity: #06B6D4;
+  --zone-hospitality: #D946EF;
+}

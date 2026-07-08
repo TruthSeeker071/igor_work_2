@@ -1,0 +1,38 @@
+name = "flightway"
+compatibility_date = "2025-01-01"
+pages_build_output_dir = "."
+
+[[kv_namespaces]]
+binding = "COACH_KV"
+id = "90baa154928941c3b45ff0ecb4894f05"
+preview_id = "d55c51ed0b6244979a96b88172f83cc5"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "flightway-db"
+database_id = "e9aa71fb-dbf8-482d-ba86-5c941cdedee0"
+
+# Optional O*NET R2 (not required — store.js falls back to /data/onet/artifacts/):
+# wrangler r2 bucket create flightway-onet
+# [[r2_buckets]]
+# binding = "ONET_BUCKET"
+# bucket_name = "flightway-onet"
+
+[env.production]
+compatibility_date = "2025-01-01"
+
+[[env.production.kv_namespaces]]
+binding = "COACH_KV"
+id = "90baa154928941c3b45ff0ecb4894f05"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "flightway-db"
+database_id = "e9aa71fb-dbf8-482d-ba86-5c941cdedee0"
+
+# FW2.0 E (security pass): lock CORS to the canonical origin in production.
+# originFromEnv(env) reads ALLOWED_ORIGIN (functions/_lib.js). Preview / prototype
+# deployments should set their own ALLOWED_ORIGIN in the Pages dashboard; left unset
+# elsewhere so same-origin previews keep working (falls back to "*").
+[env.production.vars]
+ALLOWED_ORIGIN = "https://flightway.ai"
