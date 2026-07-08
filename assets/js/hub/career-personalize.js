@@ -699,6 +699,11 @@
   function hydrateUserOnetMatch(soc) {
     var section = document.querySelector('[data-career-onet="matchSection"]');
     var panel = document.querySelector('[data-career-onet="matchPanel"]');
+    // FW2.0 C1 — AI-exposure section is career-level, so mount it even when the
+    // user has no vectors yet (before the match guard below returns).
+    if (window.FWAiExposure && typeof FWAiExposure.inject === 'function') {
+      try { FWAiExposure.inject(soc, section || panel); } catch (_) {}
+    }
     if (!section || !panel || !soc || !window.FWOnetVectors
       || typeof FWOnetVectors.userVsCareerDimensions !== 'function') return;
     ensureObjectiveFromResume();

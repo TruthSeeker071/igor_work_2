@@ -8,7 +8,8 @@
   },
   "scripts": {
     "smoke": "bash scripts/smoke.sh",
-    "onet:build": "node scripts/onet-etl/build.mjs",
+    "onet:build": "node scripts/onet-etl/build.mjs && node scripts/onet-etl/build-ai-exposure.mjs",
+    "onet:exposure": "node scripts/onet-etl/build-ai-exposure.mjs",
     "onet:test": "node scripts/onet-etl/test-math.mjs",
     "onet:seed": "node scripts/onet-etl/generate-d1-seed.mjs",
     "derive:career": "node scripts/derive-career.mjs",

@@ -94,6 +94,26 @@ changed, and the large Jacob-owned files were touched only with small guarded ho
 Both cards are injected from the portal boot after `FWSimPortalCard.inject()`
 (no edits to `portal.js`).
 
+## Pillar C1 — AI-Exposure Score (the marketing wedge, productized)
+- **`scripts/onet-etl/ai-exposure-weights.json`** — editorial 0–1 exposure weight
+  per O*NET work activity (all 41), each with a rationale + sources. Reviewable
+  and versioned.
+- **`scripts/onet-etl/build-ai-exposure.mjs`** — computes a per-occupation score
+  from the real level vectors (`vectors-lv.f32.bin`): importance-weighted average
+  exposure, then **percentile-ranked** to 0–100 so it discriminates and reads as
+  "more AI-exposed than N% of careers". Outputs **`data/ai-exposure.json`** (763
+  occupations: `score`, `rawExposure`, `band`, `topExposed`, `topDurable`).
+  Spot-checks are plausible — hairdresser 4, chief executive 28, nurse 53,
+  accountant 93, software developer 100. `npm run onet:exposure` (also chained
+  into `onet:build`).
+- **`assets/js/hub/ai-exposure.js`** (`FWAiExposure`) — renders the "How AI hits
+  this career" deep-dive section (score meter, what-AI-does / what-stays-human
+  columns, estimate badge, method link, "AI-proof my plan" CTA). Hooked into
+  `career-personalize.js` `hydrateUserOnetMatch` (career-level, shows even without
+  user vectors).
+- **`docs/AI_EXPOSURE_METHOD.md`** — honest self-assessment framing + the legal
+  guardrail (no job-loss predictions).
+
 ## Verification (run offline here)
 - `node --check` passes on every touched file.
 - `npm run test:vectors` — green, including the new A1 `fitContributions` block
