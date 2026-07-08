@@ -67,6 +67,33 @@ changed, and the large Jacob-owned files were touched only with small guarded ho
   that reference them.
 - `/pricing.html` added to `scripts/smoke-pages.mjs`.
 
+## Execution layer (Weeks 3–4 — added on top of Week 1)
+
+### B1 — Weekly Flight Plan  (deterministic selection, zero new AI)
+- **`functions/_lib/weekly-plan-core.js`** — pure, shared selection: `isoWeek()`,
+  `selectWeeklyTasks(tree)` (earliest incomplete steps on the active roadmap path,
+  same input → same 3 tasks), `applyDoneState()`, `markStepDone()`, `planProgress()`.
+- **`functions/weekly-plan.js`** — `GET` returns the week's 3 tasks (stable per ISO
+  week in KV, done-state live from the roadmap); `POST {taskId, done}` marks the
+  underlying step done via `loadRoadmap → markStepDone → saveRoadmap` (single-sourced
+  through the roadmap store). Session-gated, rate-limited.
+- **`assets/js/app/portal-flightplan.js`** — top-slot portal card: 3 checkboxes, a
+  progress ring, optimistic toggle → POST + `FWEvents.log('flightplan_done')`.
+- Unit-tested: **`scripts/test-weekly-plan.mjs`** (`npm run test:weekly`) — order,
+  determinism, limit, empty/all-done/no-path edges, done-state, completion sync.
+
+### A3 — Receipts (progress deltas)
+- **`migrations/0007_v2_execution.sql`** — `vector_snapshots(email, week, …)`.
+- **`functions/receipts.js`** — `GET` writes this week's snapshot (idempotent
+  upsert) then returns the last 8 weeks + the top coordinates that moved
+  (earliest→latest delta) + a movement trend for the sparkline.
+- **`assets/js/app/portal-receipts.js`** — "Your receipts" card: movers with
+  up/down deltas, a canvas sparkline, labels mapped from the dimension registry,
+  and a "first receipt lands next week" empty state.
+
+Both cards are injected from the portal boot after `FWSimPortalCard.inject()`
+(no edits to `portal.js`).
+
 ## Verification (run offline here)
 - `node --check` passes on every touched file.
 - `npm run test:vectors` — green, including the new A1 `fitContributions` block

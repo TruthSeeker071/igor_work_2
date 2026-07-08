@@ -88,6 +88,8 @@
 <script src="assets/js/app/portal-resume.js?v=20260703p" defer></script>
 <script src="assets/js/app/portal.js?v=20260703p" defer></script>
 <script src="assets/js/sim/sim-portal-card.js?v=20260706s" defer></script>
+<script src="assets/js/app/portal-flightplan.js?v=20260708b" defer></script>
+<script src="assets/js/app/portal-receipts.js?v=20260708b" defer></script>
 <script src="assets/js/app/dimension-viewer.js?v=20260703q" defer></script>
 <script src="assets/js/app/portal-career-advisor.js?v=20260703p" defer></script>
 <script src="assets/js/shared/data-field.js?v=20260703p" defer></script>
@@ -101,6 +103,8 @@
       if (!FWPageBoot.requireAuth('portal.html')) return;
       if (window.FWPortal && typeof FWPortal.render === 'function') FWPortal.render();
       if (window.FWSimPortalCard) FWSimPortalCard.inject();
+      if (window.FWFlightPlanCard) FWFlightPlanCard.inject();
+      if (window.FWReceiptsCard) FWReceiptsCard.inject();
       if (window.FWDimensionViewer && typeof FWDimensionViewer.render === 'function') FWDimensionViewer.render();
       if (window.FWAppNav) FWAppNav.sync('home');
     });

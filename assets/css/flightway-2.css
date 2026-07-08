@@ -144,3 +144,40 @@
   .fw-sprint-card { flex-direction: column; align-items: flex-start; }
   .fw-sprint-card .fw-btn { width: 100%; }
 }
+
+/* ───────────────────  B1 · Weekly Flight Plan card  ─────────────────── */
+.fw-flightplan-card, .fw-receipts-card {
+  margin: 0 0 14px; padding: 16px 18px; border-radius: 14px;
+  background: rgba(127,140,175,.06); border: 1px solid rgba(127,140,175,.18);
+}
+.fw-fp-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.fw-fp-head h3, .fw-rc-head h3 { margin: 0; font-size: 16px; }
+.fw-fp-sub { margin: 2px 0 0; font-size: 12.5px; opacity: .7; }
+.fw-fp-ring { flex: none; }
+.fw-fp-tasks { display: grid; gap: 8px; }
+.fw-fp-task { position: relative; display: flex; align-items: flex-start; gap: 10px; cursor: pointer; padding: 8px 10px; border-radius: 10px; background: rgba(127,140,175,.06); }
+.fw-fp-task:hover { background: rgba(127,140,175,.12); }
+.fw-fp-check { position: absolute; opacity: 0; width: 0; height: 0; }
+.fw-fp-box { flex: none; width: 20px; height: 20px; margin-top: 1px; border-radius: 6px; border: 2px solid rgba(127,140,175,.5); position: relative; transition: all .15s; }
+.fw-fp-check:checked + .fw-fp-box { background: var(--fw2-accent); border-color: var(--fw2-accent); }
+.fw-fp-check:checked + .fw-fp-box::after { content: "✓"; position: absolute; inset: 0; color: #06122b; font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.fw-fp-check:focus-visible + .fw-fp-box { outline: 2px solid var(--fw2-accent); outline-offset: 2px; }
+.fw-fp-txt { display: flex; flex-direction: column; gap: 1px; }
+.fw-fp-label { font-size: 14px; font-weight: 600; }
+.fw-fp-task.is-done .fw-fp-label { text-decoration: line-through; opacity: .55; }
+.fw-fp-src { font-size: 11.5px; opacity: .6; }
+.fw-fp-empty, .fw-rc-empty { margin: 0; font-size: 13px; opacity: .72; }
+.fw-fp-cta { display: inline-block; margin-top: 10px; font-size: 13px; font-weight: 600; color: var(--fw2-accent); text-decoration: none; }
+
+/* ───────────────────  A3 · Receipts card  ─────────────────── */
+.fw-rc-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.fw-rc-window { font-size: 11.5px; opacity: .55; }
+.fw-rc-spark { display: block; margin: 4px 0 12px; }
+.fw-rc-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.fw-rc-row { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px; font-size: 13px; }
+.fw-rc-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fw-rc-delta { font-weight: 700; font-variant-numeric: tabular-nums; }
+.fw-rc-delta.is-up { color: var(--fw2-anchored); }
+.fw-rc-delta.is-down { color: var(--fw2-inferred); }
+.fw-rc-fromto { font-size: 12px; opacity: .6; font-variant-numeric: tabular-nums; }
+.fw-rc-note { margin: 12px 0 0; font-size: 11.5px; opacity: .6; }

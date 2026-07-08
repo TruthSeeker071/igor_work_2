@@ -19,6 +19,7 @@
     "deploy": "node scripts/pages-deploy.mjs flightway ${CF_PAGES_BRANCH:-main}",
     "deploy:prototype": "node scripts/pages-deploy.mjs flightwayjacobprototype Jacob_Work",
     "test:vectors": "node scripts/test-vectors.cjs",
+    "test:weekly": "node scripts/test-weekly-plan.mjs",
     "verify:aliases": "node scripts/verify-slug-aliases.mjs",
     "sim:pregen": "node scripts/pregen-sims.mjs"
   },
