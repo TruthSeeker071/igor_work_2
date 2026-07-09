@@ -138,6 +138,18 @@ Both cards are injected from the portal boot after `FWSimPortalCard.inject()`
   panel on the coach page (question → answer → rubric feedback), premium-gated via
   `FWEnt`. Zero edits to `coach.js` — it injects its own launcher + overlay.
 
+### D2 Resume builder
+- **`functions/resume-builder.js`** — `POST {soc}` → the student's dossier
+  translated into resume bullets, each tagged with the O*NET dimensions the target
+  career weighs most (top-importance dims read server-side from `importance-im.f32.bin`).
+  The AI can only tag dimensions from that real list — it can't invent coordinates —
+  and returns a coverage figure. `requirePlan('premium')`, rate-limited + daily-capped,
+  cached 7d per (email, soc).
+- **`assets/js/app/resume-builder.js`** — a portal card opens a panel that reads the
+  focused career, generates bullets, shows a coverage meter + dimension chips, and
+  gives per-bullet copy buttons. Injected like the other portal cards (no `portal.js`
+  edits); premium-gated via `FWEnt`.
+
 ## Verification (run offline here)
 - `node --check` passes on every touched file.
 - `npm run test:vectors` — green, including the new A1 `fitContributions` block

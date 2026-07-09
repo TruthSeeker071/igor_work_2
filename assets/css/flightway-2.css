@@ -257,3 +257,20 @@
 .fw-iv-model { margin: 8px 0 0; font-size: 13px; opacity: .9; }
 .fw-iv-statusline { margin: 8px 0 0; font-size: 12px; opacity: .7; }
 .fw-iv-error { margin: 8px 0 0; font-size: 13px; color: #ff8888; }
+
+/* ───────────────────  D2 · Resume builder  ─────────────────── */
+.fw-rb-result { margin-top: 14px; }
+.fw-rb-cover { margin-bottom: 14px; padding: 12px 14px; border-radius: 12px; background: rgba(127,140,175,.08); }
+.fw-rb-cover-top { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.fw-rb-cover-num { color: var(--fw2-accent); text-align: right; }
+.fw-rb-cover-track { height: 8px; border-radius: 999px; background: rgba(127,140,175,.25); overflow: hidden; }
+.fw-rb-cover-fill { height: 100%; background: var(--fw2-accent); border-radius: 999px; }
+.fw-rb-dims { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.fw-rb-dim { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgba(110,168,255,.14); color: var(--fw2-accent); }
+.fw-rb-bullet { padding: 12px 0; border-top: 1px solid rgba(127,140,175,.18); }
+.fw-rb-text { margin: 0 0 8px; font-size: 14px; }
+.fw-rb-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.fw-rb-chip { font-size: 10.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: rgba(53,193,132,.16); color: var(--fw2-anchored); }
+.fw-rb-ev { font-size: 10.5px; opacity: .55; text-transform: uppercase; letter-spacing: .04em; }
+.fw-rb-copy { margin-left: auto; border: 1px solid rgba(110,168,255,.35); background: transparent; color: inherit; font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 8px; cursor: pointer; }
+.fw-rb-copy:hover { background: rgba(110,168,255,.15); }
