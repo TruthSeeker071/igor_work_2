@@ -75,11 +75,16 @@ export async function onRequestPost(context) {
   }
   await saveRoadmap(env, email, tree);
 
+  // Did this complete the whole waypoint? (B3 — prompt the user to log an artifact.)
+  const node = tree.nodes.find((n) => n && n.id === waypointId);
+  const waypointDone = !!(node && node.done);
+  const waypointTitle = node ? String(node.shortTitle || node.title || '') : '';
+
   // Recompute the card's progress from the saved week selection.
   let tasks = [];
   if (env.COACH_KV) {
     const saved = await env.COACH_KV.get(`wkplan:${email}:${isoWeek()}`);
     if (saved) { try { tasks = applyDoneState(JSON.parse(saved), tree); } catch { tasks = []; } }
   }
-  return jsonResponse(200, { ok: true, progress: planProgress(tasks) }, origin);
+  return jsonResponse(200, { ok: true, progress: planProgress(tasks), waypointDone, waypointTitle, waypointId }, origin);
 }

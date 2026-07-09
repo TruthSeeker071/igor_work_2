@@ -167,6 +167,17 @@ Both cards are injected from the portal boot after `FWSimPortalCard.inject()`
   the cron worker so links verify; set `RESEND_API_KEY` / `FROM_EMAIL` / `MAILING_ADDRESS`
   on the worker.
 
+## Pillar B3 — Artifact-per-waypoint (portfolio evidence)
+- **`migrations/0010_v2_artifacts.sql`** — `artifacts` table.
+- **`functions/artifacts.js`** — `POST` (log an artifact: type/title/note, validated +
+  rate-limited) + `GET` (list newest 50).
+- **`assets/js/app/artifacts.js`** — an "Evidence" card on the portal plus a log modal.
+  Completing the last step of a waypoint (from the Flight Plan card) auto-opens the
+  modal — `weekly-plan` `POST` now returns `waypointDone`. No `portal.js` edits.
+- *Note:* the optional roadmap-generate `artifact:{type,prompt}` suggestion (a
+  Jacob-owned AI-prompt tweak) is intentionally left for Jacob; the modal offers the
+  type choices directly, so the evidence loop is fully functional without it.
+
 ## Verification (run offline here)
 - `node --check` passes on every touched file.
 - `npm run test:vectors` — green, including the new A1 `fitContributions` block
@@ -175,10 +186,18 @@ Both cards are injected from the portal boot after `FWSimPortalCard.inject()`
 Still requires a deploy: `npm run pages:smoke` (Playwright vs a live URL) and the
 D1 migration apply. See `PUSH.md`.
 
-## Not in this slice (later weeks per the plan)
-B (weekly Flight Plan, receipts, nudges), C1 (AI-exposure ETL + deep-dive section),
-D (interview prep, resume builder), full `0003_v2_core` migration, entitlements,
-and Stripe. The fake door gates that Stripe work until ≥5% of actives click through.
+## Build status (updated across sessions)
+This repo has grown well past the Week-1 slice. **Built:** A1, A2, C2, fake-door
+pricing, E polish, events/telemetry, B1 Flight Plan, A3 receipts, C1 AI-exposure,
+0.3 entitlements, D1 interview prep, D2 resume builder, B2 nudge cron worker, and
+B3 artifacts. Migrations: `0006`–`0010`.
+
+**The only remaining plan item is Stripe** — and the plan deliberately gates it
+behind the fake door hitting ≥5% CTR, so it should not be built until that
+validates. Its foundation (entitlements, `users.plan`/`plan_expires_at`,
+`pricing_intents`) is already in place. One optional follow-up left for Jacob: the
+roadmap-generate `artifact:{type,prompt}` prompt hint (B3's evidence loop already
+works without it).
 
 ## Open items needing a human
 - **Igor**: create the GitHub repo + push (see `PUSH.md`); set `ALLOWED_ORIGIN` /

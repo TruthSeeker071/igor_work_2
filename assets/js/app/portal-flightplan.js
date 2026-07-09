@@ -67,7 +67,13 @@
         try { if (global.FWEvents) FWEvents.log('flightplan_done', { id: id, done: done }); } catch (_) {}
         afetch('/weekly-plan', 'POST', { taskId: id, done: done })
           .then(function (r) { return r.json(); })
-          .then(function (res) { if (res && res.progress) refreshRing(card, res.progress); })
+          .then(function (res) {
+            if (res && res.progress) refreshRing(card, res.progress);
+            // B3 — completing the last step of a waypoint prompts logging an artifact.
+            if (res && res.waypointDone && done && global.FWArtifacts && typeof FWArtifacts.logModal === 'function') {
+              FWArtifacts.logModal(res.waypointId, res.waypointTitle);
+            }
+          })
           .catch(function () { /* optimistic UI already updated */ });
       });
     });
