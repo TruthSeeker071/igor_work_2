@@ -1,0 +1,28 @@
+# FlightWay 2.0 — nudge cron Worker (Pillar B2). Standalone; same D1 + KV as Pages.
+# Deploy: `npm run deploy:cron`  (or: cd workers/cron && wrangler deploy)
+name = "flightway-cron"
+main = "index.js"
+compatibility_date = "2025-01-01"
+
+# Mondays 14:00 UTC
+[triggers]
+crons = ["0 14 * * 1"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "flightway-db"
+database_id = "e9aa71fb-dbf8-482d-ba86-5c941cdedee0"
+
+[[kv_namespaces]]
+binding = "COACH_KV"
+id = "90baa154928941c3b45ff0ecb4894f05"
+
+[vars]
+SITE_URL = "https://flightway.ai"
+
+# Secrets to set in this worker (wrangler secret put ... inside workers/cron):
+#   RESEND_API_KEY   — same key as the Pages project
+#   FROM_EMAIL       — an address on the verified Resend domain (or set as a [vars])
+#   UNSUB_SECRET     — MUST match the Pages project's UNSUB_SECRET so unsubscribe
+#                      links verify (both default to "flightway-unsub" if unset)
+#   MAILING_ADDRESS  — a real physical postal address (CAN-SPAM requirement)

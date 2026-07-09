@@ -150,6 +150,23 @@ Both cards are injected from the portal boot after `FWSimPortalCard.inject()`
   gives per-bullet copy buttons. Injected like the other portal cards (no `portal.js`
   edits); premium-gated via `FWEnt`.
 
+## Pillar B2 — Weekly nudge emails (opt-in)
+- **`migrations/0009_v2_notifications.sql`** — `users.notify_optin`, `notify_token_hash`.
+- **`functions/_lib/notify-token.js`** — deterministic peppered unsubscribe token
+  (Web Crypto), single-sourced across the endpoints and the worker; constant-time compare.
+- **`functions/notify-prefs.js`** — `GET`/`POST` the opt-in (session-gated, rate-limited).
+- **`functions/unsubscribe.js`** — one-click `GET`, token-verified, sets `notify_optin=0`,
+  plain HTML page. No auth by design (email link); CAN-SPAM compliant.
+- **`workers/cron/index.js`** + **`workers/cron/wrangler.toml`** — a standalone Worker
+  (Pages Functions can't run cron). Mondays 14:00 UTC: opted-in users → the *same*
+  `selectWeeklyTasks` selection → a Resend email with the 3 tasks, a one-click
+  unsubscribe link, and a postal address; batched ≤50/min, failures logged to KV.
+  Deploy: **`npm run deploy:cron`**.
+- **`assets/js/app/notify-optin.js`** — a portal-footer toggle (cadence stated at opt-in).
+- **Setup note:** set `UNSUB_SECRET` to the *same* value on both the Pages project and
+  the cron worker so links verify; set `RESEND_API_KEY` / `FROM_EMAIL` / `MAILING_ADDRESS`
+  on the worker.
+
 ## Verification (run offline here)
 - `node --check` passes on every touched file.
 - `npm run test:vectors` — green, including the new A1 `fitContributions` block
