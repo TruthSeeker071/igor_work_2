@@ -114,6 +114,30 @@ Both cards are injected from the portal boot after `FWSimPortalCard.inject()`
 - **`docs/AI_EXPOSURE_METHOD.md`** — honest self-assessment framing + the legal
   guardrail (no job-loss predictions).
 
+## Entitlements (0.3) + Pillar D1 — Interview prep (premium)
+
+### 0.3 Entitlements (ships dark)
+- **`migrations/0008_v2_entitlements.sql`** — `users.plan`, `users.plan_expires_at`.
+- **`functions/_lib/entitlements.js`** — `getPlan` / `requirePlan` +
+  `planSatisfies` / `isPlanActive` / `effectivePlan` + `paywallEnabled`. Until the
+  `PAYWALL_ENABLED` Pages var is `"true"`, everyone is treated as premium (beta);
+  premium endpoints still call `requirePlan` so gating is enforced server-side.
+- **`functions/config.js`** — `GET {paywallEnabled}`; `/auth/me` now returns `plan`.
+- **`assets/js/shared/entitlements.js`** — `FWEnt.has()` / `FWEnt.gate()` (UX only).
+- Unit-tested: **`scripts/test-entitlements.mjs`** (`npm run test:entitlements`) —
+  plan ranking, expiry, flag, and `requirePlan` on/off (18/18).
+
+### D1 Interview prep
+- **`functions/interview-prep.js`** — `POST {careerName, stage:'question'|'feedback'}`.
+  Question stage: a KV-cached 12-question bank per career (behavioral/role/curveball)
+  with per-user "seen" tracking; feedback stage: a rubric
+  `{structure, specificity, clarity}` (score + note each) + `verdict` + `model_moment`.
+  `requirePlan('premium')`, hourly rate-limit + a 20/day cap, server-side prompts,
+  all output length-capped.
+- **`assets/js/coach/interview-mode.js`** — a self-mounting "Practice interview"
+  panel on the coach page (question → answer → rubric feedback), premium-gated via
+  `FWEnt`. Zero edits to `coach.js` — it injects its own launcher + overlay.
+
 ## Verification (run offline here)
 - `node --check` passes on every touched file.
 - `npm run test:vectors` — green, including the new A1 `fitContributions` block

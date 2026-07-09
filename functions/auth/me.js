@@ -5,6 +5,7 @@ import {
   authErrorResponse,
   getSessionEmail,
 } from '../_lib/auth.js';
+import { resolveEntitlement } from '../_lib/entitlements.js';
 
 export async function onRequestOptions(context) {
   return authPreflight(originFromEnv(context.env));
@@ -19,7 +20,9 @@ export async function onRequestGet(context) {
     if (!email) {
       return authJsonResponse(401, { error: 'Not signed in.' }, origin);
     }
-    return authJsonResponse(200, { email }, origin);
+    // FW2.0 0.3 — surface the user's entitlement (ship-dark: premium until paywall on).
+    const ent = await resolveEntitlement(env, email);
+    return authJsonResponse(200, { email, plan: ent.effective, planRaw: ent.plan, paywall: ent.paywall }, origin);
   } catch (err) {
     console.error('auth/me failed', err);
     return authErrorResponse(err, origin);
