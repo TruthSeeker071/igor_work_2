@@ -177,9 +177,12 @@ export function resendConfigFromEnv(env) {
   return { apiKey, fromEmail };
 }
 
-export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash-lite';
-/** Next-cheapest stable 2.5 model for 503 / overload fallback (T1 AI Studio). */
-export const DEFAULT_GEMINI_FALLBACK_MODEL = 'gemini-2.5-flash';
+// gemini-2.5-flash-lite is deprecated (shutdown 2026-10-16; its preview alias is
+// already gone). gemini-3.1-flash-lite is Google's GA replacement — cheapest in the
+// Gemini 3 family, supported through at least 2027-05-07. Override per-env with GEMINI_MODEL.
+export const DEFAULT_GEMINI_MODEL = 'gemini-3.1-flash-lite';
+/** GA overload fallback (successor to gemini-2.5-flash). */
+export const DEFAULT_GEMINI_FALLBACK_MODEL = 'gemini-3.5-flash';
 
 const DEPRECATED_GEMINI_MODEL_RE = /gemini-2\.0/i;
 
