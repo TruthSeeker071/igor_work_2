@@ -12,27 +12,27 @@
     "fontSizePx": 73
   },
   "flightway-pages.css": {
-    "hex": 171,
+    "hex": 169,
     "important": 33,
-    "vh100": 8,
+    "vh100": 0,
     "fontSizePx": 132
   },
   "flightway-theme.css": {
     "hex": 0,
     "important": 289,
-    "vh100": 1,
+    "vh100": 0,
     "fontSizePx": 0
   },
   "hub-dashboard.css": {
     "hex": 40,
     "important": 50,
-    "vh100": 1,
+    "vh100": 0,
     "fontSizePx": 0
   },
   "profile-building.css": {
     "hex": 0,
     "important": 1,
-    "vh100": 1,
+    "vh100": 0,
     "fontSizePx": 0
   },
   "simulation.css": {

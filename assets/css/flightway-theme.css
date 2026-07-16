@@ -1,5 +1,5 @@
 /* FlightWay design system — light default, dark toggle, orange accents */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* Inter loads via per-page <link preconnect+stylesheet> — @import removed (render-blocking, double-fetch). Self-host follow-up in handoff. */
 @import url('zone-colors.css');
 
 /* Fallback before boot script — light default */
@@ -696,7 +696,7 @@ nav .nav-links .app-nav-tab.is-active {
   flex-direction: column;
   align-items: stretch;
   justify-content: center;
-  min-height: 100vh;
+  min-height: 100dvh;
   padding-top: 64px;
 }
 

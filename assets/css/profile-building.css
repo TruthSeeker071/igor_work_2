@@ -2,7 +2,7 @@
 
 #page-profile-build {
   padding: clamp(96px, 12vw, 110px) clamp(16px, 4vw, 24px) 80px;
-  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg-solid);
   min-width: 0;
 }
