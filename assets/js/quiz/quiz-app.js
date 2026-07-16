@@ -632,7 +632,7 @@ function qzProgressPct(idx,total){
 function qzRenderQ(idx){
   const q=QZ_ACTIVE[idx];
   const pct=qzProgressPct(idx,QZ_ACTIVE.length);
-  const lbl=document.getElementById('qz-q-label'); if(lbl) lbl.textContent='About you';
+  const lbl=document.getElementById('qz-q-label'); if(lbl) lbl.textContent='Question '+(idx+1)+' of '+QZ_ACTIVE.length;
   const pctEl=document.getElementById('qz-q-pct'); if(pctEl) pctEl.textContent='';
   document.getElementById('qz-prog-fill').style.width=`${pct}%`;
 
