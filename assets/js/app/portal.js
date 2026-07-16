@@ -260,8 +260,8 @@
       '<div class="portal-greeting-row">'
       + '<div>'
       + '<div class="portal-eyebrow">Your FlightWay home</div>'
-      + '<h1 class="portal-title">Welcome back, ' + esc(name) + '.</h1>'
-      + (email ? '<p class="portal-email">' + esc(email) + '</p>' : '')
+      + '<h1 class="portal-title">Hey ' + esc(name) + '</h1>'
+      + '<p class="portal-email">Built from your quiz answers &middot; <a href="quiz.html" class="portal-retake">retake quiz</a>' + (email ? ' &middot; ' + esc(email) : '') + '</p>'
       + '</div>'
       + (archetype ? '<div class="portal-archetype" title="Your quiz archetype"><span class="portal-archetype-eye">Archetype</span><span class="portal-archetype-name">' + esc(archetype) + '</span></div>' : '')
       + '</div>'

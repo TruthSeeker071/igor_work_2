@@ -3108,3 +3108,59 @@ body.portal-resume-drawer-open { overflow: hidden; }
   }
   #page-quiz .qz-whyrail p { margin: 0; font-size: var(--text-sm); color: var(--text-secondary); line-height: var(--line-relaxed); }
 }
+
+/* ── UI overhaul Phase 3b — portal per wireframes 1c/1d (tokens only) ── */
+@media (min-width: 0px) {
+  #page-portal .portal-target-row {
+    border: 2px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: rgb(var(--surface));
+    padding: var(--space-4);
+  }
+  #page-portal .portal-target-fit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 52px;
+    min-height: 52px;
+    border: 5px solid rgb(var(--primary));
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: var(--text-sm);
+  }
+  #page-portal .portal-target-cta-row { margin-top: var(--space-3); }
+  #page-portal .portal-target-deepdive {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    width: 100%;
+    border: 1.5px solid var(--border-strong);
+    border-radius: 12px;
+    background: rgb(var(--surface));
+    color: rgb(var(--text));
+    font-weight: 600;
+    font-size: var(--text-sm);
+    text-decoration: none;
+    transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+  }
+  #page-portal .portal-target-deepdive:hover { background: var(--accent-light); border-color: rgb(var(--primary)); }
+  #page-portal .portal-retake { color: inherit; text-decoration: underline; }
+}
+@media (min-width: 1024px) {
+  #page-portal .portal-wrap {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: var(--space-5);
+    align-items: start;
+  }
+  #page-portal .portal-head { grid-column: 1; }
+  #page-portal #portal-prompt-banner { grid-column: 2; grid-row: 1 / span 2; }
+  #page-portal #portal-empty-quiz { grid-column: 1 / -1; }
+  #page-portal .portal-actions { grid-column: 1; }
+  #page-portal .portal-profile-entry { grid-column: 2; }
+  #page-portal .portal-snapshot { grid-column: 1 / -1; }
+  #page-portal .dim-profile-section { grid-column: 1 / -1; }
+  #page-portal .portal-footer { grid-column: 1 / -1; }
+  #page-portal .portal-target-deepdive { width: auto; padding: 0 var(--space-5); }
+}

@@ -131,6 +131,7 @@
       + '<div id="portal-target-advisor-slot"></div>'
       + '</div>'
       + '<div class="portal-target-metrics portal-target-dual-fit" id="portal-target-dual-fit" hidden aria-live="polite"></div>'
+      + '<div class="portal-target-cta-row"><a class="portal-target-deepdive" id="portal-target-deepdive" href="career.html">Open deep dive &rarr;</a></div>'
       + '</div>';
 
     this.row = this.root.querySelector('#portal-target-row');
@@ -292,6 +293,8 @@
 
   TargetSwitch.prototype.updateHero = function (target) {
     if (!this.toggle || !target) return;
+    var dd = this.root && this.root.querySelector('#portal-target-deepdive');
+    if (dd && target.slug) dd.href = 'career.html?slug=' + encodeURIComponent(target.slug);
     var orb = this.toggle.querySelector('.portal-target-orb');
     var nameEl = this.toggle.querySelector('.portal-target-name');
     var fitEl = this.toggle.querySelector('.portal-target-fit');
