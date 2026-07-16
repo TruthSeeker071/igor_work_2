@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f7f3ec;font-family:system-ui,-apple-system,sans-serif;color:#222}
+a{color:#222}a:hover{color:#e8631a}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08)}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 8px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 14px/1.2 system-ui,sans-serif;color:#1a1a1a}
+.dv-opts{display:flex;flex-wrap:wrap;gap:36px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 12px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.55)}
+.dv-card{max-width:100%;background:#fff;border:1px solid rgba(0,0,0,.12);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}
+.dv-next{margin:26px 0 0;font:12px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.5)}
+.grp{margin:34px 0 0}
+.grp h3{font:700 13px/1 system-ui;letter-spacing:.06em;text-transform:uppercase;color:#555;margin:0 0 16px;border-bottom:2px solid #ddd;padding-bottom:8px}
+.row{display:flex;gap:14px;align-items:flex-start}
+.ann{width:250px;flex:none;display:flex;flex-direction:column;gap:10px;font:15px/1.35 'Patrick Hand',cursive;color:#333;padding-top:8px}
+.ann p{margin:0;display:flex;gap:7px;align-items:flex-start}
+.ann .risk{color:#a33;border:1.5px dashed #a33;border-radius:6px;padding:6px 8px}
+.mk{flex:none;width:18px;height:18px;border:1.5px solid #222;border-radius:50%;background:#fff;font:700 11px/15px system-ui;text-align:center;color:#222}
+.mkf{position:absolute;width:18px;height:18px;border:1.5px solid #222;border-radius:50%;background:#fff;font:700 11px/15px system-ui;text-align:center;color:#222;z-index:5}
+.bx{border:1.5px dashed #aaa;border-radius:6px;background:#f2f2f2;display:flex;align-items:center;justify-content:center;color:#888;font:11px ui-monospace,monospace;text-align:center;padding:4px}
+.btn{min-height:48px;border:1.5px solid #555;border-radius:10px;display:flex;align-items:center;justify-content:center;font:600 14px system-ui;background:#fff;color:#222;padding:0 16px}
+.prim{background:#e8631a;border-color:#e8631a;color:#fff}
+.chip{border:1.5px solid #999;border-radius:999px;padding:5px 12px;font:600 11px system-ui;color:#444;background:#fff;white-space:nowrap}
+.tier{border-radius:999px;padding:2px 8px;font:600 9px/1.4 ui-monospace,monospace;white-space:nowrap}
+.t-a{border:1.5px solid #444;color:#222;background:#eee}
+.t-i{border:1.5px dashed #777;color:#555;background:#fff}
+.t-e{border:1.5px dotted #999;color:#888;background:#fff}
+.dimrow{display:grid;grid-template-columns:1fr auto;gap:4px 8px;align-items:center}
+.track{height:10px;background:#e6e6e6;border-radius:5px;position:relative}
+.fill{position:absolute;top:0;left:0;bottom:0;background:#8a8a8a;border-radius:5px}
+.tabbar{display:grid;grid-template-columns:repeat(4,1fr);border-top:1.5px solid #555;background:#fff}
+.tab{min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:600 10px system-ui;color:#666}
+.tab .ic{width:20px;height:20px;border:1.5px solid currentColor;border-radius:5px}
+.tabon{color:#e8631a}
+.sec{font:700 11px system-ui;letter-spacing:.05em;text-transform:uppercase;color:#777}
+.card{border:1.5px solid #999;border-radius:10px;background:#fff;padding:14px;display:flex;flex-direction:column;gap:10px}
+h1,h2,h4,p{margin:0}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">FlightWay UI overhaul — lo-fi wireframes, 5 surfaces @ 390 &amp; 1440. Orange = primary action only.</span></div>
+
+<!-- ============ 1. QUIZ ============ -->
+<div class="grp"><h3>1 · Quiz (first-touch conversion)</h3>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1a"><div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Quiz — mobile 390</div>
+<div class="row">
+<div class="dv-card" style="width:390px;position:relative">
+  <div style="display:flex;flex-direction:column;min-height:760px">
+    <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #ddd">
+      <div class="btn" style="min-height:44px;width:44px;padding:0;border-radius:50%">←</div>
+      <div style="flex:1">
+        <div style="font:600 11px system-ui;color:#666;margin-bottom:5px">Question 3 of 7</div>
+        <div class="track" style="height:8px"><div class="fill" style="width:43%;background:#e8631a"></div></div>
+      </div>
+      <div style="font:600 12px system-ui;color:#888">Skip</div>
+      <span class="mkf" style="top:10px;right:64px;position:static;flex:none" ></span>
+    </div>
+    <span class="mkf" style="top:52px;left:170px">1</span>
+    <div style="flex:1;padding:28px 20px;display:flex;flex-direction:column;gap:18px">
+      <h2 style="font:700 24px/1.25 system-ui">When you picture a good work day, what are you mostly doing?</h2>
+      <span class="mkf" style="top:96px;right:14px">2</span>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="btn" style="min-height:64px;justify-content:flex-start;text-align:left">Solving a tricky technical problem</div>
+        <div class="btn" style="min-height:64px;justify-content:flex-start;border-color:#e8631a;border-width:2.5px">Helping someone one-on-one</div>
+        <div class="btn" style="min-height:64px;justify-content:flex-start;text-align:left">Making or designing something new</div>
+        <div class="btn" style="min-height:64px;justify-content:flex-start;text-align:left">Organizing a plan and running it</div>
+        <div class="btn" style="min-height:64px;justify-content:flex-start;text-align:left">Persuading a room of people</div>
+      </div>
+      <span class="mkf" style="top:320px;right:14px">3</span>
+    </div>
+    <div style="padding:16px 20px 28px;display:flex;flex-direction:column;gap:8px">
+      <div class="btn prim" style="min-height:56px">Next →</div>
+      <span class="mkf" style="bottom:64px;right:14px">4</span>
+      <div style="font:11px system-ui;color:#999;text-align:center">Your answers build your personal career map — no account needed yet</div>
+    </div>
+  </div>
+</div>
+<div class="ann">
+  <p><span class="mk">1</span>Progress: literal "3 of 7" + bar. Data: quiz state in localStorage → survives refresh, no account.</p>
+  <p><span class="mk">2</span>One question per screen. Question copy from static quiz JSON (7 items).</p>
+  <p><span class="mk">3</span>Answer cards ≥64px tall, full-width tap. Single-select; selection = 2.5px outline (shown), not color fill. Focus order: back → skip → answers → Next.</p>
+  <p><span class="mk">4</span>Only orange on screen = Next. Disabled until a choice is made. Sits bottom-third, above thumb.</p>
+  <p>Priority: question &gt; answers &gt; progress &gt; skip.</p>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1b"><div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Quiz — desktop 1440</div>
+<div class="row">
+<div class="dv-card" style="width:1000px">
+  <div style="display:flex;min-height:560px">
+    <div style="flex:1;padding:40px 56px;display:flex;flex-direction:column;gap:24px;max-width:640px;margin:0 auto">
+      <div style="display:flex;align-items:center;gap:16px">
+        <div class="btn" style="min-height:44px;width:44px;padding:0;border-radius:50%">←</div>
+        <div style="flex:1"><div style="font:600 12px system-ui;color:#666;margin-bottom:6px">Question 3 of 7</div>
+        <div class="track" style="height:8px"><div class="fill" style="width:43%;background:#e8631a"></div></div></div>
+        <div style="font:600 12px system-ui;color:#888">Skip</div>
+      </div>
+      <h2 style="font:700 28px/1.25 system-ui">When you picture a good work day, what are you mostly doing?</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="btn" style="min-height:64px;justify-content:flex-start;text-align:left">Solving a tricky technical problem</div>
+        <div class="btn" style="min-height:64px;justify-content:flex-start;border-color:#e8631a;border-width:2.5px">Helping someone one-on-one</div>
+        <div class="btn" style="min-height:64px;justify-content:flex-start;text-align:left">Making or designing something new</div>
+        <div class="btn" style="min-height:64px;justify-content:flex-start;text-align:left">Organizing a plan and running it</div>
+        <div class="btn" style="min-height:64px;justify-content:flex-start;text-align:left;grid-column:1/-1">Persuading a room of people</div>
+      </div>
+      <div style="display:flex;justify-content:flex-end"><div class="btn prim" style="min-height:52px;width:200px">Next →</div></div>
+    </div>
+    <div style="width:280px;border-left:1px solid #ddd;padding:40px 28px;display:flex;flex-direction:column;gap:14px;background:#fafafa">
+      <div class="sec">Why we ask</div>
+      <div class="bx" style="height:110px">reassurance copy —<br>"each answer tunes 161<br>dimensions of your profile"</div>
+      <div class="bx" style="height:150px">abstract vector viz<br>placeholder (static img,<br>not canvas)</div>
+    </div>
+  </div>
+</div>
+<div class="ann">
+  <p><span class="mk">1</span>Same 7-step flow; answers go 2-up grid, keyboard: arrows move, Enter selects. Visible focus ring required.</p>
+  <p><span class="mk">2</span>Right rail = personalization story only; never interactive, safe to hide &lt;1100px.</p>
+  <p class="risk">Risk: don't animate the vector viz here — static image. Canvas on the quiz path hurts first-load conversion.</p>
+</div>
+</div>
+</div>
+
+</div></div>
+
+<!-- ============ 2. PORTAL ============ -->
+<div class="grp"><h3>2 · Portal (signed-in home)</h3>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1c"><div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>Portal — mobile 390</div>
+<div class="row">
+<div class="dv-card" style="width:390px;position:relative">
+  <div style="display:flex;flex-direction:column;min-height:800px">
+    <div style="padding:18px 16px 4px;display:flex;justify-content:space-between;align-items:center">
+      <div><h2 style="font:700 20px system-ui">Hey Jordan</h2><div style="font:12px system-ui;color:#888">Built from your 7 answers · <u>retake quiz</u></div></div>
+      <div class="bx" style="width:44px;height:44px;border-radius:50%">avatar</div>
+    </div>
+    <span class="mkf" style="top:44px;left:150px">1</span>
+    <div style="padding:12px 16px;display:flex;flex-direction:column;gap:12px">
+      <div class="card" style="border-width:2px;border-color:#555">
+        <div class="sec">Your target career</div>
+        <div style="display:flex;gap:14px;align-items:center">
+          <div style="width:64px;height:64px;border-radius:50%;border:5px solid #e8631a;display:flex;align-items:center;justify-content:center;font:700 18px system-ui;flex:none">82</div>
+          <div><h4 style="font:700 17px system-ui">UX Researcher</h4><div style="font:12px system-ui;color:#777">Fit score 82 / 100</div></div>
+        </div>
+        <div style="font:12px system-ui;color:#666;border-top:1px dashed #ccc;padding-top:8px">▸ Why this match — top 3 dimensions from your answers</div>
+        <div class="btn" style="min-height:48px">Open deep dive →</div>
+      </div>
+      <span class="mkf" style="top:120px;right:14px">2</span>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between"><div class="sec">Roadmap progress</div><div style="font:11px system-ui;color:#888">4 / 9 steps</div></div>
+        <div class="track"><div class="fill" style="width:44%"></div></div>
+        <div style="font:13px system-ui">Next up: <b>Intro to statistics (free course)</b></div>
+        <div class="btn" style="min-height:44px">Continue roadmap</div>
+      </div>
+      <span class="mkf" style="top:330px;right:14px">3</span>
+      <div class="card">
+        <div class="sec">Top skill gaps</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="chip">User interviews</span><span class="chip">SQL basics</span><span class="chip">Survey design</span></div>
+      </div>
+      <div class="card" style="background:#f7f3ec">
+        <div style="display:flex;gap:10px;align-items:center">
+          <div class="bx" style="width:40px;height:40px;border-radius:50%;flex:none">%</div>
+          <div style="font:13px/1.35 system-ui"><b>Firm up your profile</b> — 2 quick questions would upgrade 14 "estimated" data points to "anchored".</div>
+        </div>
+        <div class="btn prim" style="min-height:48px">Answer 2 questions</div>
+      </div>
+      <span class="mkf" style="top:560px;right:14px">4</span>
+      <div class="bx" style="height:64px">recently viewed careers — horizontal scroll row (3 small cards)</div>
+    </div>
+    <div style="margin-top:auto;position:sticky;bottom:0">
+      <div class="tabbar">
+        <div class="tab tabon"><div class="ic"></div>Home</div>
+        <div class="tab"><div class="ic" style="border-radius:50%"></div>Explore</div>
+        <div class="tab"><div class="ic" style="border-radius:2px"></div>Roadmap</div>
+        <div class="tab"><div class="ic" style="border-radius:50% 50% 50% 2px"></div>Ask Marco</div>
+      </div>
+      <span class="mkf" style="bottom:40px;right:8px">5</span>
+    </div>
+  </div>
+</div>
+<div class="ann">
+  <p><span class="mk">1</span>Personalization story in the header, not a card: "Built from your 7 answers". Data: quiz meta (date, count).</p>
+  <p><span class="mk">2</span>Hero card = target career. Data: user.targetCareer + fit score from vector match. "Why this match" collapsed teaser links into the drawer on deep dive.</p>
+  <p><span class="mk">3</span>Roadmap card: data = roadmap steps done/total + next incomplete step. One tap to resume.</p>
+  <p><span class="mk">4</span>The ONLY orange CTA on this screen = firm-up profile (highest-value action: improves confidence tiers everywhere). Bottom-third placement.</p>
+  <p><span class="mk">5</span><span>Bottom bar (see <a class="dv-oid" href="#1h">1h</a>). Ask Marco always slot 4.</span></p>
+  <p>Priority: target career &gt; roadmap &gt; firm-up &gt; gaps &gt; recents.</p>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1d"><div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>Portal — desktop 1440</div>
+<div class="row">
+<div class="dv-card" style="width:1180px">
+  <div style="display:flex;flex-direction:column;min-height:640px">
+    <div style="display:flex;align-items:center;gap:24px;padding:14px 28px;border-bottom:1px solid #ddd">
+      <div style="font:800 15px system-ui">FlightWay</div>
+      <div style="display:flex;gap:18px;font:600 13px system-ui;color:#666"><span style="color:#222;border-bottom:2px solid #e8631a;padding-bottom:2px">Home</span><span>Explore careers</span><span>Roadmap</span></div>
+      <div style="margin-left:auto;display:flex;gap:12px;align-items:center">
+        <div class="btn" style="min-height:44px;border-radius:999px">💬 Ask Marco</div>
+        <div class="bx" style="width:40px;height:40px;border-radius:50%">av</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;padding:24px 28px">
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div><h2 style="font:700 24px system-ui">Hey Jordan</h2><div style="font:13px system-ui;color:#888">Your map is built from your 7 quiz answers · <u>retake</u></div></div>
+        <div class="card" style="border-width:2px;border-color:#555;flex-direction:row;gap:20px;align-items:center">
+          <div style="width:84px;height:84px;border-radius:50%;border:6px solid #e8631a;display:flex;align-items:center;justify-content:center;font:700 24px system-ui;flex:none">82</div>
+          <div style="flex:1"><div class="sec">Your target career</div><h4 style="font:700 20px system-ui;margin:4px 0">UX Researcher</h4><div style="font:12px system-ui;color:#666">▸ Why this match — top dimensions from your answers</div></div>
+          <div class="btn" style="min-height:48px;flex:none">Open deep dive →</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="card"><div class="sec">Roadmap progress</div><div class="track"><div class="fill" style="width:44%"></div></div><div style="font:13px system-ui">4/9 · Next: <b>Intro to statistics</b></div><div class="btn" style="min-height:44px">Continue</div></div>
+          <div class="card"><div class="sec">Top skill gaps</div><div style="display:flex;gap:8px;flex-wrap:wrap"><span class="chip">User interviews</span><span class="chip">SQL basics</span><span class="chip">Survey design</span></div><div style="font:12px system-ui;color:#888">From target-career vector diff</div></div>
+        </div>
+        <div class="bx" style="height:70px">recently viewed careers row</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card" style="background:#f7f3ec"><b style="font:700 14px system-ui">Firm up your profile</b><div style="font:13px/1.4 system-ui">2 quick questions upgrade 14 estimated data points to anchored.</div><div class="btn prim" style="min-height:48px">Answer 2 questions</div></div>
+        <div class="card"><div class="sec">Marco says</div><div class="bx" style="height:80px">1-line AI nudge, links into chat</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="ann">
+  <p><span class="mk">1</span>Top nav mirrors mobile bar; Ask Marco is a persistent pill in the header on ALL signed-in desktop pages.</p>
+  <p><span class="mk">2</span>2:1 grid, right rail = actions (firm-up, Marco nudge). Plain CSS grid, no framework needed.</p>
+  <p><span class="mk">3</span>Fit ring = border-radius circle, no canvas/SVG chart needed at this size.</p>
+</div>
+</div>
+</div>
+
+</div></div>
+
+<!-- ============ 3. CAREER DEEP DIVE ============ -->
+<div class="grp"><h3>3 · Career deep dive (flagship)</h3>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1e"><div class="dv-olabel"><a class="dv-oid" href="#1e">1e</a>Deep dive — mobile 390</div>
+<div class="row">
+<div class="dv-card" style="width:390px;position:relative">
+  <div style="display:flex;flex-direction:column;min-height:900px">
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #ddd">
+      <div class="btn" style="min-height:44px;width:44px;padding:0;border-radius:50%">←</div>
+      <div style="font:600 13px system-ui;color:#888">Explore / UX Researcher</div>
+      <div class="btn" style="min-height:44px;width:44px;padding:0;border-radius:50%;margin-left:auto">♡</div>
+    </div>
+    <div style="padding:18px 16px;display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;gap:14px;align-items:center">
+        <div style="width:72px;height:72px;border-radius:50%;border:6px solid #e8631a;display:flex;flex-direction:column;align-items:center;justify-content:center;flex:none"><b style="font:700 20px system-ui">82</b><span style="font:9px system-ui;color:#888">FIT</span></div>
+        <div><h2 style="font:700 22px system-ui">UX Researcher</h2><div style="font:12px system-ui;color:#777">Median $78k · Growing +13% · Bachelor's typical</div></div>
+      </div>
+      <span class="mkf" style="top:70px;right:14px">1</span>
+      <div class="card" style="gap:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><b style="font:700 13px system-ui">Why this match</b><span style="font:12px;color:#888">▲ collapse</span></div>
+        <div style="font:11px system-ui;color:#888">Top dimensions from YOUR answers driving this score:</div>
+        <div class="dimrow"><div style="font:12px system-ui">Interest: Investigative</div><span class="tier t-a">anchored</span><div class="track" style="grid-column:1/-1"><div class="fill" style="width:88%"></div></div></div>
+        <div class="dimrow"><div style="font:12px system-ui">Work style: Independence</div><span class="tier t-a">anchored</span><div class="track" style="grid-column:1/-1"><div class="fill" style="width:74%"></div></div></div>
+        <div class="dimrow"><div style="font:12px system-ui">Value: Helping others</div><span class="tier t-i">inferred</span><div class="track" style="grid-column:1/-1"><div class="fill" style="width:61%"></div></div></div>
+        <div style="font:11px system-ui;color:#888;text-decoration:underline">See all 161 dimensions</div>
+      </div>
+      <span class="mkf" style="top:200px;right:14px">2</span>
+      <div class="card" style="gap:10px">
+        <div class="sec">How you compare</div>
+        <div class="dimrow"><div style="font:12px system-ui">Analytical thinking</div><span class="tier t-a">anchored</span><div class="track" style="grid-column:1/-1"><div class="fill" style="width:80%"></div><div style="position:absolute;left:66%;top:-3px;bottom:-3px;width:2px;background:#222"></div></div></div>
+        <div class="dimrow"><div style="font:12px system-ui">Communication</div><span class="tier t-i">inferred</span><div class="track" style="grid-column:1/-1"><div class="fill" style="width:55%"></div><div style="position:absolute;left:72%;top:-3px;bottom:-3px;width:2px;background:#222"></div></div></div>
+        <div class="dimrow"><div style="font:12px system-ui">Statistics</div><span class="tier t-e">estimated</span><div class="track" style="grid-column:1/-1"><div class="fill" style="width:30%"></div><div style="position:absolute;left:70%;top:-3px;bottom:-3px;width:2px;background:#222"></div></div></div>
+        <div style="font:10px ui-monospace,monospace;color:#999">▮ you &nbsp;|&nbsp; │ career benchmark · chips = data confidence</div>
+      </div>
+      <span class="mkf" style="top:400px;right:14px">3</span>
+      <div class="card"><div class="sec">Marco's take</div><div class="bx" style="height:90px;text-align:left;justify-content:flex-start;padding:10px">AI narrative — 3 short paragraphs, streamed. Personalized: cites the user's own quiz answers.</div><div style="font:12px system-ui;text-decoration:underline;color:#666">Ask Marco a follow-up →</div></div>
+      <span class="mkf" style="top:560px;right:14px">4</span>
+      <div class="card"><div class="sec">Your skill gaps for this career</div>
+        <div style="display:flex;justify-content:space-between;font:13px system-ui"><span>User interviews</span><span class="chip" style="border-style:dashed">gap · high</span></div>
+        <div style="display:flex;justify-content:space-between;font:13px system-ui"><span>SQL basics</span><span class="chip" style="border-style:dashed">gap · med</span></div>
+        <div style="display:flex;justify-content:space-between;font:13px system-ui"><span>Presentation</span><span class="chip">covered ✓</span></div>
+      </div>
+      <div style="height:70px"></div>
+    </div>
+    <div style="position:sticky;bottom:0;background:#fff;border-top:1px solid #ddd;padding:10px 16px 8px">
+      <div class="btn prim" style="min-height:56px">Set as my target career</div>
+      <span class="mkf" style="bottom:70px;right:8px">5</span>
+      <div class="tabbar" style="border-top:none;margin-top:8px">
+        <div class="tab"><div class="ic"></div>Home</div>
+        <div class="tab tabon"><div class="ic" style="border-radius:50%"></div>Explore</div>
+        <div class="tab"><div class="ic" style="border-radius:2px"></div>Roadmap</div>
+        <div class="tab"><div class="ic" style="border-radius:50% 50% 50% 2px"></div>Ask Marco</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="ann">
+  <p><span class="mk">1</span>Fit score first. Data: match(userVector, careerVector); stats from O*NET record.</p>
+  <p><span class="mk">2</span>"Why this match" drawer shown EXPANDED (default open on first visit, then remembered). Native &lt;details&gt; element — zero JS. Data: top-3 contributing dimensions + weights.</p>
+  <p><span class="mk">3</span>Dimension bars: gray fill = user, black tick = career benchmark. Confidence chips: solid=anchored, dashed=inferred, dotted=estimated — pattern-coded, not color-coded (WCAG, and keeps wireframe gray).</p>
+  <p><span class="mk">4</span>AI narrative streams into a plain div; show skeleton + "generating…" state. Cache per career.</p>
+  <p><span class="mk">5</span>Sticky footer: primary CTA sits ABOVE the tab bar, one stacked sticky block. Becomes "✓ Your target" after tap.</p>
+  <p class="risk">Risk: sticky CTA + tab bar + iOS safe-area = one fixed container with env(safe-area-inset-bottom) padding — don't stack two independent fixed elements.</p>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1f"><div class="dv-olabel"><a class="dv-oid" href="#1f">1f</a>Deep dive — desktop 1440</div>
+<div class="row">
+<div class="dv-card" style="width:1180px">
+  <div style="display:flex;flex-direction:column;min-height:700px">
+    <div style="display:flex;align-items:center;gap:24px;padding:14px 28px;border-bottom:1px solid #ddd">
+      <div style="font:800 15px system-ui">FlightWay</div>
+      <div style="font:600 13px system-ui;color:#888">Explore / UX Researcher</div>
+      <div style="margin-left:auto;display:flex;gap:12px"><div class="btn" style="min-height:44px;border-radius:999px">💬 Ask Marco</div><div class="bx" style="width:40px;height:40px;border-radius:50%">av</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 360px;gap:24px;padding:24px 28px">
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;gap:18px;align-items:center;justify-content:space-between">
+          <div style="display:flex;gap:18px;align-items:center">
+            <div style="width:84px;height:84px;border-radius:50%;border:6px solid #e8631a;display:flex;align-items:center;justify-content:center;font:700 24px system-ui">82</div>
+            <div><h2 style="font:700 26px system-ui">UX Researcher</h2><div style="font:13px system-ui;color:#777">Median $78k · Growing +13% · Bachelor's typical</div></div>
+          </div>
+          <div class="btn prim" style="min-height:52px">Set as my target career</div>
+        </div>
+        <div class="card"><b style="font:700 14px system-ui">Why this match ▲</b>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+            <div><div style="font:12px system-ui;margin-bottom:4px">Investigative <span class="tier t-a">anchored</span></div><div class="track"><div class="fill" style="width:88%"></div></div></div>
+            <div><div style="font:12px system-ui;margin-bottom:4px">Independence <span class="tier t-a">anchored</span></div><div class="track"><div class="fill" style="width:74%"></div></div></div>
+            <div><div style="font:12px system-ui;margin-bottom:4px">Helping others <span class="tier t-i">inferred</span></div><div class="track"><div class="fill" style="width:61%"></div></div></div>
+          </div>
+          <div style="font:11px system-ui;color:#888;text-decoration:underline">See all 161 dimensions</div>
+        </div>
+        <div class="card"><div class="sec">How you compare</div>
+          <div class="dimrow"><div style="font:12px system-ui">Analytical thinking</div><span class="tier t-a">anchored</span><div class="track" style="grid-column:1/-1"><div class="fill" style="width:80%"></div><div style="position:absolute;left:66%;top:-3px;bottom:-3px;width:2px;background:#222"></div></div></div>
+          <div class="dimrow"><div style="font:12px system-ui">Communication</div><span class="tier t-i">inferred</span><div class="track" style="grid-column:1/-1"><div class="fill" style="width:55%"></div><div style="position:absolute;left:72%;top:-3px;bottom:-3px;width:2px;background:#222"></div></div></div>
+          <div class="dimrow"><div style="font:12px system-ui">Statistics</div><span class="tier t-e">estimated</span><div class="track" style="grid-column:1/-1"><div class="fill" style="width:30%"></div><div style="position:absolute;left:70%;top:-3px;bottom:-3px;width:2px;background:#222"></div></div></div>
+        </div>
+        <div class="card"><div class="sec">Your skill gaps</div><div style="display:flex;gap:10px"><span class="chip" style="border-style:dashed">User interviews · high</span><span class="chip" style="border-style:dashed">SQL · med</span><span class="chip">Presentation ✓</span></div><div class="btn" style="min-height:44px;align-self:flex-start">Add gaps to my roadmap</div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card" style="min-height:280px"><div class="sec">Marco's take</div><div class="bx" style="flex:1;min-height:180px">AI narrative, personalized,<br>streamed text</div><div class="btn" style="min-height:44px">Ask a follow-up</div></div>
+        <div class="card"><div class="sec">Similar careers</div><div class="bx" style="height:90px">3 rows: name + fit score,<br>from vector nearest-neighbors</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="ann">
+  <p><span class="mk">1</span>CTA moves top-right (persistent on scroll via position:sticky header if page is long).</p>
+  <p><span class="mk">2</span>Marco's take lives in right rail — visible without scroll, reinforcing the AI value prop.</p>
+  <p><span class="mk">3</span>Similar careers = cheap engagement loop, precomputed nearest-neighbor list.</p>
+</div>
+</div>
+</div>
+
+</div></div>
+
+<!-- ============ 4. CAREER HUB (mobile) ============ -->
+<div class="grp"><h3>4 · Career Hub — mobile alternative to canvas map</h3>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1g"><div class="dv-olabel"><a class="dv-oid" href="#1g">1g</a>Hub — mobile 390 (ranked list)</div>
+<div class="row">
+<div class="dv-card" style="width:390px;position:relative">
+  <div style="display:flex;flex-direction:column;min-height:800px">
+    <div style="padding:14px 16px 10px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #ddd;position:sticky;top:0;background:#fff">
+      <div style="display:flex;gap:10px;align-items:center">
+        <h2 style="font:700 20px system-ui;flex:1">Explore careers</h2>
+        <div style="display:flex;border:1.5px solid #555;border-radius:8px;overflow:hidden;font:600 12px system-ui">
+          <div style="padding:11px 14px;background:#222;color:#fff">List</div><div style="padding:11px 14px;color:#888">Map</div>
+        </div>
+      </div>
+      <span class="mkf" style="top:14px;right:110px">1</span>
+      <div class="bx" style="height:44px;justify-content:flex-start;padding-left:12px">🔍 search 782 careers…</div>
+      <div style="display:flex;gap:8px;overflow:hidden">
+        <span class="chip" style="background:#222;color:#fff;border-color:#222">Best fit</span><span class="chip">Healthcare</span><span class="chip">Tech</span><span class="chip">Creative</span><span class="chip">Trades</span><span class="chip">＋</span>
+      </div>
+      <span class="mkf" style="top:118px;right:8px">2</span>
+      <div style="display:flex;justify-content:space-between;font:11px system-ui;color:#888"><span>Ranked by fit to <b>your</b> profile</span><span>Sort: Fit ▾</span></div>
+    </div>
+    <div style="padding:10px 16px;display:flex;flex-direction:column;gap:10px">
+      <div class="card" style="flex-direction:row;align-items:center;gap:12px;padding:12px;min-height:72px">
+        <b style="font:700 16px system-ui;width:34px;color:#e8631a">82</b>
+        <div style="flex:1"><b style="font:600 14px system-ui">UX Researcher</b><div style="font:11px system-ui;color:#888">$78k · +13% growth · ★ your target</div></div>
+        <div style="color:#999">›</div>
+      </div>
+      <span class="mkf" style="top:190px;right:8px">3</span>
+      <div class="card" style="flex-direction:row;align-items:center;gap:12px;padding:12px;min-height:72px">
+        <b style="font:700 16px system-ui;width:34px">79</b>
+        <div style="flex:1"><b style="font:600 14px system-ui">Market Research Analyst</b><div style="font:11px system-ui;color:#888">$68k · +8% growth</div></div>
+        <div style="color:#999">›</div>
+      </div>
+      <div class="card" style="flex-direction:row;align-items:center;gap:12px;padding:12px;min-height:72px">
+        <b style="font:700 16px system-ui;width:34px">76</b>
+        <div style="flex:1"><b style="font:600 14px system-ui">School Counselor</b><div style="font:11px system-ui;color:#888">$61k · +5% growth</div></div>
+        <div style="color:#999">›</div>
+      </div>
+      <div class="card" style="flex-direction:row;align-items:center;gap:12px;padding:12px;min-height:72px">
+        <b style="font:700 16px system-ui;width:34px">74</b>
+        <div style="flex:1"><b style="font:600 14px system-ui">Data Analyst</b><div style="font:11px system-ui;color:#888">$72k · +23% growth</div></div>
+        <div style="color:#999">›</div>
+      </div>
+      <div class="bx" style="height:56px">…rows 5–30, then "Load 30 more" button (no infinite scroll)</div>
+      <span class="mkf" style="top:560px;right:8px">4</span>
+    </div>
+    <div style="margin-top:auto;position:sticky;bottom:0">
+      <div class="tabbar">
+        <div class="tab"><div class="ic"></div>Home</div>
+        <div class="tab tabon"><div class="ic" style="border-radius:50%"></div>Explore</div>
+        <div class="tab"><div class="ic" style="border-radius:2px"></div>Roadmap</div>
+        <div class="tab"><div class="ic" style="border-radius:50% 50% 50% 2px"></div>Ask Marco</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="ann">
+  <p><span class="mk">1</span>List is DEFAULT on mobile; "Map" opens the canvas full-screen landscape-hinted, clearly secondary. Toggle ≥44px.</p>
+  <p><span class="mk">2</span>Filter chips scroll horizontally; "Best fit" is a sort preset, category chips filter O*NET clusters. State in URL query → shareable/back-button safe.</p>
+  <p><span class="mk">3</span>Row anatomy: fit score (orange only for user's target ★), name, 2 stats. Whole row is the tap target, ≥72px.</p>
+  <p><span class="mk">4</span>782 careers: render 30 rows, "Load more" button. No virtualization library needed in vanilla JS.</p>
+  <p class="risk">Risk: DON'T lazy-render on scroll events in vanilla JS (jank). Chunked "load more" or IntersectionObserver only.</p>
+</div>
+</div>
+</div>
+
+</div></div>
+
+<!-- ============ 5. BOTTOM ACTION BAR ============ -->
+<div class="grp"><h3>5 · Persistent mobile bottom bar</h3>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1h"><div class="dv-olabel"><a class="dv-oid" href="#1h">1h</a>Bottom bar — spec + coexistence, 390</div>
+<div class="row">
+<div class="dv-card" style="width:390px;position:relative">
+  <div style="display:flex;flex-direction:column;min-height:560px">
+    <div style="flex:1;padding:16px;display:flex;flex-direction:column;gap:10px;opacity:.35">
+      <div class="bx" style="height:60px">page header (any signed-in page)</div>
+      <div class="bx" style="height:120px">content card</div>
+      <div class="bx" style="height:120px">content card</div>
+      <div class="bx" style="height:80px">content — last item gets<br>padding-bottom: 88px so bar never covers it</div>
+    </div>
+    <span class="mkf" style="bottom:150px;right:8px">3</span>
+    <div style="position:sticky;bottom:0;background:#fff;border-top:1.5px solid #555">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr)">
+        <div class="tab tabon" style="min-height:64px"><div class="ic"></div>Home</div>
+        <div class="tab" style="min-height:64px"><div class="ic" style="border-radius:50%"></div>Explore</div>
+        <div class="tab" style="min-height:64px"><div class="ic" style="border-radius:2px"></div>Roadmap</div>
+        <div class="tab" style="min-height:64px;color:#e8631a"><div class="ic" style="border-radius:50% 50% 50% 2px"></div>Ask Marco</div>
+      </div>
+      <div style="height:14px;background:#f2f2f2;display:flex;align-items:center;justify-content:center;font:9px ui-monospace,monospace;color:#999">env(safe-area-inset-bottom)</div>
+    </div>
+    <span class="mkf" style="bottom:56px;left:8px">1</span>
+    <span class="mkf" style="bottom:56px;right:8px">2</span>
+  </div>
+</div>
+<div class="ann">
+  <p><span class="mk">1</span>4 tabs, each ≥64px tall × 97px wide (≥44px WCAG easily). Active tab: filled icon + label, plus aria-current="page". Focus order = DOM order, visible ring on each tab.</p>
+  <p><span class="mk">2</span>Ask Marco is a permanent tab — the guaranteed entry point on every signed-in surface. Icon tinted orange even when inactive (it's an action, not a location). Tap opens chat as full-screen sheet, bar hides inside chat.</p>
+  <p><span class="mk">3</span><span>Coexistence rule: bar is position:fixed; every page's scroll container gets padding-bottom = bar height + safe-area. Page-level primary CTAs (see <a class="dv-oid" href="#1e">1e</a>) stack INSIDE the same fixed container, above the tabs.</span></p>
+  <p>Implementation: one shared HTML snippet injected per page (or server-side include) — no framework needed; active state = compare location.pathname.</p>
+  <p class="risk">Risk: 100vh + fixed bar on iOS Safari = hidden content. Use 100dvh / min-height:100svh, never 100vh.</p>
+</div>
+</div>
+</div>
+
+</div></div>
+
+<p class="dv-next">Try next: "riff on <a class="dv-oid" href="#1c">1c</a> with roadmap above target career" · "show the why-this-match drawer collapsed state" · "wireframe the Marco chat sheet"</p>
+</section>
+
+</x-dc>
+</body>
+</html>
