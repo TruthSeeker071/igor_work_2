@@ -892,6 +892,20 @@
 
     var section = el.closest('.career-fit-section');
     if (section) section.style.display = '';
+
+    // UI overhaul Phase 3c (wireframe 1e-5): mirror the primary CTA into the
+    // fixed bottom bar on mobile — one fixed container, CTA above the tabs.
+    try {
+      if (window.FWTabbar && window.matchMedia && matchMedia('(max-width: 768px)').matches) {
+        var srcCta = el.querySelector('.fit-track-roadmap-btn') || el.querySelector('.fit-roadmap-cta a');
+        if (srcCta) {
+          var mirror = srcCta.cloneNode(true);
+          mirror.className = 'fw-sticky-cta';
+          mirror.textContent = 'Set as my target career';
+          FWTabbar.setAction(mirror);
+        }
+      }
+    } catch (_) { /* chrome only — never block fit panel render */ }
   }
 
   var careerTitleBySocCache = null;

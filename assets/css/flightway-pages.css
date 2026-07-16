@@ -3164,3 +3164,23 @@ body.portal-resume-drawer-open { overflow: hidden; }
   #page-portal .portal-footer { grid-column: 1 / -1; }
   #page-portal .portal-target-deepdive { width: auto; padding: 0 var(--space-5); }
 }
+
+/* ── UI overhaul Phase 3c — career deep dive per wireframes 1e/1f ── */
+@media (min-width: 0px) {
+  .fw-sticky-cta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 56px;
+    border-radius: 14px;
+    background: rgb(var(--primary));
+    color: rgb(var(--primary-fg));
+    font-weight: 700;
+    font-size: var(--text-base);
+    text-decoration: none;
+    box-shadow: var(--shadow-btn);
+  }
+  .fw-sticky-cta:hover { background: rgb(var(--primary-hover)); }
+  /* Fit panel head reads as the flagship block */
+  .fit-panel-head { font-size: var(--text-xl); }
+}

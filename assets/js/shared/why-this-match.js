@@ -92,18 +92,28 @@
 
     var toggle = block.querySelector('.fw-why-toggle');
     var body = block.querySelector('.fw-why-body');
-    toggle.addEventListener('click', function () {
-      var open = body.hidden;
+    function setOpen(open, log) {
       body.hidden = !open;
       toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
       block.classList.toggle('is-open', open);
-      if (open && global.FWEvents) FWEvents.log('why_match_open', { n: contribs.length });
+      if (open && log && global.FWEvents) FWEvents.log('why_match_open', { n: contribs.length });
+    }
+    toggle.addEventListener('click', function () {
+      var open = body.hidden;
+      setOpen(open, true);
+      try { localStorage.setItem(OPEN_KEY, open ? '1' : '0'); } catch (_) { /* ignore */ }
     });
+    // Wireframe 1e-2: expanded by default on first visit, then remembered.
+    var saved = null;
+    try { saved = localStorage.getItem(OPEN_KEY); } catch (_) { /* ignore */ }
+    if (saved !== '0') setOpen(true, false);
 
     if (opts.prepend && container.firstChild) container.insertBefore(block, container.firstChild);
     else container.appendChild(block);
     return block;
   }
+
+  var OPEN_KEY = 'fw_why_match_open_v1';
 
   global.FWWhyMatch = {
     fromComparisons: fromComparisons,
