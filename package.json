@@ -24,7 +24,8 @@
     "test:weekly": "node scripts/test-weekly-plan.mjs",
     "test:entitlements": "node scripts/test-entitlements.mjs",
     "verify:aliases": "node scripts/verify-slug-aliases.mjs",
-    "sim:pregen": "node scripts/pregen-sims.mjs"
+    "sim:pregen": "node scripts/pregen-sims.mjs",
+    "verify:ui": "node scripts/verify-ui.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.28.1",

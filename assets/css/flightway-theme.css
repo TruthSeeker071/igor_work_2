@@ -44,6 +44,12 @@ html:not([data-theme]) {
   --nav-border: rgb(var(--border));
   --overlay-bg: rgb(20 19 18 / 0.72);
   --content-elevated: rgb(var(--surface));
+
+  /* Confidence-tier + info semantics (single source; flightway-2.css aliases these) */
+  --conf-anchored: #35c184;
+  --conf-inferred: #e0a63a;
+  --conf-estimated: #8a93ac;
+  --info-accent: #6ea8ff;
 }
 
 /* ── Light (warm cream + peach) ── */
@@ -70,7 +76,9 @@ html:not([data-theme]) {
   --surface: 255 255 255;
   --surface-2: 248 248 248;
   --surface-hover: 255 244 238;
-  --text: 210 85 40;
+  /* was 210 85 40 (brand orange): 4.04:1 on --bg, fails WCAG AA for body text.
+     Orange stays for interactive/brand elements via --primary/--accent. */
+  --text: 40 30 25;
   --text-muted: 120 90 70;
   --border: 235 228 222;
 
@@ -83,6 +91,12 @@ html:not([data-theme]) {
   --nav-border: rgb(var(--border));
   --overlay-bg: rgb(20 12 9 / 0.35);
   --content-elevated: rgb(var(--surface));
+
+  /* Confidence-tier + info semantics — darkened for contrast on light surfaces */
+  --conf-anchored: #127a52;
+  --conf-inferred: #96640a;
+  --conf-estimated: #5a6378;
+  --info-accent: #1d58b2;
 }
 
 /* Solid aliases for Flightway.html legacy var(--bg) usage */
@@ -116,6 +130,13 @@ html:not([data-theme]) {
   --shadow-btn-hover: 0 4px 12px rgb(0 0 0 / 0.18);
   --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
+  /* Motion tokens — use these for all new transitions/animations */
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
   /* Spacing scale (4px base) */
   --space-1: 4px;
   --space-2: 8px;
@@ -133,6 +154,9 @@ html:not([data-theme]) {
   --text-lg: 1.125rem;
   --text-xl: 1.25rem;
   --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+  --text-display: clamp(2.25rem, 5vw, 3rem);
   --line-tight: 1.25;
   --line-normal: 1.5;
   --line-relaxed: 1.65;
@@ -146,6 +170,11 @@ html:not([data-theme]) {
 
   --green: #4ade80;
   --green-bg: rgba(74, 222, 128, 0.12);
+
+  /* Fill-safe accents: constant across themes, always paired with dark text (#06122b).
+     Text usage must use --info-accent / --conf-* (theme-aware, contrast-safe). */
+  --info-accent-fill: #6ea8ff;
+  --conf-inferred-fill: #e0a63a;
 
   --q-blue: var(--primary-solid);
   --q-lblue: var(--primary-hover-solid);

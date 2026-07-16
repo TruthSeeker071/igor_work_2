@@ -1,0 +1,56 @@
+{
+  "auth-pages.css": {
+    "hex": 0,
+    "important": 0,
+    "vh100": 0,
+    "fontSizePx": 0
+  },
+  "flightway-2.css": {
+    "hex": 31,
+    "important": 0,
+    "vh100": 0,
+    "fontSizePx": 73
+  },
+  "flightway-pages.css": {
+    "hex": 171,
+    "important": 33,
+    "vh100": 8,
+    "fontSizePx": 132
+  },
+  "flightway-theme.css": {
+    "hex": 0,
+    "important": 289,
+    "vh100": 1,
+    "fontSizePx": 0
+  },
+  "hub-dashboard.css": {
+    "hex": 40,
+    "important": 50,
+    "vh100": 1,
+    "fontSizePx": 0
+  },
+  "profile-building.css": {
+    "hex": 0,
+    "important": 1,
+    "vh100": 1,
+    "fontSizePx": 0
+  },
+  "simulation.css": {
+    "hex": 2,
+    "important": 1,
+    "vh100": 0,
+    "fontSizePx": 3
+  },
+  "skill-gap-tracker.css": {
+    "hex": 2,
+    "important": 4,
+    "vh100": 0,
+    "fontSizePx": 0
+  },
+  "zone-colors.css": {
+    "hex": 0,
+    "important": 0,
+    "vh100": 0,
+    "fontSizePx": 0
+  }
+}
