@@ -1,0 +1,60 @@
+{
+  "v": 1,
+  "contact": {
+    "name": "Jordan Rivera",
+    "email": "jordan.rivera@example.com",
+    "phone": "",
+    "location": "Austin, TX",
+    "links": ["linkedin.com/in/jordanrivera"]
+  },
+  "summary": "Operations analyst with 5 years of experience turning messy data into decisions.",
+  "sections": [
+    {
+      "kind": "experience",
+      "heading": "Work Experience",
+      "items": [
+        {
+          "org": "Northbridge Logistics",
+          "role": "Senior Operations Analyst",
+          "start": "13/2020",
+          "end": "Present",
+          "bullets": [
+            { "text": "Redesigned the weekly capacity forecast, cutting planning time from 6 hours to 90 minutes and also personally rewired the entire warehouse conveyor scheduling system from scratch overnight without any help from anyone on the team while training every new hire and rewriting the onboarding manual for the whole department in a single marathon session.", "src": "resume", "dims": ["Analytical Thinking"] }
+          ]
+        },
+        {
+          "org": "Alden Retail Group",
+          "role": "Operations Coordinator",
+          "start": "",
+          "end": "",
+          "bullets": [
+            { "text": "Trained 12 new coordinators on inventory reconciliation procedures.", "src": "manual", "dims": [] }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "education",
+      "heading": "Education",
+      "items": [
+        {
+          "org": "University of Texas at Austin",
+          "role": "B.B.A. in Supply Chain Management",
+          "start": "2015",
+          "end": "2019",
+          "bullets": []
+        }
+      ]
+    },
+    {
+      "kind": "projects",
+      "heading": "Projects",
+      "items": []
+    },
+    {
+      "kind": "skills",
+      "heading": "Skills",
+      "flat": ["SQL", "Tableau", "Process Improvement", "Vendor Management", "Python"]
+    }
+  ]
+}

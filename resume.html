@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resume Builder — FlightWay</title>
+<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260716a">
+<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260716a">
+<script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
+<script src="assets/js/shared/global-shim.js?v=20260703p"></script>
+<script src="assets/js/shared/flags.js?v=20260703p"></script>
+<script src="assets/js/shared/entitlements.js?v=20260708e" defer></script>
+<link rel="stylesheet" href="assets/css/flightway-2.css?v=20260716a">
+<script src="assets/js/shared/events.js?v=20260708a" defer></script>
+<script src="assets/js/shared/fw-tabbar.js?v=20260716a" defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="assets/vendor/lucide-lite.js?v=20260703p" defer></script>
+<style>
+  .resume-app input[type="text"], .resume-app textarea { padding: 8px 10px; border-radius: 8px; border: 1px solid rgb(var(--border)); background: rgb(var(--surface)); color: rgb(var(--text)); font: inherit; }
+  .resume-app textarea { width: 100%; box-sizing: border-box; resize: vertical; }
+  .resume-contact-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
+  .resume-page-wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .resume-editor-col, .resume-preview-col { min-width: 0; }
+  .resume-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+  .resume-toolbar input[type="text"] { flex: 1 1 220px; }
+  .resume-switcher { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .resume-switcher button { font-size: 12px; }
+  .resume-save-state { font-size: 12px; opacity: 0.75; min-width: 90px; }
+  .resume-section-card { border: 1px solid rgb(var(--border)); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+  .resume-item-card { border: 1px dashed rgb(var(--border)); border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+  .resume-bullet-row { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
+  .resume-bullet-row textarea { flex: 1 1 auto; min-height: 40px; }
+  .resume-src-chip { font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; padding: 2px 6px; border-radius: 999px; background: rgb(var(--surface-2)); color: rgb(var(--text-muted)); border: 1px solid rgb(var(--border)); white-space: nowrap; }
+  .resume-skill-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .resume-skill-tag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 999px; background: rgb(var(--surface-2)); font-size: 12px; }
+  .resume-skill-tag button { border: none; background: none; cursor: pointer; font-size: 12px; line-height: 1; color: inherit; }
+  .resume-preview-pane { border: 1px solid rgb(var(--border)); border-radius: 10px; padding: 20px; background: #fff; color: #111; font-family: Arial, Helvetica, sans-serif; }
+  .resume-add-btn, .resume-remove-btn { font-size: 12px; }
+  .resume-btn-quiet { background: rgb(var(--surface-2)); border: 1px solid rgb(var(--border)); color: inherit; }
+  .resume-error-banner { color: #b3261e; font-size: 13px; margin: 6px 0; }
+  [data-theme="dark"] .resume-error-banner, [data-theme="dark"] .resume-tailor-msg--error { color: #ff8888; }
+  .resume-suggest-row { border-top: 1px solid rgb(var(--border)); padding: 10px 0; }
+  .resume-suggest-row:first-child { border-top: none; }
+  .resume-suggest-text { margin: 0 0 6px 0; font-size: 13px; }
+  .resume-suggest-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .resume-tailor-fields { display: flex; flex-direction: column; gap: 8px; }
+  .resume-tailor-fields textarea { min-height: 110px; resize: vertical; }
+  .resume-tailor-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  .resume-tailor-msg { font-size: 12px; opacity: 0.8; }
+  .resume-tailor-msg--error { color: #b3261e; opacity: 1; }
+  .resume-variant-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+  .resume-variant-base-btn { align-self: flex-start; font-size: 12px; padding: 6px 12px; border-radius: 999px; border: 1px solid rgb(var(--border)); background: rgb(var(--surface-2)); color: inherit; cursor: pointer; }
+  .resume-variant-base-btn[aria-pressed="true"] { border-color: var(--accent); font-weight: 600; }
+  .resume-variant-card { border: 1px solid rgb(var(--border)); border-radius: 10px; padding: 12px 14px; }
+  .resume-variant-card--active { border-color: var(--accent); }
+  .resume-variant-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+  .resume-variant-select { font-size: 13px; font-weight: 600; background: none; border: none; cursor: pointer; padding: 0; text-align: left; color: inherit; }
+  .resume-variant-score { font-size: 12px; opacity: 0.85; white-space: nowrap; }
+  .resume-variant-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+  .resume-variant-chip { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgb(var(--surface-2)); border: 1px solid rgb(var(--border)); }
+  .resume-variant-gaps { margin: 6px 0 0 0; padding-left: 18px; font-size: 12px; }
+  .resume-gap-item { margin-bottom: 6px; }
+  .resume-gap-text { display: block; }
+  .resume-gap-sub { display: block; opacity: 0.7; font-size: 11px; }
+  .resume-ats-box { border: 1px solid rgb(var(--border)); border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; }
+  .resume-ats-score { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+  .resume-ats-issues { margin: 0; padding-left: 18px; font-size: 12px; }
+  .resume-ats-ok { list-style: none; margin-left: -18px; color: #1a7a3c; }
+  [data-theme="dark"] .resume-ats-ok { color: #6fd394; }
+  @media (max-width: 900px) {
+    .resume-page-wrap { grid-template-columns: 1fr; }
+  }
+  @media print {
+    body * { visibility: hidden; }
+    .resume-preview-pane, .resume-preview-pane * { visibility: visible; }
+    .resume-preview-pane { position: absolute; left: 0; top: 0; width: 100%; border: none; padding: 0; }
+    nav, footer, .resume-toolbar, .resume-switcher, .resume-editor-col,
+    .resume-tailor-card, .resume-variant-list, .resume-ats-box { display: none !important; }
+  }
+</style>
+</head>
+<body class="portal-page">
+
+<nav>
+  <div class="nav-inner">
+    <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay home"></a>
+    <div class="nav-links app-nav" aria-label="App">
+      <a href="portal.html" class="app-nav-tab" data-app-nav="home"><span class="app-nav-label">Home</span></a>
+      <a href="dashboard.html" class="app-nav-tab" data-app-nav="hub"><span class="app-nav-label">Career Hub</span></a>
+      <a href="coach.html" class="app-nav-tab" data-app-nav="advisor"><span class="app-nav-label">Marco</span></a>
+      <a href="roadmap.html" class="app-nav-tab" data-app-nav="roadmap"><span class="app-nav-label">Career Roadmap</span></a>
+      <a href="quiz.html" class="app-nav-tab app-nav-tab--muted" data-app-nav="quiz"><span class="app-nav-label">Career Quiz</span></a>
+      <a href="auth.html#signin" class="app-nav-tab nav-signin-link" id="nav-signin-link">Sign in</a>
+      <button type="button" class="fw-theme-toggle" aria-label="Switch to dark mode" aria-pressed="false">
+        <span class="fw-theme-icon" aria-hidden="true"></span>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<div id="page-resume" class="page active" role="main" aria-label="Resume Builder">
+  <section class="portal-wrap">
+    <header class="portal-head">
+      <h1>Resume Builder</h1>
+      <p>Build one ATS-safe base resume from your profile — every bullet keeps its source.</p>
+    </header>
+
+    <div id="resume-gate-host"></div>
+
+    <div id="resume-app" class="resume-app">
+      <div class="resume-toolbar">
+        <input type="text" id="resume-title-input" placeholder="Resume title" maxlength="120">
+        <button type="button" id="resume-save-btn" class="fw-iv-btn fw-iv-btn--primary">Save</button>
+        <span id="resume-save-state" class="resume-save-state" aria-live="polite"></span>
+        <button type="button" id="resume-print-btn" class="fw-iv-btn resume-btn-quiet">Print / PDF</button>
+        <button type="button" id="resume-docx-btn" class="fw-iv-btn resume-btn-quiet">Download .docx</button>
+        <button type="button" id="resume-delete-btn" class="fw-iv-btn resume-btn-quiet">Delete</button>
+      </div>
+      <div class="resume-switcher" id="resume-switcher" aria-label="Your resumes"></div>
+      <p id="resume-error" class="resume-error-banner" hidden></p>
+
+      <div class="resume-section-card resume-tailor-card">
+        <h3>Tailor to a job</h3>
+        <p>Paste a job posting to get a reordered, reworded variant plus a keyword match score and gap list.</p>
+        <div class="resume-tailor-fields">
+          <input type="text" id="resume-tailor-title" placeholder="Job title (optional)" maxlength="120">
+          <textarea id="resume-tailor-jobtext" rows="6" maxlength="6000" placeholder="Paste the full job posting here (at least a few lines)…"></textarea>
+          <div class="resume-tailor-actions">
+            <button type="button" id="resume-tailor-btn" class="fw-iv-btn fw-iv-btn--primary">Tailor to this job</button>
+            <span id="resume-tailor-msg" class="resume-tailor-msg" aria-live="polite"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="resume-variant-list" id="resume-variant-list" aria-label="Base resume and tailored variants"></div>
+
+      <div class="resume-page-wrap">
+        <div class="resume-editor-col">
+          <div class="resume-section-card">
+            <h3>Contact</h3>
+            <div class="resume-contact-fields">
+              <input type="text" id="resume-contact-name" placeholder="Full name" maxlength="120">
+              <input type="text" id="resume-contact-email" placeholder="Email" maxlength="160">
+              <input type="text" id="resume-contact-phone" placeholder="Phone" maxlength="160">
+              <input type="text" id="resume-contact-location" placeholder="Location" maxlength="160">
+              <input type="text" id="resume-contact-links" placeholder="Links (comma separated)" maxlength="600">
+            </div>
+          </div>
+
+          <div class="resume-section-card">
+            <h3>Summary</h3>
+            <textarea id="resume-summary" maxlength="1200" rows="3" placeholder="A short professional summary…"></textarea>
+          </div>
+
+          <div class="resume-section-card resume-suggest-card">
+            <h3>AI bullet suggestions</h3>
+            <p>Drafts built from your profile, portfolio artifacts, and sim flights — tuned to your target career. Every bullet keeps its source; edit anything after adding.</p>
+            <div class="resume-tailor-actions">
+              <button type="button" id="resume-suggest-btn" class="fw-iv-btn resume-btn-quiet">Suggest bullets</button>
+              <span id="resume-suggest-msg" class="resume-tailor-msg" aria-live="polite"></span>
+            </div>
+            <div id="resume-suggest-list" aria-label="Suggested bullets"></div>
+          </div>
+
+          <div class="resume-section-card" data-section-kind="experience">
+            <h3>Work Experience</h3>
+            <div class="resume-items" data-items="experience"></div>
+            <button type="button" class="resume-add-btn" data-add-item="experience">+ Add experience</button>
+          </div>
+
+          <div class="resume-section-card" data-section-kind="education">
+            <h3>Education</h3>
+            <div class="resume-items" data-items="education"></div>
+            <button type="button" class="resume-add-btn" data-add-item="education">+ Add education</button>
+          </div>
+
+          <div class="resume-section-card" data-section-kind="projects">
+            <h3>Projects</h3>
+            <div class="resume-items" data-items="projects"></div>
+            <button type="button" class="resume-add-btn" data-add-item="projects">+ Add project</button>
+          </div>
+
+          <div class="resume-section-card" data-section-kind="skills">
+            <h3>Skills</h3>
+            <div class="resume-skill-tags" id="resume-skill-tags"></div>
+            <input type="text" id="resume-skill-input" placeholder="Type a skill and press Enter" maxlength="80">
+          </div>
+        </div>
+
+        <div class="resume-preview-col">
+          <h3>Preview</h3>
+          <div class="resume-ats-box" id="resume-ats-box" aria-label="ATS self-check">
+            <div class="resume-ats-score" id="resume-ats-score">-- / 100</div>
+            <ul class="resume-ats-issues" id="resume-ats-issues"></ul>
+          </div>
+          <div class="resume-preview-pane" id="resume-preview-pane"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-left">
+      <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay"></a>
+      <p>&copy; 2026 FlightWay. All rights reserved.</p>
+    </div>
+    <div class="footer-links"><a href="mailto:hello@flightway.app">Contact</a></div>
+  </div>
+</footer>
+
+<script src="assets/js/shared/page-boot.js?v=20260703p" defer></script>
+<script src="assets/js/shared/auth.js?v=20260703p" defer></script>
+<script src="assets/js/shared/auth-nav.js?v=20260703p" defer></script>
+<script src="assets/js/shared/fw-toast.js?v=20260703p" defer></script>
+<script src="assets/js/shared/resume-render.js?v=20260717a" defer></script>
+<script src="assets/vendor/fflate-lite.js?v=20260717a" defer></script>
+<script src="assets/js/app/resume-page.js?v=20260717c" defer></script>
+<script src="assets/js/shared/data-field.js?v=20260703p" defer></script>
+<script src="assets/js/shared/brand.js?v=20260703p" defer></script>
+<script src="assets/js/shared/app-nav.js?v=20260703p" defer></script>
+<script src="assets/js/shared/theme.js?v=20260703p" defer></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    FWPageBoot.authBootThen(function () {
+      if (!FWPageBoot.requireAuth('resume.html')) return;
+      if (window.FWResumePage && typeof FWResumePage.init === 'function') FWResumePage.init();
+      if (window.FWAppNav) FWAppNav.sync('hub');
+    });
+  });
+</script>
+</body>
+</html>

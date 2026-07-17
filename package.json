@@ -21,6 +21,8 @@
     "deploy:prototype": "node scripts/pages-deploy.mjs flightwayjacobprototype Jacob_Work",
     "deploy:cron": "wrangler deploy --config workers/cron/wrangler.toml",
     "test:vectors": "node scripts/test-vectors.cjs",
+    "resume:ats-check": "node scripts/test-resume-ats.cjs",
+    "resume:tailor-check": "node scripts/test-resume-tailor.cjs",
     "test:weekly": "node scripts/test-weekly-plan.mjs",
     "test:entitlements": "node scripts/test-entitlements.mjs",
     "verify:aliases": "node scripts/verify-slug-aliases.mjs",

@@ -122,6 +122,7 @@
       + '<p class="fw-iv-sub">Bullets from your profile, tuned to <strong>' + target + '</strong> and tagged by the O*NET coordinates it weighs most.</p>'
       + '<div class="fw-rb-body">'
       + '<button type="button" id="fw-rb-gen" class="fw-iv-btn fw-iv-btn--primary">Generate bullets</button>'
+      + '<a class="fw-iv-btn" href="resume.html">Open the full builder →</a>'
       + '<div id="fw-rb-result" class="fw-rb-result" hidden></div>'
       + '<p id="fw-rb-error" class="fw-iv-error" hidden></p>'
       + '</div></div>';
