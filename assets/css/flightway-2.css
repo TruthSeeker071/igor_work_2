@@ -240,6 +240,7 @@
 .fw-iv-btn { border: 0; border-radius: 10px; padding: 10px 14px; font: inherit; font-weight: 600; cursor: pointer; }
 .fw-iv-btn--primary { background: var(--fw2-accent); color: #06122b; }
 .fw-iv-btn:disabled { opacity: .55; cursor: default; }
+a.fw-iv-btn { text-decoration: none; color: inherit; display: inline-flex; align-items: center; }
 .fw-iv-question { margin: 4px 0 12px; padding: 14px; border-radius: 12px; background: rgba(127,140,175,.1); }
 .fw-iv-qtype { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 2px 8px; border-radius: 999px; margin-bottom: 8px; }
 .fw-iv-qtype--behavioral { background: rgba(53,193,132,.2); color: var(--fw2-anchored); }
