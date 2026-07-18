@@ -6,6 +6,7 @@
 <title>FlightWay — Career Guide</title>
 <link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260716a">
 <link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260716a">
+<link rel="stylesheet" href="assets/css/good-fit-jobs.css?v=20260718a">
 <script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
 <script src="assets/js/shared/global-shim.js?v=20260703p"></script>
 <script src="assets/js/shared/flags.js?v=20260703p"></script>
@@ -53,6 +54,7 @@
 <script src="assets/js/shared/why-this-match.js?v=20260716a" defer></script>
 <script src="assets/js/hub/ai-exposure.js?v=20260708c" defer></script>
 <script src="assets/js/hub/career-personalize.js?v=20260716a" defer></script>
+<script src="assets/js/job-matches.js?v=20260718a" defer></script>
 <script src="assets/js/app/app-pages.js?v=20260703q" defer></script>
 <script src="assets/js/shared/career-target.js?v=20260703p" defer></script>
 <script src="assets/js/shared/sector-fit-sheet.js?v=20260703p" defer></script>
@@ -77,8 +79,12 @@
     function openCareer() {
       var socParam = params.get('soc') || '';
       var runShow = function (resolvedSoc) {
-        if (typeof showCareer === 'function') showCareer(slug, 'hub', { soc: resolvedSoc || socParam });
-        else location.replace('dashboard.html');
+        if (typeof showCareer === 'function') {
+          showCareer(slug, 'hub', { soc: resolvedSoc || socParam });
+          if (window.FWJobs) FWJobs.renderCareer(resolvedSoc || socParam);
+        } else {
+          location.replace('dashboard.html');
+        }
       };
       if (window.FWOnetVectors && typeof FWOnetVectors.resolveTargetSoc === 'function') {
         FWOnetVectors.resolveTargetSoc(slug, socParam).then(runShow).catch(function () { runShow(socParam); });

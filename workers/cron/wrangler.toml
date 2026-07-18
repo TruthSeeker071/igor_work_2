@@ -26,3 +26,6 @@ SITE_URL = "https://flightway.ai"
 #   UNSUB_SECRET     — MUST match the Pages project's UNSUB_SECRET so unsubscribe
 #                      links verify (both default to "flightway-unsub" if unset)
 #   MAILING_ADDRESS  — a real physical postal address (CAN-SPAM requirement)
+#   ADZUNA_APP_ID    — Adzuna developer App ID (Good Fit Jobs). Same value as Pages.
+#   ADZUNA_APP_KEY   — Adzuna developer App Key. Without both, the email sends with
+#                      no jobs section (feature is off, nothing breaks).

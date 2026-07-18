@@ -24,6 +24,7 @@
     "resume:ats-check": "node scripts/test-resume-ats.cjs",
     "resume:tailor-check": "node scripts/test-resume-tailor.cjs",
     "test:weekly": "node scripts/test-weekly-plan.mjs",
+    "test:jobs": "node scripts/test-jobs.mjs",
     "test:entitlements": "node scripts/test-entitlements.mjs",
     "verify:aliases": "node scripts/verify-slug-aliases.mjs",
     "sim:pregen": "node scripts/pregen-sims.mjs",

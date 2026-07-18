@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260716a">
 <link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260716a">
 <link rel="stylesheet" href="assets/css/skill-gap-tracker.css?v=20260705b">
+<link rel="stylesheet" href="assets/css/good-fit-jobs.css?v=20260718a">
 <script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
 <script src="assets/js/shared/global-shim.js?v=20260703p"></script>
 <script src="assets/js/shared/flags.js?v=20260703p"></script>
@@ -94,6 +95,7 @@
 <script src="assets/js/app/portal-receipts.js?v=20260708b" defer></script>
 <script src="assets/js/app/resume-builder.js?v=20260717a" defer></script>
 <script src="assets/js/app/notify-optin.js?v=20260708e" defer></script>
+<script src="assets/js/job-matches.js?v=20260718a" defer></script>
 <script src="assets/js/app/artifacts.js?v=20260708e" defer></script>
 <script src="assets/js/app/dimension-viewer.js?v=20260703q" defer></script>
 <script src="assets/js/app/portal-career-advisor.js?v=20260703p" defer></script>
@@ -112,6 +114,7 @@
       if (window.FWReceiptsCard) FWReceiptsCard.inject();
       if (window.FWResumeBuilder) FWResumeBuilder.inject();
       if (window.FWNotifyOptin) FWNotifyOptin.inject();
+      if (window.FWJobs) FWJobs.injectHomeCard();
       if (window.FWArtifacts) FWArtifacts.injectCard();
       if (window.FWDimensionViewer && typeof FWDimensionViewer.render === 'function') FWDimensionViewer.render();
       if (window.FWAppNav) FWAppNav.sync('home');
