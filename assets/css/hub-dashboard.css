@@ -1,11 +1,10 @@
 /* Career Hub (dashboard.html) — theme-aligned overrides */
 
-/* --hub-* chrome tokens are single-sourced in flightway-theme.css. The ONE
-   hub-specific divergence: the canvas stays ALWAYS-dark even in light theme
-   (legacy behavior restored 2026-07-18) so the cursor spotlight reads; page
-   chrome (topbar, panels, HUD) stays theme-aware via the shared tokens. */
+/* --hub-* chrome tokens are single-sourced in flightway-theme.css.
+   2026-07-20 heatmap redesign: the canvas follows the theme — white in light
+   (the default), near-black in dark. The forced-dark pin is gone. */
 [data-theme="light"] {
-  --hub-canvas-bg: rgb(20 19 18);
+  --hub-canvas-bg: rgb(255 255 255);
 }
 
 body.hub-page {
@@ -473,8 +472,8 @@ body.hub-page .panel-description {
     width: 128px;
     height: 8px;
     border-radius: 999px;
-    filter: saturate(0.5) opacity(0.85); /* muted: keeps rarity hue mapping, kills the loudness */
-    background: linear-gradient(to right, #9AA0AD, #5ED152, #3FAEF0, #BD4AE8, #F2A82E, #FFD24A);
+    /* Heat ramp: warm gray (low fit) -> ember (best fit). Single hue family. */
+    background: linear-gradient(to right, #CBC5BF, #DFBCA6, #E09B6E, #D97742, #C6521C, #A83C0F);
   }
   .legend-bar--zones {
     background: linear-gradient(to right, #3B82F6, #10B981, #F59E0B, #8B5CF6, #EC4899, #78716C);
@@ -484,7 +483,7 @@ body.hub-page .panel-description {
   }
   .legend-bar--rarity {
     display: block;
-    background: linear-gradient(to right, #9AA0AD, #5ED152, #3FAEF0, #BD4AE8, #F2A82E, #FFD24A);
+    background: linear-gradient(to right, #CBC5BF, #DFBCA6, #E09B6E, #D97742, #C6521C, #A83C0F);
   }
 
   /* ── Map HUD (overview hint / sector back) ── */

@@ -5,13 +5,13 @@
   var _api = {};
   var hubCanvas = global.FWHubCanvasBg || {};
   var getHubCanvasBg = hubCanvas.getHubCanvasBg || function () { return '#080706'; };
-  // The hub canvas is ALWAYS dark (legacy behavior restored 2026-07-18 —
-  // hub-dashboard.css pins --hub-canvas-bg dark in both themes so the cursor
-  // spotlight reads everywhere). Every isHubLightTheme() branch in this file
-  // styles canvas-INTERIOR paint, so all of them must follow the forced-dark
-  // canvas, never the page theme. Page chrome (HUD/panels, hub-dashboard.js
-  // DOM code) keeps real theme detection via FWHubCanvasBg.isHubLightTheme.
-  var isHubLightTheme = function () { return false; };
+  // 2026-07-20 heatmap redesign: the canvas follows the page theme again.
+  // Light theme = white canvas with a single-hue fit heatmap (gray -> ember);
+  // dark theme keeps the same ramp on the dark ground. The old forced-dark
+  // pin (2026-07-18) is gone along with the rainbow rarity palette.
+  var isHubLightTheme = hubCanvas.isHubLightTheme || function () {
+    return document.documentElement.getAttribute('data-theme') === 'light';
+  };
 
 var ZONE_LABEL_FONT_PX = 17; // bumped for the 11-macro-sector redesign (was 13)
   var SECTOR_ORB_SCREEN_R = 5.0;
@@ -69,8 +69,18 @@ function specularPoint(sx, sy, r) {
 }
 
 function getHubLabelColors() {
-  // Always the dark palette: label plates sit on the forced-dark canvas
-  // (getRoadmapTreeColors would hand back light-theme plates in light mode).
+  // Theme-aware plates: near-white plates with ink text on the light canvas,
+  // dark plates on the dark canvas. High-contrast text either way.
+  if (isHubLightTheme()) {
+    return {
+      labelBg: 'rgba(255, 255, 255, 0.95)',
+      labelBgMuted: 'rgba(255, 255, 255, 0.85)',
+      labelText: '#211d1a',
+      labelTextMuted: '#57504b',
+      labelBorder: 'rgba(33, 29, 26, 0.18)',
+      labelBorderMuted: 'rgba(33, 29, 26, 0.10)',
+    };
+  }
   return {
     labelBg: 'rgba(10, 9, 8, 0.94)',
     labelBgMuted: 'rgba(10, 9, 8, 0.82)',
@@ -422,27 +432,10 @@ function drawZoneClusterOrbs(ctx, dots, hoverA, zoneRarity) {
   fillDotBatch(ctx, dots.back, 'rgba(' + dotCol + ',' + ((hubLight ? 0.30 : 0.26) + boost).toFixed(3) + ')');
   fillDotBatch(ctx, dots.mid, 'rgba(' + dotCol + ',' + ((hubLight ? 0.52 : 0.46) + boost).toFixed(3) + ')');
   fillDotBatch(ctx, dots.front, 'rgba(' + dotCol + ',' + ((hubLight ? 0.82 : 0.78) + boost).toFixed(3) + ')');
-  // Cores: soft glow halo + bright body + specular highlight.
-  for (var ci = 0; ci < dots.cores.length; ci++) {
-    var c = dots.cores[ci];
-    var halo = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, c.r * 3.4);
-    halo.addColorStop(0, 'rgba(' + glow + ',' + (hubLight ? 0.30 : 0.38) + ')');
-    halo.addColorStop(1, 'rgba(' + glow + ',0)');
-    ctx.fillStyle = halo;
-    ctx.beginPath();
-    ctx.arc(c.x, c.y, c.r * 3.4, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  fillDotBatch(ctx, dots.cores, 'rgba(' + dotCol + ',' + (hubLight ? 0.92 : 0.95) + ')');
-  ctx.fillStyle = 'rgba(255,255,255,' + (hubLight ? 0.6 : 0.7) + ')';
-  ctx.beginPath();
-  for (var ch = 0; ch < dots.cores.length; ch++) {
-    var co = dots.cores[ch];
-    var hr = co.r * 0.34;
-    ctx.moveTo(co.x - co.r * 0.26 + hr, co.y - co.r * 0.3);
-    ctx.arc(co.x - co.r * 0.26, co.y - co.r * 0.3, hr, 0, Math.PI * 2);
-  }
-  ctx.fill();
+  // Cores: flat matte dots — depth comes from the alpha layering above, not
+  // from gloss. (Halo + specular highlight removed in the heatmap redesign.)
+  if (glow) { /* keep param used; halo intentionally dropped */ }
+  fillDotBatch(ctx, dots.cores, 'rgba(' + dotCol + ',' + (hubLight ? 0.95 : 0.95) + ')');
 }
 
 // Balanced two-line wrap for long sector names ("Community & Social Service"
@@ -569,7 +562,7 @@ function drawFixedZoneTiles(targetCtx) {
     var rgb = G.rgb;
     var rarity = G.rarity;
     var hoverA = G.hoverA;
-    var baseA = (hubLight ? 0.30 : 0.20) + hoverA * 0.10;
+    var baseA = (hubLight ? 0.15 : 0.20) + hoverA * 0.08;
 
     // Soft cloud: one broad wash + 4 offset blobs, all inside ~1.5R so each
     // cluster reads as a discrete cloud-orb with open space around it.
@@ -720,7 +713,7 @@ function drawOverviewIdleLayer(nowMs) {
     for (var si = 0; si < z.sparkles.length; si++) {
       var s = z.sparkles[si];
       var pulse = 0.5 + 0.5 * Math.sin(t * s.speed + s.phase);
-      var a = 0.10 + 0.38 * pulse;
+      var a = (isHubLightTheme() ? 0.06 + 0.22 * pulse : 0.10 + 0.38 * pulse);
       ctx.fillStyle = 'rgba(' + z.glow + ',' + a.toFixed(3) + ')';
       ctx.beginPath();
       ctx.arc(s.x, s.y, s.r + 0.9 * pulse, 0, Math.PI * 2);
@@ -825,13 +818,17 @@ function screenToWorld(sx, sy) {
 // Tier boundaries canonical in FWOnetMath.FIT_TIERS (mean-centered cosine scale:
 // 66/56/46/34/20). Literals kept here to avoid coupling the render hot path to
 // module load order — keep them in sync with FWOnetMath.
+// 2026-07-20: single-hue HEAT ramp (was the Fortnite rarity rainbow).
+// One hue family — warm gray for weak fit deepening to ember for best fit —
+// so intensity, not hue, carries the information. Tier names/boundaries are
+// unchanged (FWOnetMath.FIT_TIERS); only the paint changed.
 function rarityOf(score) {
-  if (score >= 66) return { tier:'mythic',     base:'#FFD24A', light:'#FFF3C0', dark:'#E0A012', glow:'255,205,70' };
-  if (score >= 56) return { tier:'legendary',  base:'#F2A82E', light:'#FFD98A', dark:'#C97A14', glow:'242,168,46' };
-  if (score >= 46) return { tier:'epic',       base:'#BD4AE8', light:'#E4A8F7', dark:'#8A2BB5', glow:'189,74,232' };
-  if (score >= 34) return { tier:'rare',       base:'#3FAEF0', light:'#9AD6FA', dark:'#1E7BC4', glow:'63,174,240' };
-  if (score >= 0) return { tier:'uncommon',   base:'#5ED152', light:'#A9EDA1', dark:'#36A02C', glow:'94,209,82' };
-  return                  { tier:'common',     base:'#9AA0AD', light:'#C7CBD3', dark:'#6E7480', glow:'154,160,173' };
+  if (score >= 66) return { tier:'mythic',     base:'#A83C0F', light:'#C65A28', dark:'#7E2B08', glow:'168,60,15' };
+  if (score >= 56) return { tier:'legendary',  base:'#C6521C', light:'#DD7440', dark:'#9A3D10', glow:'198,82,28' };
+  if (score >= 46) return { tier:'epic',       base:'#D97742', light:'#E89A6C', dark:'#B25A2A', glow:'217,119,66' };
+  if (score >= 34) return { tier:'rare',       base:'#E09B6E', light:'#EDBB9A', dark:'#C07C50', glow:'224,155,110' };
+  if (score >= 0) return { tier:'uncommon',   base:'#DFBCA6', light:'#EDD6C7', dark:'#C09A80', glow:'223,188,166' };
+  return                  { tier:'common',     base:'#CBC5BF', light:'#E0DBD6', dark:'#A8A29B', glow:'150,144,138' };
 }
 function fitColor(score) { return rarityOf(score).base; }
 
@@ -1295,9 +1292,10 @@ function drawSectorOrbsScreen(careerList) {
     let glowStrength = 0;
     const isGold = sectorFit != null && sectorFit >= 56;
     const isBest = sectorFit != null && sectorFit >= 66;
-    if (isBest) glowStrength = 0.55;
-    else if (isGold) glowStrength = 0.38;
-    else if (sectorFit != null && sectorFit >= 44) glowStrength = 0.22;
+    // Heatmap redesign: intensity lives in the dot color; halos are a whisper
+    // reserved for the very top matches and direct interaction.
+    if (isBest) glowStrength = hubLight ? 0.16 : 0.35;
+    else if (isGold) glowStrength = hubLight ? 0.09 : 0.22;
     if (dimmed) glowStrength = 0;
     if (isSat) glowStrength = 0.4 * satBloom;
     if (isHovered) glowStrength = Math.max(glowStrength, 0.38);
@@ -1310,7 +1308,7 @@ function drawSectorOrbsScreen(careerList) {
     }
 
     if (glowStrength > 0) {
-      const mult = isGold && _api.motionOk ? 1 + 0.24 * Math.sin(now / 380 + (c.vectorIndex || 0)) : 1;
+      const mult = 1;
       const haloR = r * (isBest ? 3.1 : 2.5);
       const glow = _api.ctx.createRadialGradient(scr.x, scr.y, r * 0.35, scr.x, scr.y, haloR);
       const glowRgb = rarity.glow || rar.glow;
@@ -1323,44 +1321,28 @@ function drawSectorOrbsScreen(careerList) {
     }
 
     if (isSelected) {
-      _api.ctx.strokeStyle = 'rgba(' + (rarity.glow || rar.glow) + ',0.9)';
+      _api.ctx.strokeStyle = hubLight ? 'rgba(33,29,26,0.75)' : 'rgba(' + (rarity.glow || rar.glow) + ',0.9)';
       _api.ctx.lineWidth = 2;
       _api.ctx.beginPath();
       _api.ctx.arc(scr.x, scr.y, r + 4, 0, Math.PI * 2);
       _api.ctx.stroke();
     }
 
-    const sp = specularPointScreen(scr.x, scr.y, r);
-    const body = _api.ctx.createRadialGradient(
-      sp.hx - r * 0.12, sp.hy - r * 0.12, r * 0.08,
-      scr.x, scr.y, r
-    );
-    body.addColorStop(0, rar.light);
-    body.addColorStop(0.55, rar.base);
-    body.addColorStop(1, rar.dark);
-    _api.ctx.fillStyle = body;
+    // Flat matte heat dot (specular/gem shading removed in the redesign).
+    // Hover/selected get the slightly lighter variant so interaction still
+    // answers the cursor without gloss.
+    _api.ctx.fillStyle = (isHovered || isSelected) ? rar.light : rar.base;
     _api.ctx.beginPath();
     _api.ctx.arc(scr.x, scr.y, r, 0, Math.PI * 2);
     _api.ctx.fill();
-
-    if (isGold) {
-      _api.ctx.strokeStyle = isBest ? 'rgba(255,247,210,0.88)' : 'rgba(255,225,150,0.55)';
-      _api.ctx.lineWidth = isBest ? 1.4 : 1;
+    // Hairline rim keeps pale low-fit dots legible on the white canvas.
+    if (hubLight) {
+      _api.ctx.strokeStyle = 'rgba(33,29,26,0.14)';
+      _api.ctx.lineWidth = 0.75;
       _api.ctx.beginPath();
-      _api.ctx.arc(scr.x, scr.y, r - 0.5, 0, Math.PI * 2);
+      _api.ctx.arc(scr.x, scr.y, r - 0.35, 0, Math.PI * 2);
       _api.ctx.stroke();
     }
-
-    // Legacy 3-stop specular profile — the mid stop is what gives the orbs
-    // their metallic gem read instead of a soft blur.
-    const hi = _api.ctx.createRadialGradient(sp.hx, sp.hy, 0, sp.hx, sp.hy, r * 0.62);
-    hi.addColorStop(0, 'rgba(255,255,255,' + (isGold ? 0.9 : (isHovered ? 0.72 : 0.55)) + ')');
-    hi.addColorStop(0.45, 'rgba(255,255,255,' + (isGold ? 0.35 : 0.18) + ')');
-    hi.addColorStop(1, 'rgba(255,255,255,0)');
-    _api.ctx.fillStyle = hi;
-    _api.ctx.beginPath();
-    _api.ctx.arc(scr.x, scr.y, r, 0, Math.PI * 2);
-    _api.ctx.fill();
 
     // Dimmed long-tail orbs skip labels so the label solve favors top matches.
     // Satellites bypass the (cached) label solve entirely: their labels fade
@@ -1517,22 +1499,27 @@ function render() {
     // Backdrop is keyed to drag-only offsets (bgOffX/Y), not panX/Y — zoom
     // adjusts pan every tick to stay cursor-anchored, and a pan-keyed grid
     // visibly slides during zoom.
-    hubCanvas.paintHubCanvasBackground(_api.ctx, W, H, _api.state.bgOffX || 0, _api.state.bgOffY || 0, { forceDark: true });
+    hubCanvas.paintHubCanvasBackground(_api.ctx, W, H, _api.state.bgOffX || 0, _api.state.bgOffY || 0);
   } else {
     _api.ctx.fillStyle = getHubCanvasBg();
     _api.ctx.fillRect(0, 0, W, H);
   }
 
-  // Cursor spotlight brighten — restored from the legacy hub. Always on:
-  // the canvas is forced dark in both themes.
+  // Cursor spotlight: white brighten on the dark canvas; on the light canvas
+  // a barely-there warm tint so the pointer still feels like a light source.
   if (_api.state.mouseOn && _api.motionOk) {
     var spotR = Math.max(W, H) * 0.12;
     var sg = _api.ctx.createRadialGradient(
       _api.state.mouseX, _api.state.mouseY, 0,
       _api.state.mouseX, _api.state.mouseY, spotR * 1.5,
     );
-    sg.addColorStop(0, 'rgba(255,255,255,0.07)');
-    sg.addColorStop(1, 'rgba(255,255,255,0)');
+    if (isHubLightTheme()) {
+      sg.addColorStop(0, 'rgba(210,85,40,0.030)');
+      sg.addColorStop(1, 'rgba(210,85,40,0)');
+    } else {
+      sg.addColorStop(0, 'rgba(255,255,255,0.07)');
+      sg.addColorStop(1, 'rgba(255,255,255,0)');
+    }
     _api.ctx.fillStyle = sg;
     _api.ctx.fillRect(0, 0, W, H);
   }
