@@ -16,25 +16,25 @@
 .fw-jobs-head { margin-bottom: 4px; }
 .fw-jobs-tag {
   display: inline-block;
-  font-size: 0.7rem;
+  font-size: 0.6875rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: rgb(var(--primary));
   background: rgba(var(--primary), 0.12);
   border: 1px solid rgb(var(--primary) / 0.25);
-  border-radius: 100px;
+  border-radius: 999px;
   padding: 3px 10px;
 }
 .fw-jobs-heading {
   margin: 10px 0 2px;
-  font-size: 1.15rem;
+  font-size: 1.125rem;
   font-weight: 800;
   color: rgb(var(--text));
 }
 .fw-jobs-sub {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: 0.8125rem;
   line-height: 1.4;
   color: rgb(var(--text-muted));
 }
@@ -56,7 +56,7 @@
   border: 1px solid rgb(var(--border));
   border-radius: var(--radius-sm);
   padding: 12px 14px;
-  transition: border-color 0.16s, background 0.16s, transform 0.16s;
+  transition: border-color 0.18s, background 0.18s, transform 0.18s;
 }
 .fw-job-card:hover {
   border-color: rgb(var(--primary) / 0.4);
@@ -64,19 +64,19 @@
   transform: translateY(-1px);
 }
 .fw-job-title {
-  font-size: 0.92rem;
+  font-size: 0.875rem;
   font-weight: 700;
   color: rgb(var(--text));
   line-height: 1.3;
 }
 .fw-job-meta {
   margin-top: 3px;
-  font-size: 0.8rem;
+  font-size: 0.8125rem;
   color: rgb(var(--text-muted));
 }
 .fw-job-sub {
   margin-top: 6px;
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   color: rgb(var(--text-muted));
   display: flex;
   flex-wrap: wrap;

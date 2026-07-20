@@ -127,7 +127,7 @@ body.hub-page .hub-brand .fw-brand-icon {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   font-weight: 500;
   letter-spacing: 0.02em;
 }
@@ -171,7 +171,7 @@ body.hub-page .hub-brand .fw-brand-icon {
 .hub-boot-error-text {
   margin: 0;
   max-width: 28rem;
-  font-size: 0.95rem;
+  font-size: 1rem;
   line-height: 1.5;
   color: var(--hub-text-muted);
 }
@@ -180,7 +180,7 @@ body.hub-page .hub-brand .fw-brand-icon {
   display: inline-flex;
   align-items: center;
   padding: 10px 18px;
-  border-radius: 9999px;
+  border-radius: 999px;
   font-size: 0.875rem;
   font-weight: 600;
   text-decoration: none;
@@ -303,12 +303,12 @@ body.hub-page .panel-related-chip {
   flex-direction: column;
   gap: 2px;
   padding: 6px 10px;
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px solid var(--hub-border);
   background: var(--hub-control-bg);
   color: var(--hub-text);
   text-decoration: none;
-  font-size: 0.78rem;
+  font-size: 0.8125rem;
   max-width: 100%;
 }
 
@@ -322,7 +322,7 @@ body.hub-page .panel-related-chip-name {
 }
 
 body.hub-page .panel-related-chip-badge {
-  font-size: 0.68rem;
+  font-size: 0.6875rem;
   color: var(--hub-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -432,9 +432,9 @@ body.hub-page .btn-daylife {
     padding: 8px 12px 8px 36px;
     color: var(--hub-text, #fff);
     font-family: 'Inter', sans-serif;
-    font-size: 0.85rem;
+    font-size: 0.875rem;
     outline: none;
-    transition: border-color 0.2s, background 0.2s;
+    transition: border-color 0.18s, background 0.18s;
   }
   #search::placeholder { color: var(--hub-text-muted, rgba(255,255,255,0.45)); opacity: 0.75; }
   #search:focus {
@@ -455,7 +455,7 @@ body.hub-page .btn-daylife {
     gap: 11px;
   }
   .legend-label {
-    font-size: 0.85rem;
+    font-size: 0.875rem;
     font-weight: 600;
     color: var(--hub-text-muted, rgba(255,255,255,0.45));
     white-space: nowrap;
@@ -499,7 +499,7 @@ body.hub-page .btn-daylife {
     padding: 8px 14px;
     border-radius: 10px;
     font-family: 'Inter', sans-serif;
-    font-size: 0.82rem;
+    font-size: 0.8125rem;
     line-height: 1.35;
     background: var(--hub-panel-bg);
     border: 1px solid var(--hub-border);
@@ -535,7 +535,7 @@ body.hub-page .btn-daylife {
     gap: 8px 12px;
   }
   .hub-map-hint {
-    font-size: 0.8rem;
+    font-size: 0.8125rem;
     letter-spacing: 0.01em;
   }
   .hub-map-hud.is-sector .hub-map-hint { display: none; }
@@ -552,13 +552,13 @@ body.hub-page .btn-daylife {
   .panel-fit-bar-fill--objective {
     height: 100%;
     border-radius: 2px;
-    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
+    transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
   }
   .panel-fit-bar-fill--glow {
     box-shadow: 0 0 14px rgba(255, 205, 70, 0.45);
   }
   .panel-skills-empty {
-    font-size: 0.82rem;
+    font-size: 0.8125rem;
     color: var(--hub-text-muted);
     font-style: italic;
   }
@@ -569,7 +569,7 @@ body.hub-page .btn-daylife {
     margin-bottom: 8px;
   }
   .panel-tradeoff {
-    font-size: 0.78rem;
+    font-size: 0.8125rem;
     line-height: 1.4;
     color: var(--hub-text-muted);
     margin: 4px 0 0;
@@ -580,12 +580,12 @@ body.hub-page .btn-daylife {
   }
   .panel-ai-derived {
     display: inline-block;
-    font-size: 0.65rem;
+    font-size: 0.6875rem;
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     padding: 2px 7px;
-    border-radius: 4px;
+    border-radius: 6px;
     margin-bottom: 8px;
     background: rgb(var(--primary) / 0.15);
     color: rgb(var(--primary));
@@ -605,9 +605,9 @@ body.hub-page .btn-daylife {
     gap: 8px;
     background: var(--hub-control-bg, rgba(255,255,255,0.07));
     border: 1px solid var(--hub-border, rgba(255,255,255,0.1));
-    border-radius: 20px;
+    border-radius: 16px;
     padding: 4px 12px 4px 6px;
-    font-size: 0.8rem;
+    font-size: 0.8125rem;
     color: var(--hub-text, rgba(255,255,255,0.9));
   }
   .user-avatar {
@@ -618,7 +618,7 @@ body.hub-page .btn-daylife {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.65rem;
+    font-size: 0.6875rem;
     font-weight: 700;
     color: var(--hub-accent-fg);
   }
@@ -640,10 +640,10 @@ body.hub-page .btn-daylife {
     background: var(--hub-panel-bg);
     border: 1px solid var(--hub-border);
     border-radius: 10px;
-    font-size: 0.8rem;
+    font-size: 0.8125rem;
     color: var(--hub-text);
     opacity: 0;
-    transition: opacity 0.15s;
+    transition: opacity 0.18s;
     z-index: 150;
     max-width: 220px;
     overflow: hidden;
@@ -660,18 +660,18 @@ body.hub-page .btn-daylife {
     padding: 10px 12px;
     min-width: 0;
   }
-  #tooltip .tt-name { font-weight: 600; font-size: 0.85rem; margin-bottom: 6px; }
+  #tooltip .tt-name { font-weight: 600; font-size: 0.875rem; margin-bottom: 6px; }
   #tooltip .tt-fit-row {
     display: flex;
     justify-content: space-between;
     gap: 8px;
-    font-size: 0.76rem;
+    font-size: 0.75rem;
     margin-bottom: 3px;
   }
   #tooltip .tt-fit-label { color: var(--hub-text-muted); }
   #tooltip .tt-fit-val { font-weight: 600; }
-  #tooltip .tt-score { font-size: 0.78rem; margin-bottom: 4px; }
-  #tooltip .tt-industry { font-size: 0.72rem; color: var(--hub-text-muted); margin-top: 4px; }
+  #tooltip .tt-score { font-size: 0.8125rem; margin-bottom: 4px; }
+  #tooltip .tt-industry { font-size: 0.6875rem; color: var(--hub-text-muted); margin-top: 4px; }
 
   /* ── DETAIL PANEL ── */
   #detail-panel {
@@ -712,13 +712,13 @@ body.hub-page .btn-daylife {
     justify-content: center;
     font-size: 1rem;
     line-height: 1;
-    transition: background 0.2s, color 0.2s;
+    transition: background 0.18s, color 0.18s;
   }
   .panel-close:hover { background: var(--hub-control-bg); color: var(--hub-text); border-color: rgb(var(--primary) / 0.4); }
 
   .panel-industry-badge {
     display: inline-block;
-    font-size: 0.68rem;
+    font-size: 0.6875rem;
     font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -753,20 +753,20 @@ body.hub-page .btn-daylife {
   }
   .panel-fit-pct {
     font-weight: 600;
-    font-size: 0.85rem;
+    font-size: 0.875rem;
     color: var(--hub-text);
   }
   .panel-fit-bar-bg {
     width: 100%;
     height: 6px;
     background: rgba(255,255,255,0.08);
-    border-radius: 3px;
+    border-radius: 6px;
     overflow: hidden;
   }
   .panel-fit-bar-fill {
     height: 100%;
-    border-radius: 3px;
-    transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+    border-radius: 6px;
+    transition: width 0.45s cubic-bezier(0.4,0,0.2,1);
   }
 
   .panel-body {
@@ -780,7 +780,7 @@ body.hub-page .btn-daylife {
   .panel-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
 
   .panel-section-label {
-    font-size: 0.7rem;
+    font-size: 0.6875rem;
     font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -797,14 +797,14 @@ body.hub-page .btn-daylife {
   .skill-pill {
     background: var(--hub-control-bg);
     border: 1px solid var(--hub-border);
-    border-radius: 20px;
+    border-radius: 16px;
     padding: 4px 10px;
     font-size: 0.75rem;
     color: var(--hub-text);
   }
 
   .panel-description {
-    font-size: 0.88rem;
+    font-size: 0.875rem;
     line-height: 1.65;
     color: var(--hub-text-muted);
     margin-bottom: 24px;
@@ -829,10 +829,10 @@ body.hub-page .btn-daylife {
     background: rgb(var(--primary));
     color: rgb(var(--primary-fg));
     font-family: 'Inter', sans-serif;
-    font-size: 0.85rem;
+    font-size: 0.875rem;
     font-weight: 600;
     text-decoration: none;
-    transition: opacity 0.2s, transform 0.2s;
+    transition: opacity 0.18s, transform 0.18s;
   }
   .btn-deep-dive:hover {
     opacity: 0.92;
@@ -847,7 +847,7 @@ body.hub-page .btn-daylife {
     border: 1px solid rgba(255,255,255,0.12);
     color: rgba(255,255,255,0.3);
     font-family: 'Inter', sans-serif;
-    font-size: 0.85rem;
+    font-size: 0.875rem;
     font-weight: 500;
     cursor: not-allowed;
     opacity: 0.5;
@@ -863,7 +863,7 @@ body.hub-page .btn-daylife {
     border: 1px solid rgba(255,255,255,0.12);
     border-radius: 6px;
     padding: 5px 10px;
-    font-size: 0.72rem;
+    font-size: 0.6875rem;
     color: rgba(255,255,255,0.6);
     white-space: nowrap;
     pointer-events: none;
@@ -890,12 +890,12 @@ body.hub-page .btn-daylife {
   background: rgb(var(--primary));
   color: rgb(var(--primary-fg));
   font-family: inherit;
-  font-size: 0.8rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
   box-shadow: none;
   white-space: nowrap;
-  transition: background 0.2s, opacity 0.2s;
+  transition: background 0.18s, opacity 0.18s;
 }
 .hr-toggle:hover { background: rgb(var(--primary-hover)); }
 .hr-toggle.open { opacity: 0.55; }
@@ -918,7 +918,7 @@ body.hub-page .btn-daylife {
   border-left: 1px solid var(--hub-border);
   box-shadow: -8px 0 40px rgb(0 0 0 / 0.18);
   transform: translateX(100%);
-  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 115;
   display: flex;
   flex-direction: column;
@@ -933,7 +933,7 @@ body.hub-page .btn-daylife {
   padding: 20px 20px 6px;
   flex-shrink: 0;
 }
-.hr-head-title { font-size: 1.05rem; font-weight: 700; color: var(--hub-text); }
+.hr-head-title { font-size: 1rem; font-weight: 700; color: var(--hub-text); }
 .hr-close {
   width: 30px; height: 30px;
   border-radius: 50%;
@@ -944,22 +944,22 @@ body.hub-page .btn-daylife {
   font-size: 1rem; line-height: 1;
 }
 .hr-close:hover { color: var(--hub-text); border-color: rgb(var(--primary) / 0.45); }
-.hr-sub { padding: 0 20px; font-size: 0.82rem; color: var(--hub-text-muted); line-height: 1.5; }
+.hr-sub { padding: 0 20px; font-size: 0.8125rem; color: var(--hub-text-muted); line-height: 1.5; }
 
 .hr-prog {
   margin: 14px 20px 6px;
   height: 6px;
-  border-radius: 99px;
+  border-radius: 999px;
   background: var(--hub-control-bg);
   overflow: hidden;
 }
 .hr-prog-fill {
   height: 100%;
-  border-radius: 99px;
+  border-radius: 999px;
   background: linear-gradient(90deg, rgb(var(--primary)), rgb(var(--primary-hover)));
-  transition: width 0.4s cubic-bezier(.22,.61,.36,1);
+  transition: width 0.45s cubic-bezier(.22,.61,.36,1);
 }
-.hr-prog-lbl { padding: 0 20px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--hub-text-muted); }
+.hr-prog-lbl { padding: 0 20px; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--hub-text-muted); }
 
 .hr-body { flex: 1; overflow-y: auto; padding: 16px 20px 8px; }
 .hr-q {
@@ -967,19 +967,19 @@ body.hub-page .btn-daylife {
   border-bottom: 1px solid var(--hub-border);
 }
 .hr-q:last-child { border-bottom: none; }
-.hr-q-title { font-size: 0.92rem; font-weight: 600; color: var(--hub-text); margin-bottom: 4px; }
-.hr-q-sub { font-size: 0.76rem; color: var(--hub-text-muted); margin-bottom: 10px; }
+.hr-q-title { font-size: 0.875rem; font-weight: 600; color: var(--hub-text); margin-bottom: 4px; }
+.hr-q-sub { font-size: 0.75rem; color: var(--hub-text-muted); margin-bottom: 10px; }
 .hr-q.answered .hr-q-title::before { content: "✓ "; color: #4ade80; font-weight: 800; }
 
 .hr-tags { display: flex; flex-wrap: wrap; gap: 8px; }
 .hr-tag {
   padding: 8px 12px;
   border: 1.5px solid var(--hub-border);
-  border-radius: 99px;
+  border-radius: 999px;
   background: var(--hub-control-bg);
   color: var(--hub-text);
   font-family: inherit;
-  font-size: 0.8rem;
+  font-size: 0.8125rem;
   cursor: pointer;
   transition: all 0.18s;
 }
@@ -995,7 +995,7 @@ body.hub-page .btn-daylife {
   background: var(--hub-control-bg);
   color: var(--hub-text);
   font-family: inherit;
-  font-size: 0.83rem;
+  font-size: 0.8125rem;
   line-height: 1.35;
   cursor: pointer;
   transition: all 0.18s;
@@ -1003,7 +1003,7 @@ body.hub-page .btn-daylife {
 .hr-opt:hover { border-color: rgb(var(--primary) / 0.55); }
 .hr-opt.sel { border-color: rgb(var(--primary)); background: rgb(var(--primary) / 0.16); }
 
-.hr-slider-labels { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--hub-text-muted); margin-bottom: 6px; }
+.hr-slider-labels { display: flex; justify-content: space-between; font-size: 0.6875rem; color: var(--hub-text-muted); margin-bottom: 6px; }
 .hr-slider { width: 100%; accent-color: rgb(var(--primary)); }
 .hr-slider:not(.hr-slider-on) { opacity: 0.55; }
 
@@ -1016,11 +1016,11 @@ body.hub-page .btn-daylife {
   background: rgb(var(--primary));
   color: rgb(var(--primary-fg));
   font-family: inherit;
-  font-size: 0.92rem;
+  font-size: 0.875rem;
   font-weight: 700;
   cursor: pointer;
   box-shadow: var(--shadow-btn);
-  transition: background 0.2s, opacity 0.2s;
+  transition: background 0.18s, opacity 0.18s;
 }
 .hr-update:hover:not(:disabled) { background: rgb(var(--primary-hover)); }
 .hr-update:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
@@ -1032,15 +1032,15 @@ body.hub-page .btn-daylife {
   transform: translateX(-50%) translateY(16px);
   z-index: 200;
   padding: 12px 22px;
-  border-radius: 99px;
+  border-radius: 999px;
   background: rgb(var(--primary));
   color: rgb(var(--primary-fg));
-  font-size: 0.88rem;
+  font-size: 0.875rem;
   font-weight: 700;
   box-shadow: var(--shadow-btn);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.25s, transform 0.25s;
+  transition: opacity 0.3s, transform 0.3s;
 }
 .hr-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
@@ -1051,7 +1051,7 @@ body.hub-page .btn-daylife {
   }
   .hr-toggle-label::after {
     content: 'Sharpen';
-    font-size: 0.8rem;
+    font-size: 0.8125rem;
     line-height: 1;
   }
   .hr-toggle { padding: 0 12px; }
@@ -1076,7 +1076,7 @@ body.hub-page .btn-daylife {
   background: #2563eb;
   color: #fff;
   font-family: inherit;
-  font-size: 0.92rem;
+  font-size: 0.875rem;
   font-weight: 700;
   cursor: pointer;
   transition: background 0.18s, transform 0.18s;
@@ -1087,9 +1087,9 @@ body.hub-page .btn-daylife {
 
 /* GPA readout (mirrors the quiz GPA display, themed to hub tokens). */
 .hr-gpa-display { display: flex; align-items: baseline; gap: 8px; margin: 2px 0 4px; }
-.hr-gpa-num { font-size: 1.7rem; font-weight: 800; color: var(--hub-text); letter-spacing: -0.02em; }
-.hr-gpa-letter { font-size: 0.85rem; font-weight: 700; color: var(--hub-text-muted); }
-.hr-gpa-feedback { font-size: 0.74rem; font-weight: 600; color: var(--hub-text-muted); margin-bottom: 10px; min-height: 1em; }
+.hr-gpa-num { font-size: 1.875rem; font-weight: 800; color: var(--hub-text); letter-spacing: -0.02em; }
+.hr-gpa-letter { font-size: 0.875rem; font-weight: 700; color: var(--hub-text-muted); }
+.hr-gpa-feedback { font-size: 0.75rem; font-weight: 600; color: var(--hub-text-muted); margin-bottom: 10px; min-height: 1em; }
 .hr-gpa-feedback.elite { color: #f5a623; }
 .hr-gpa-feedback.great { color: rgb(var(--primary)); }
 .hr-gpa-feedback.good  { color: #4ade80; }
@@ -1105,7 +1105,7 @@ body.hub-page .btn-daylife {
   background: var(--hub-control-bg);
   color: var(--hub-text);
   font-family: inherit;
-  font-size: 0.86rem;
+  font-size: 0.875rem;
   line-height: 1.5;
   resize: vertical;
 }
@@ -1130,9 +1130,9 @@ body.hub-page .btn-daylife {
 }
 .hr-upload:hover { border-color: rgb(var(--primary) / 0.6); }
 .hr-upload input { display: none; }
-.hr-upload-label { font-size: 0.84rem; font-weight: 600; color: var(--hub-text); }
-.hr-upload-hint { font-size: 0.72rem; color: var(--hub-text-muted); }
-.hr-upload-status { font-size: 0.76rem; font-weight: 600; color: var(--hub-text-muted); margin-top: 6px; min-height: 1em; }
+.hr-upload-label { font-size: 0.8125rem; font-weight: 600; color: var(--hub-text); }
+.hr-upload-hint { font-size: 0.6875rem; color: var(--hub-text-muted); }
+.hr-upload-status { font-size: 0.75rem; font-weight: 600; color: var(--hub-text-muted); margin-top: 6px; min-height: 1em; }
 .hr-upload-status.ok { color: #4ade80; }
 
 /* ── Marco — bottom-left AI-advisor mascot (marco.js) ──────────────────────── */
@@ -1170,10 +1170,10 @@ body.hub-page .btn-daylife {
   position: relative;
   max-width: 240px;
   padding: 10px 14px;
-  border-radius: 16px 16px 16px 4px;
+  border-radius: 16px 16px 16px 6px;
   background: #1e3a5f;
   color: #fff;
-  font-size: 0.86rem;
+  font-size: 0.875rem;
   font-weight: 600;
   line-height: 1.4;
   box-shadow: 0 6px 22px rgb(0 0 0 / 0.28);
@@ -1197,13 +1197,13 @@ body.hub-page .btn-daylife {
   width: 12px; height: 12px;
   background: #1e3a5f;
   transform: rotate(45deg);
-  border-radius: 0 0 3px 0;
+  border-radius: 0 0 6px 0;
 }
 .marco-root:focus-visible { outline: none; }
 .marco-root:focus-visible .marco-avatar { box-shadow: 0 0 0 3px #fff, 0 0 0 6px #1e3a5f; }
 
 @media (max-width: 700px) {
-  .marco-bubble { max-width: 150px; font-size: 0.8rem; }
+  .marco-bubble { max-width: 150px; font-size: 0.8125rem; }
   .marco-avatar { width: 46px; height: 46px; }
 }
 
@@ -1230,27 +1230,27 @@ body.hub-page .btn-daylife {
   width: 100%;
   padding: 9px 10px;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   background: transparent;
   color: var(--hub-text);
   font-family: inherit;
-  font-size: 0.86rem;
+  font-size: 0.875rem;
   text-align: left;
   cursor: pointer;
 }
 .ss-item:hover { background: var(--hub-control-bg); }
 .ss-name { font-weight: 600; }
-.ss-industry { font-size: 0.74rem; color: var(--hub-text-muted); }
+.ss-industry { font-size: 0.75rem; color: var(--hub-text-muted); }
 .ss-tag {
   margin-left: auto;
-  font-size: 0.64rem;
+  font-size: 0.6875rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: rgb(var(--primary));
   background: rgb(var(--primary) / 0.12);
   padding: 2px 7px;
-  border-radius: 100px;
+  border-radius: 999px;
   white-space: nowrap;
 }
 
@@ -1362,7 +1362,7 @@ body.hub-page .btn-daylife {
 }
 .hub-stretch-title {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   font-weight: 700;
   letter-spacing: 0.01em;
   color: var(--hub-text);
@@ -1377,9 +1377,9 @@ body.hub-page .btn-daylife {
   border-radius: 6px;
   background: transparent;
   color: var(--hub-text-muted);
-  font-size: 1.15rem;
+  font-size: 1.125rem;
   cursor: pointer;
-  transition: background 0.16s, color 0.16s;
+  transition: background 0.18s, color 0.18s;
 }
 .hub-stretch-dismiss:hover {
   background: var(--hub-control-bg);
@@ -1387,7 +1387,7 @@ body.hub-page .btn-daylife {
 }
 .hub-stretch-sub {
   margin: 4px 0 10px;
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   line-height: 1.4;
   color: var(--hub-text-muted);
 }
@@ -1409,13 +1409,13 @@ body.hub-page .btn-daylife {
   width: 100%;
   text-align: left;
   padding: 9px 10px;
-  border-radius: 9px;
+  border-radius: 10px;
   border: 1px solid var(--hub-border);
   background: var(--hub-control-bg);
   color: var(--hub-text);
   cursor: pointer;
   text-decoration: none;
-  transition: border-color 0.16s, transform 0.16s;
+  transition: border-color 0.18s, transform 0.18s;
 }
 .hub-stretch-row:hover {
   border-color: rgb(var(--primary) / 0.45);
@@ -1428,14 +1428,14 @@ body.hub-page .btn-daylife {
   margin-bottom: 3px;
 }
 .hub-stretch-row-title {
-  font-size: 0.82rem;
+  font-size: 0.8125rem;
   font-weight: 700;
   color: var(--hub-text);
 }
 .hub-stretch-badge {
   flex: 0 0 auto;
   margin-left: auto;
-  font-size: 0.6rem;
+  font-size: 0.6875rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -1447,13 +1447,13 @@ body.hub-page .btn-daylife {
   white-space: nowrap;
 }
 .hub-stretch-pair {
-  font-size: 0.7rem;
+  font-size: 0.6875rem;
   font-weight: 600;
   color: var(--hub-text-muted);
   margin-bottom: 3px;
 }
 .hub-stretch-why {
-  font-size: 0.72rem;
+  font-size: 0.6875rem;
   line-height: 1.4;
   color: var(--hub-text-muted);
 }

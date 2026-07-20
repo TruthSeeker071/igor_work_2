@@ -4,3 +4,6 @@ node_modules/
 *.log
 .fuse_hidden*
 *.lock
+
+.wrangler/
+.claude/
