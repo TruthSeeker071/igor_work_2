@@ -563,7 +563,8 @@ const QZ_Qs = [
     opts:[{t:'Heads-down building, coding, or engineering something new',s:{tech:4,engineering:3,science:1}},{t:'Meetings, presentations, negotiations, strategy',s:{business:4,law:3,finance:2,marketing:2}},{t:'Designing, creating, or producing original work',s:{creative:4,marketing:2,startups:1}},{t:'Working directly with patients, clients, or students',s:{healthcare:4,social:3,education:3}},{t:'Research, analysis, writing, deep thought',s:{science:4,education:2,law:1,tech:1}}]},
   {id:22,type:'mc',q:"How much social interaction do you want in your work?",sub:'',
     opts:[{t:'As little as possible. Let me work alone.',s:{tech:3,science:2,engineering:2,creative:1}},{t:'Minimal — just enough to get by.',s:{tech:2,science:2,engineering:1}},{t:'Balanced. Some solo, some people time.',s:{business:1,healthcare:1,education:1,marketing:1}},{t:'I like being around others regularly.',s:{business:2,healthcare:2,education:2,marketing:1,hr:1}},{t:'I need constant interaction to stay energized.',s:{business:3,marketing:3,social:2,hr:2,law:1}}]},
-  {id:23,type:'name',q:"Last one — what's your first name?",sub:"So we can personalize your Career Hub.",key:'name',placeholder:'Your first name'}
+  {id:23,type:'name',q:"Last one — what's your first name?",sub:"So we can personalize your Career Hub.",key:'name',placeholder:'Your first name'},
+  {id:24,type:'leaning',q:"Already have a career in mind?",sub:"Most people come in with a leaning — tell us and we'll take it seriously. Totally fine to skip if you're wide open.",key:'leaning',placeholder:'e.g. Lawyer, software engineer, nurse…'}
 ];
 
 // ── INITIAL vs HUB split ──────────────────────────────────────────────────
@@ -572,7 +573,7 @@ const QZ_Qs = [
 // QZ_ACTIVE is the ordered list the quiz actually plays; QZ_HUB is the rest.
 // Scoring (qzComputeScores) keys off question `id`, so it works regardless of
 // which screen captured the answer.
-const QZ_INITIAL_IDS = [0, 2, 20, 21, 22, 3, 5, 17, 23];
+const QZ_INITIAL_IDS = [0, 24, 2, 20, 21, 22, 3, 5, 17, 23];
 const QZ_ACTIVE = QZ_INITIAL_IDS.map(id => QZ_Qs.find(q => q.id === id)).filter(Boolean);
 const QZ_HUB = QZ_Qs.filter(q => QZ_INITIAL_IDS.indexOf(q.id) === -1);
 
@@ -604,6 +605,19 @@ const QZ_COMBOS = [
 let qzCur=0, qzAns={}, qzSliders={};
 let qzAnswers={pairs:{},pairsOwn:{},tot:{},env:[],map:null,emoji:{},swipes:{},yesno:{},rank:{},spectrum:null,subjects:[],multi:{},mcOther:{}};
 let qzName='';
+let qzLeaning='';
+// Resolved from qzLeaning against the catalog (async, best-effort). The zone
+// feeds a sector-score boost in qzComputeScores (recomputed fresh, same idiom
+// as qzResumeBoosts); the SOC is persisted so ranking can bonus the exact pick.
+let qzLeaningZone=null, qzLeaningSoc=null;
+function qzResolveLeaning(){
+  const text=(qzLeaning||'').trim();
+  if(!text || !window.FWOnetCatalog || typeof FWOnetCatalog.load!=='function') return Promise.resolve();
+  return FWOnetCatalog.load().then(function(){
+    const hit=(FWOnetCatalog.searchByTitle(text,1)||[])[0];
+    if(hit){ qzLeaningZone=hit.hubZone||null; qzLeaningSoc=hit.soc||null; }
+  }).catch(function(){ /* leaning stays a copy-level ack only */ });
+}
 let qzBudget={salary:17,purpose:17,flex:16,growth:17,recog:16,security:17};
 let qzGpa=null, qzSchool=null, qzSchoolMatch=null, qzStage=null;
 let qzShownCombos=new Set();
@@ -611,7 +625,11 @@ let qzPairsIdx=0, qzSwipeIdx=0, qzYesNoIdx=0, qzTotIdx=0, qzSelectedBItem=null, 
 let qzYesNoCustomOpen=new Set();
 let qzResumeText=null, qzResumeBoosts={}, qzResumeSummary='', qzObjectiveSkipped=false, qzResumeFile=null, qzResumeApplying=false;
 let qzEnrichBoosts={}, qzCharacterSummary='', qzEnrichTraits=[], qzEnrichDone=false;
-let qzAudioCtx=null, qzRevealTimers=[], qzParticleRAF=null;
+let qzAudioCtx=null, qzRevealTimers=[], qzParticleRAF=null, qzPlacementPct={}, qzPlacementSoc={};
+// Resolves when the signup-gate confetti has fully finished — the post-signup
+// résumé prompt waits on this so it never fights the celebration.
+let qzConfettiDonePromise=Promise.resolve();
+let qzResumeStepResolve=null;
 
 function qzR(x){return Math.round(x)}
 
@@ -682,6 +700,9 @@ function qzRenderInput(q,idx){
   }
   if(q.type==='name'){
     return `<div class="text-input-wrap"><input class="text-input" id="qz-name-q-in" type="text" placeholder="${q.placeholder}" value="${(qzName||'').replace(/"/g,'&quot;')}" oninput="qzHandleNameInput(this.value)" onkeydown="if(event.key==='Enter'&&qzCanNext(QZ_ACTIVE[qzCur]))qzGoNext()" autocomplete="given-name"></div>`;
+  }
+  if(q.type==='leaning'){
+    return `<div class="text-input-wrap"><input class="text-input" id="qz-leaning-in" type="text" placeholder="${q.placeholder}" value="${(qzLeaning||'').replace(/"/g,'&quot;')}" oninput="qzHandleLeaningInput(this.value)" onkeydown="if(event.key==='Enter')qzGoNext()" autocomplete="off"><div class="text-meta">Optional — leave blank to explore wide open.</div></div>`;
   }
   if(q.type==='pairs'){
     if(qzPairsIdx>=q.pairs.length) return `<div style="text-align:center;padding:30px 0"><div style="font-size:48px;margin-bottom:14px">✓</div><div style="font-size:16px;font-weight:700;color:var(--q-green)">All done! Continuing...</div></div>`;
@@ -887,6 +908,7 @@ function qzHandleNameInput(val){
   const btn=document.getElementById('qz-btn-next');
   if(btn) btn.disabled=!(qzName&&qzName.trim().length>=1);
 }
+function qzHandleLeaningInput(val){ qzLeaning=val; }
 function qzHandleSl(qId,key,val){val=parseInt(val);qzSliders[key]=val;const el=document.getElementById(`qz-sl-${qId}`);if(el)el.style.background=qzSliderBg(val);const disp=document.getElementById(`qz-sval-${qId}`);if(disp)disp.textContent=qzSlLabel(qzById(qId),val);qzCheckCombos();}
 
 function qzSetupMap(){
@@ -1044,6 +1066,7 @@ function qzCanNext(q){
   if(q.type==='tags') return qzAnswers.subjects.length>=q.min;
   if(q.type==='text') return qzSchool && qzSchool.trim().length>=2;
   if(q.type==='name') return !!(qzName && qzName.trim().length>=1);
+  if(q.type==='leaning') return true; // optional — a stated leaning is welcome, never required
   if(q.type==='pairs') return qzPairsIdx>=q.pairs.length;
   if(q.type==='tot') return Object.keys(qzAnswers.tot||{}).length===q.cards.length;
   if(q.type==='vpicker') return qzAnswers.env.length===q.pick;
@@ -1087,18 +1110,101 @@ function qzGoBack(){
 }
 function qzForceNext(){const now=Date.now();if(now-qzLastNav<250)return;qzLastNav=now;if(qzCur===QZ_ACTIVE.length-1){qzFinishInitialQuiz();return;}qzSlide(()=>{qzCur++;qzRenderQ(qzCur);});}
 
-// End of the short initial quiz → straight to the email gate (lowest friction;
-// After the 9 initial questions, offer optional resume upload before signup gate.
-function qzFinishInitialQuiz(){ qzShowResumeStep(); }
+// End of the short initial quiz → straight to the signup gate (lowest friction).
+// The résumé upload used to live here, before the gate; it now runs AFTER the
+// account is created (see qzShowPostSignupResume) so the celebration comes first.
+function qzFinishInitialQuiz(){ qzResolveLeaning(); qzShowGate(); }
 
-function qzShowResumeStep(){
-  document.getElementById('qz-quiz').classList.add('qz-hidden');
-  document.getElementById('qz-gate').classList.add('qz-hidden');
-  document.getElementById('qz-results').classList.add('qz-hidden');
-  const step=document.getElementById('qz-resume');
-  if(!step){ qzShowGate(); return; }
-  step.classList.remove('qz-hidden');
-  window.scrollTo({top:0,behavior:'smooth'});
+// "One last thing" résumé step, shown AFTER registration once the gate confetti
+// has finished. Returns a promise that resolves when the user continues or skips;
+// résumé input lands in qzResumeText/qzResumeFile for the caller to apply.
+// "Sharpen your matches" step — the deeper personality questions that used to
+// live in a Career Hub drawer now run here, right after signup and BEFORE the
+// resume step. FWHubRefine owns the questions, scoring, and persistence
+// (sector-fit-sheet patches + persistQuizVectors), so this is pure hosting.
+function qzShowSharpenStep(){
+  return new Promise(function(resolve){
+    const step=document.getElementById('qz-sharpen');
+    const root=document.getElementById('qz-sharpen-root');
+    if(!step || !root || !global.FWHubRefine || typeof FWHubRefine.mount!=='function'){ resolve(); return; }
+    ['qz-quiz','qz-gate','qz-results','qz-resume','qz-academics'].forEach(function(id){
+      const el=document.getElementById(id); if(el) el.classList.add('qz-hidden');
+    });
+    step.classList.remove('qz-hidden');
+    window.scrollTo({top:0,behavior:'smooth'});
+    const contBtn=document.getElementById('qz-sharpen-continue');
+    const skipBtn=document.getElementById('qz-sharpen-skip');
+    const statusEl=document.getElementById('qz-sharpen-status');
+    FWHubRefine.mount(root,{
+      onProgress:function(done,total){
+        if(contBtn) contBtn.textContent = done>0 ? 'Save & continue →' : 'Continue →';
+      }
+    });
+    function finish(save){
+      step.classList.add('qz-hidden');
+      if(save && FWHubRefine.answeredCount()>0){
+        try{ FWHubRefine.commit(); }catch(err){ console.warn('sharpen commit failed', err); }
+        if(statusEl) statusEl.textContent='';
+      }
+      resolve();
+    }
+    if(contBtn && !contBtn._qzBound){ contBtn._qzBound=true; contBtn.addEventListener('click',function(){ finish(true); }); }
+    if(skipBtn && !skipBtn._qzBound){ skipBtn._qzBound=true; skipBtn.addEventListener('click',function(){ finish(false); }); }
+  });
+}
+
+// "Academic Profile" step — the academics panel that used to live in a Career
+// Hub drawer now runs here, immediately after Sharpen Matches. FWHubAcademics
+// owns the questions, scoring, and persistence (sector-fit-sheet patches +
+// persistQuizVectors), so this is pure hosting.
+function qzShowAcademicsStep(){
+  return new Promise(function(resolve){
+    const step=document.getElementById('qz-academics');
+    const root=document.getElementById('qz-academics-root');
+    if(!step || !root || !global.FWHubAcademics || typeof FWHubAcademics.mount!=='function'){ resolve(); return; }
+    ['qz-quiz','qz-gate','qz-results','qz-sharpen','qz-resume'].forEach(function(id){
+      const el=document.getElementById(id); if(el) el.classList.add('qz-hidden');
+    });
+    step.classList.remove('qz-hidden');
+    window.scrollTo({top:0,behavior:'smooth'});
+    const contBtn=document.getElementById('qz-academics-continue');
+    const skipBtn=document.getElementById('qz-academics-skip');
+    FWHubAcademics.mount(root,{
+      onProgress:function(done){
+        if(contBtn) contBtn.textContent = done>0 ? 'Save & continue →' : 'Continue →';
+      }
+    });
+    function finish(save){
+      step.classList.add('qz-hidden');
+      if(save && FWHubAcademics.answeredCount()>0){
+        try{ FWHubAcademics.commit(); }catch(err){ console.warn('academics commit failed', err); }
+      }
+      resolve();
+    }
+    if(contBtn && !contBtn._qzBound){ contBtn._qzBound=true; contBtn.addEventListener('click',function(){ finish(true); }); }
+    if(skipBtn && !skipBtn._qzBound){ skipBtn._qzBound=true; skipBtn.addEventListener('click',function(){ finish(false); }); }
+  });
+}
+
+function qzShowPostSignupResume(){
+  return new Promise(function(resolve){
+    const step=document.getElementById('qz-resume');
+    if(!step || !global.FWResumeIngest){ resolve(); return; }
+    qzResumeStepResolve=resolve;
+    document.getElementById('qz-quiz').classList.add('qz-hidden');
+    document.getElementById('qz-gate').classList.add('qz-hidden');
+    document.getElementById('qz-results').classList.add('qz-hidden');
+    // Reframe the step as a warm post-signup welcome rather than a quiz question.
+    const titleEl=step.querySelector('.qz-resume-title');
+    const subEl=step.querySelector('.qz-resume-sub');
+    const badgeEl=step.querySelector('.qz-resume-badge');
+    if(titleEl) titleEl.textContent='One last thing';
+    if(subEl) subEl.innerHTML="We'd love to see what experience you already have. Add a resume and we'll tune your matches to it — or skip and jump straight in.";
+    if(badgeEl) badgeEl.textContent='Step 3 of 3 · Optional';
+    const skipEl=step.querySelector('#qz-resume-skip');
+    if(skipEl) skipEl.textContent='Skip for now';
+    step.classList.remove('qz-hidden');
+    window.scrollTo({top:0,behavior:'smooth'});
   const root=document.getElementById('qz-resume-ingest-root');
   const continueBtn=document.getElementById('qz-resume-continue');
   const skipBtn=document.getElementById('qz-resume-skip');
@@ -1144,20 +1250,16 @@ function qzShowResumeStep(){
       var ready=global.FWResumeIngest && FWResumeIngest.hasValidInput(qzResumeText, qzResumeFile);
       if(!ready) return;
       qzObjectiveSkipped=false;
+      // Immediate busy feedback: the résumé parse + vector rebuild that follow
+      // can take tens of seconds, and the step stays on screen the whole time.
       qzResumeApplying=true;
-      if(continueBtn) continueBtn.disabled=true;
-      if(statusEl) statusEl.textContent='Building objective fit from your resume…';
-      Promise.resolve(qzApplyResumeRules()).then(function(){
-        if(statusEl) statusEl.textContent='Objective fit updated from your resume.';
-        qzShowGate();
-      }).catch(function(err){
-        console.warn('qzApplyResumeRules failed', err);
-        if(statusEl) statusEl.textContent='Could not apply resume rules. You can still continue.';
-        qzShowGate();
-      }).finally(function(){
-        qzResumeApplying=false;
-        if(continueBtn) continueBtn.disabled=false;
-      });
+      continueBtn.disabled=true;
+      continueBtn.textContent='Reading your resume…';
+      if(skipBtn) skipBtn.disabled=true;
+      if(statusEl){
+        statusEl.textContent='Tuning your matches to your experience — this can take a moment. Hang tight!';
+      }
+      if(qzResumeStepResolve){ var r=qzResumeStepResolve; qzResumeStepResolve=null; r(); }
     });
   }
   if(skipBtn && !skipBtn._qzBound){
@@ -1170,9 +1272,10 @@ function qzShowResumeStep(){
       qzResumeBoosts={};
       qzResumeSummary='';
       if(statusEl) statusEl.textContent='';
-      qzShowGate();
+      if(qzResumeStepResolve){ var r=qzResumeStepResolve; qzResumeStepResolve=null; r(); }
     });
   }
+  });
 }
 
 function qzSlide(cb,back=false){
@@ -1241,6 +1344,9 @@ function qzComputeScores(){
   if(qzResumeBoosts) Object.entries(qzResumeBoosts).forEach(([k,v])=>{if(sc[k]!==undefined) sc[k]+=v;});
   // Custom-answer enrich boosts
   if(qzEnrichBoosts) Object.entries(qzEnrichBoosts).forEach(([k,v])=>{if(sc[k]!==undefined) sc[k]+=v;});
+  // Stated-interest boost: the sector of the career the user said they're
+  // leaning toward gets a real bump, so the leaning visibly shapes the map.
+  if(qzLeaningZone && sc[qzLeaningZone]!==undefined) sc[qzLeaningZone]+=8;
   return sc;
 }
 
@@ -1347,11 +1453,18 @@ const qzCAREER_META = {
   agriculture: {person:'🧑‍🌾', accent:'#65a30d'}
 };
 
-// Rarity tier per rank — drives colors + particle count (loot-box style)
-function qzTierFor(rank){
-  return rank===1
-    ? {name:'LEGENDARY', label:'★ LEGENDARY FIT', color:'#f5b301', particles:120}
-    : {name:'EPIC',      label:'EPIC MATCH',      color:'#7c3aed', particles:70};
+// Rarity tier by ACTUAL match strength (not rank) — drives colors + particle
+// count (loot-box style). Thresholds mirror the fit-rarity ladder so a strong
+// fit reads legendary and a middling one honestly doesn't.
+// Thresholds calibrated to the mean-centered cosine fit scale (canonical in
+// FWOnetMath.FIT_TIERS: legendary 56 / epic 46 / rare 34). LEGENDARY maps to
+// legendary+mythic, EPIC to epic, GREAT to rare, SOLID to uncommon/common.
+function qzTierFor(pct){
+  const p = Number(pct) || 0;
+  if (p >= 56) return {name:'LEGENDARY', label:'★ LEGENDARY FIT', color:'#f5b301', particles:120};
+  if (p >= 46) return {name:'EPIC',      label:'EPIC MATCH',      color:'#7c3aed', particles:90};
+  if (p >= 34) return {name:'GREAT',     label:'GREAT MATCH',     color:'#2563eb', particles:60};
+  return              {name:'SOLID',     label:'SOLID MATCH',     color:'#16a34a', particles:40};
 }
 
 // Per-industry illustration params for the parametric SVG portrait generator
@@ -1477,21 +1590,26 @@ function qzResolveHubCareer(career) {
     salary: deep ? deep.midSalary : '',
     meta: meta,
     desc: career.description
+      || (career.soc && window.FWOnetCatalog && typeof FWOnetCatalog.descriptionFor === 'function'
+        ? FWOnetCatalog.descriptionFor(career.soc) : '')
+      || ''
   };
 }
 
 function qzBinderHtml(rank, careerOrKey, pct, isHubCareer){
   const r = isHubCareer ? qzResolveHubCareer(careerOrKey) : qzResolveCareer(careerOrKey);
   const desc = isHubCareer ? r.desc : qzIndustryWhy(careerOrKey);
-  const salaryHtml=r.salary?`<div class="placement-salary">Median pay ~${r.salary} · ${rank===1?'your strongest fit':'a close second'}</div>`:'';
+  const salaryHtml=r.salary?`<div class="placement-salary">Median pay ~${r.salary} · ${rank===1?'your strongest match so far':'a close second'}</div>`:'';
   const btn=r.careerKey
     ? `<a class="placement-btn" href="${qzCareerHref(r.careerKey)}">Explore this career →</a>`
     : `<button class="placement-btn" onclick="document.getElementById('full-breakdown').scrollIntoView({behavior:'smooth'})">See why it fits →</button>`;
   const sx=[8,84,15,80], sy=[10,15,78,72], se=['✨','⭐','💫','🌟'];
   const sparkles=se.map((s,i)=>`<span class="binder-sparkle" style="left:${sx[i]}%;top:${sy[i]}%;animation-delay:${i*0.12}s">${s}</span>`).join('');
-  const tier=qzTierFor(rank);
+  qzPlacementPct[rank]=pct;
+  qzPlacementSoc[rank]=(isHubCareer && careerOrKey && careerOrKey.soc)?careerOrKey.soc:null;
+  const tier=qzTierFor(pct);
   return `<div class="binder-slot" id="binder-slot-${rank}" style="--accent:${r.meta.accent};--tier-color:${tier.color}">
-    <div class="rank-ribbon">${rank===1?'★ #1 Best Fit':'#2 Runner-up'}</div>
+    <div class="rank-ribbon">${rank===1?'★ #1 Match so far':'#2 Runner-up'}</div>
     <div class="binder" id="binder-${rank}">
       <div class="ray-burst"></div>
       ${sparkles}
@@ -1501,6 +1619,7 @@ function qzBinderHtml(rank, careerOrKey, pct, isHubCareer){
         <div class="placement-pct">${pct}% match</div>
         ${salaryHtml}
         <div class="placement-desc">${desc}</div>
+        <div class="placement-why" id="placement-why-${rank}"></div>
         ${btn}
       </div>
       <div class="binder-cover">
@@ -1584,6 +1703,78 @@ function qzSalaryArenaHtml(industryKey){
   </div>`;
 }
 
+// FW trust pass — acknowledge the user's stated leaning before suggesting.
+// Interview finding: most users arrive with a career in mind and get upset when
+// an algorithm silently overrides it. Lead with their pick, score it honestly,
+// and frame our #1 as a related comparison — never a flat replacement.
+function qzRenderLeaningAck(hubTop1){
+  const el=document.getElementById('qz-leaning-ack');
+  const text=(qzLeaning||'').trim();
+  if(!el || !text) return;
+  const esc=t=>String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const show=html=>{ el.innerHTML=html; el.hidden=false; };
+  if(!window.FWOnetCatalog || typeof FWOnetCatalog.searchByTitle!=='function' || typeof FWOnetCatalog.load!=='function'){
+    show(`You mentioned <strong>${esc(text)}</strong> — keep it on the table as you explore below.`);
+    return;
+  }
+  FWOnetCatalog.load().then(()=>{
+    const hit=(FWOnetCatalog.searchByTitle(text,1)||[])[0];
+    if(!hit){
+      show(`You mentioned <strong>${esc(text)}</strong> — we'll keep that in mind. Your matches below are a comparison point, not a replacement.`);
+      return;
+    }
+    const href=qzCareerHref(hit.slug||'');
+    const link=`<a href="${href}">${esc(hit.name||hit.title)}</a>`;
+    const topSoc=hubTop1 && hubTop1.career && hubTop1.career.soc;
+    if(topSoc && topSoc===hit.soc){
+      show(`You told us you were leaning toward <strong>${esc(hit.name||hit.title)}</strong> — your answers back that up. It comes out as your #1 match.`);
+      return;
+    }
+    const ranked=(window.FWOnetVectors && typeof FWOnetVectors.getCachedOnetRank==='function')
+      ? FWOnetVectors.getCachedOnetRank() : null;
+    let rankLine='';
+    if(ranked && ranked.length){
+      const idx=ranked.findIndex(r=>r.soc===hit.soc);
+      if(idx>=0) rankLine=` It ranks #${idx+1} of ${ranked.length} for you`+(ranked[idx].score!=null?` (${Math.max(0,Math.min(100,Math.round(ranked[idx].score)))}% fit)`:'')+'.';
+    }
+    show(`You mentioned <strong>${link}</strong> — that's a real option, and it stays on the table.${rankLine} The matches below build on many of the same strengths — compare them side by side, don't treat them as a replacement.`);
+  }).catch(()=>{
+    show(`You mentioned <strong>${esc(text)}</strong> — keep it on the table as you explore below.`);
+  });
+}
+
+// FW trust pass — "why this match" at the first reveal. Reuses the same
+// comparison rows + drawer the career.html deep dive already renders, so the
+// very first % a user sees carries a tap-to-expand explanation instead of
+// standing alone as a verdict. Additive: any failure leaves the reveal as-is.
+function qzInjectWhy(){
+  if(!window.FWWhyMatch || !window.FWOnetVectors
+    || typeof FWOnetVectors.userVsCareerDimensions!=='function'
+    || typeof FWOnetVectors.readQuizVectors!=='function') return;
+  let vecs=null;
+  try{ vecs=FWOnetVectors.readQuizVectors(); }catch(_){ return; }
+  const personality=vecs && vecs.personality && vecs.personality.values;
+  if(!personality || !personality.length) return;
+  const objective=vecs.objective && vecs.objective.values;
+  const confidence=vecs.personality.confidence;
+  const objActive=!!(objective && objective.some(v=>Number(v)>1));
+  [1,2].forEach(rank=>{
+    const soc=qzPlacementSoc[rank];
+    const mount=document.getElementById('placement-why-'+rank);
+    if(!soc || !mount) return;
+    FWOnetVectors.userVsCareerDimensions(soc, personality, objective, confidence).then(match=>{
+      if(!match || !match.comparisons || !match.comparisons.length) return;
+      FWWhyMatch.inject(mount, match.comparisons, qzPlacementPct[rank], {k:3});
+      if(!objActive && !mount.querySelector('.placement-basis')){
+        const basis=document.createElement('div');
+        basis.className='placement-basis';
+        basis.textContent='A starting read from your quiz answers — we\'ll sharpen it together right after you sign up.';
+        mount.appendChild(basis);
+      }
+    }).catch(()=>{});
+  });
+}
+
 function qzShowResults(){
   document.getElementById('qz-quiz').classList.add('qz-hidden');
   document.getElementById('qz-results').classList.remove('qz-hidden');
@@ -1592,22 +1783,23 @@ function qzShowResults(){
   function renderWithRanking(careerRanked) {
   const sorted=Object.entries(sc).sort((a,b)=>b[1]-a[1]).slice(0,4);
   const maxSc=sorted[0][1]||1;
-  const archetype=qzDetermineArchetype();
-  const blurb=qzGenerateBlurb(sorted.map(x=>x[0]));
   const top1=sorted[0], top2=sorted[1];
   const pct1=Math.round((top1[1]/maxSc)*100), pct2=Math.round((top2[1]/maxSc)*100);
   const hubTop1 = careerRanked[0];
   const hubTop2 = careerRanked[1];
-  const hubMax = hubTop1 ? hubTop1.score : 1;
-  const hubPct1 = hubTop1 ? Math.round((hubTop1.score / hubMax) * 100) : pct1;
-  const hubPct2 = hubTop2 ? Math.round((hubTop2.score / hubMax) * 100) : pct2;
+  // Use the ABSOLUTE 0-100 fit score, not a ratio to the winner — dividing by
+  // the top score forced every #1 to read 100% + "legendary" regardless of fit.
+  const clampFit = function (s) { return Math.max(0, Math.min(100, Math.round(Number(s) || 0))); };
+  const hubPct1 = hubTop1 ? clampFit(hubTop1.score) : pct1;
+  const hubPct2 = hubTop2 ? clampFit(hubTop2.score) : pct2;
 
   // ── Lead with the dramatic binder reveal (top 2 hub careers) ──
   let h=`<div class="reveal-stage">
-    <div class="reveal-eye">Your Career Placement</div>
+    <div class="reveal-eye">Your Starting Matches</div>
     <div class="reveal-headline" id="reveal-headline">Tallying your results…</div>
     <div class="reveal-tagline" id="reveal-tagline">Hold tight — your career binders are loading.</div>
     <button class="skip-reveal" onclick="qzSkipReveal()">Skip the reveal →</button>
+    <div id="qz-leaning-ack" class="qz-leaning-ack" hidden></div>
     ${hubTop2 ? qzBinderHtml(2, hubTop2.career, hubPct2, true) : qzBinderHtml(2, top2[0], pct2, false)}
     ${hubTop1 ? qzBinderHtml(1, hubTop1.career, hubPct1, true) : qzBinderHtml(1, top1[0], pct1, false)}
   </div>`;
@@ -1615,7 +1807,6 @@ function qzShowResults(){
   // ── Full breakdown (revealed after the binders open) ──
   let fb=`<div class="res-hdr"><div class="res-eye">The Full Picture</div><div class="res-title">Your Top Industry Matches</div><div class="res-sub">Personalized from 19 data points about how you think, work, and lead.</div><p class="qz-fit-footnote">Percentiles show how strongly you match each path vs other careers. In Career Hub, add academics or a transcript to unlock objective fit alongside personality fit.</p></div>`;
   if(qzGpa!==null){ const g=qzGpaFeedback(qzGpa); fb+=`<div class="gpa-banner ${g.cls||'solid'}">${qzGpaMessage()}</div>`; }
-  fb+=`<div class="archetype-card"><div class="arche-eye">You Are</div><div class="arche-name">${archetype.name}</div><div class="arche-blurb">${blurb}</div></div>`;
   fb+=qzSalaryArenaHtml(sorted[0][0]);
   if(qzResumeText && Object.keys(qzResumeBoosts).length>0){
     const topBoosts=Object.entries(qzResumeBoosts).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k])=>QZ_IND[k]?.name||k);
@@ -1661,7 +1852,10 @@ function qzShowResults(){
   if(qzParticleRAF){ cancelAnimationFrame(qzParticleRAF); qzParticleRAF=null; }
   qzFxLayer();
   qzRunReveal();
-  qzPersistHubQuiz();
+  qzRenderLeaningAck(hubTop1);
+  const persisted=qzPersistHubQuiz();
+  if(persisted && typeof persisted.then==='function') persisted.then(qzInjectWhy).catch(()=>qzInjectWhy());
+  else qzInjectWhy();
   }
 
   if (window.FWOnetVectors && typeof FWOnetVectors.rankOnetCareersFromVectors === 'function') {
@@ -1697,12 +1891,12 @@ function qzShowResults(){
 function qzPersistHubQuiz(){
   var payload = qzBuildHubPayload();
   var save = function (p) {
-    try { localStorage.setItem('fw_hub_quiz_v1', JSON.stringify(p)); } catch (_) {}
+    try { if (window.FWUser) FWUser.putBlob(p); } catch (_) {}
   };
   var done = window.FWOnetQuizSeed
     ? FWOnetQuizSeed.attachVectorsToPayload(payload).then(save)
     : Promise.resolve(save(payload));
-  done.catch(function () { save(payload); });
+  done = done.catch(function () { save(payload); });
   if (window.FWAuth && FWAuth.authEmail && FWAuth.authEmail()) {
     FWAuth.syncQuizProfile()
       .then(function () {
@@ -1712,6 +1906,7 @@ function qzPersistHubQuiz(){
       })
       .catch(function (err) { console.warn('quiz profile sync failed', err); });
   }
+  return done;
 }
 
 function qzSleep(ms){return new Promise(res=>{const id=setTimeout(res,ms);qzRevealTimers.push(id);});}
@@ -1876,7 +2071,7 @@ async function qzRevealOne(rank, chargeMs){
   const slot=document.getElementById('binder-slot-'+rank);
   const binder=document.getElementById('binder-'+rank);
   if(!slot||!binder) return;
-  const tier=qzTierFor(rank);
+  const tier=qzTierFor(qzPlacementPct[rank]!=null?qzPlacementPct[rank]:0);
   const dim=document.querySelector('#qz-fx .fx-dim');
 
   slot.classList.add('show');
@@ -1918,8 +2113,8 @@ async function qzRunReveal(){
   if(tag) tag.textContent='Drumroll… this is the big one.';
   await qzSleep(700);
   await qzRevealOne(1, 1700);
-  if(head) head.textContent='🎉 Your Top Career Match';
-  if(tag) tag.textContent='Tap either card to dive into the full guide.';
+  if(head) head.textContent='🎉 Your top match — so far';
+  if(tag) tag.textContent='A starting read from your answers, not a final verdict. Tap a card for the full guide — we\'ll ask a few sharper questions after you sign up.';
   await qzSleep(1100);
 
   const breakdown=document.getElementById('full-breakdown');
@@ -1935,45 +2130,6 @@ function qzSkipReveal(){
   const head=document.getElementById('reveal-headline'); if(head) head.textContent='🎉 Your Top Career Matches';
   const tag=document.getElementById('reveal-tagline'); if(tag) tag.textContent='Tap either card to dive into the full guide.';
   const bd=document.getElementById('full-breakdown'); if(bd) bd.classList.add('show');
-}
-
-function qzDetermineArchetype(){
-  const techy=qzAnswers.subjects.some(t=>['💻 Tech / Coding','🧮 Math','🏗️ Engineering'].includes(t));
-  const creative=qzAnswers.subjects.some(t=>['🎨 Art & Design','🎵 Music','🎬 Film','✍️ Writing','📷 Photography'].includes(t));
-  const helpful=qzAnswers.subjects.some(t=>['🩺 Medicine','🧠 Psychology','🌍 Global Issues'].includes(t));
-  const map=qzAnswers.map||{x:50,y:50};
-  const risk=qzSliders.risk||50;
-  const intensity=qzSliders.intensity||50;
-  if(techy && creative && map.y>55) return {name:'The Technical Creative'};
-  if(risk>65 && (qzBudget.salary||0)<20 && map.y>50) return {name:'The Visionary Builder'};
-  if(risk>65 && (qzBudget.growth||0)>20) return {name:'The Entrepreneurial Force'};
-  if(helpful && map.x>55) return {name:'The Connector-Healer'};
-  if((qzBudget.purpose||0)>=22 && intensity<55) return {name:'The Purpose-Driven Idealist'};
-  if(qzGpa>=3.8 && qzAnswers.subjects.some(t=>['🔬 Science','🤔 Philosophy','📜 History','🧮 Math'].includes(t))) return {name:'The Scholar'};
-  if(map.y<45 && (qzBudget.salary||0)>=22) return {name:'The Strategic Operator'};
-  if(map.x>60 && (qzBudget.recog||0)>=18) return {name:'The Natural Leader'};
-  if(creative && risk>55) return {name:'The Bold Creative'};
-  if(techy && map.y<45) return {name:'The Systems Thinker'};
-  return {name:'The Multi-Threat'};
-}
-
-function qzGenerateBlurb(top){
-  const traits=[];
-  const map=qzAnswers.map||{x:50,y:50};
-  if(map.y>60) traits.push("a strong creative instinct");
-  else if(map.y<40) traits.push("a clear preference for structure and rigor");
-  if(map.x>60) traits.push("real energy from collaboration");
-  else if(map.x<40) traits.push("the focus to do deep solo work");
-  if((qzBudget.salary||0)>=25) traits.push("ambition about compensation");
-  if((qzBudget.purpose||0)>=25) traits.push("a commitment to meaningful impact");
-  if((qzBudget.flex||0)>=20) traits.push("a non-negotiable need for flexibility");
-  if(qzSliders.risk>70) traits.push("unusual risk tolerance");
-  if(qzSliders.intensity>70) traits.push("an appetite for high-tempo work");
-  else if(qzSliders.intensity<35) traits.push("the discipline to value sustainable pace");
-  const traitStr=traits.length>2?traits.slice(0,3).join(', '):traits.join(' and ');
-  let intro=`You combine ${traitStr||'a thoughtful, balanced approach to your career'}. That's an unusual blend — and it's exactly the kind of profile that does well in the industries below.`;
-  if(qzGpa!==null && qzGpa>=3.7) intro+=` Your ${qzGpa.toFixed(2)} GPA tells admissions committees and employers you can execute under pressure — which opens nearly every door.`;
-  return intro;
 }
 
 function qzGpaMessage(){
@@ -2150,6 +2306,8 @@ const QZ_SEND_RESULTS_EP = '/send-results';
 
 // Multicolored confetti raining down for ~5s — celebratory moment on the signup gate.
 function qzConfetti(){
+  let confettiDone;
+  qzConfettiDonePromise=new Promise(function(res){ confettiDone=res; });
   const cv=document.createElement('canvas');
   cv.style.cssText='position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9999';
   document.body.appendChild(cv);
@@ -2188,7 +2346,7 @@ function qzConfetti(){
       ctx.restore();
     });
     if(elapsed<DUR){requestAnimationFrame(frame);}
-    else{cv.remove();window.removeEventListener('resize',size);}
+    else{cv.remove();window.removeEventListener('resize',size);if(confettiDone)confettiDone();}
   }
   window.addEventListener('resize',size);
   requestAnimationFrame(frame);
@@ -2297,7 +2455,6 @@ function qzBuildHubPayload(){
     characterSummary: qzCharacterSummary || '',
     customAnswers: qzCollectCustomAnswers(),
     enrichBoosts: qzEnrichBoosts || {},
-    archetype: (typeof qzDetermineArchetype === 'function') ? (qzDetermineArchetype().name || null) : null,
     traits: qzEnrichTraits || [],
     // Surface what the initial quiz already captured so the Career Hub (and the
     // academics panel) can read year / GPA / school / subjects without re-asking.
@@ -2307,7 +2464,9 @@ function qzBuildHubPayload(){
       school: qzSchoolMatch ? qzSchoolMatch.name : (qzSchool || null),
       schoolCity: qzSchoolMatch ? qzSchoolMatch.city : null,
       subjects: (qzAnswers.subjects || []).slice(),
+      careerLeaning: (qzLeaning || '').trim().slice(0, 120) || null,
     },
+    careerLeaningSoc: qzLeaningSoc || null,
   };
 }
 
@@ -2316,7 +2475,6 @@ function qzRegisterProfilePayload(hubPayload) {
   const slim = {
     name: full.name,
     scores: full.scores,
-    archetype: full.archetype,
     traits: Array.isArray(full.traits) ? full.traits.slice(0, 12) : [],
     characterSummary: String(full.characterSummary || '').slice(0, 2000),
     resumeSummary: String(full.resumeSummary || '').slice(0, 1200),
@@ -2393,19 +2551,25 @@ function qzBuildHubUrl(){
   if (global.FWSectorFitSheet && typeof FWSectorFitSheet.ensureSectorFitSheet === 'function') {
     FWSectorFitSheet.ensureSectorFitSheet(payload);
   }
+  // The #r= token crosses to the dashboard as the v2 user shape (the reader
+  // accepts both during rollout); local storage stays the v1 working blob via
+  // the facade until Phase 4 flips it.
+  var tokenBody = function (p) {
+    return (window.FWUser && typeof FWUser.normalizeUser === 'function') ? FWUser.normalizeUser(p) : p;
+  };
   if (global.FWOnetQuizSeed && typeof FWOnetQuizSeed.attachVectorsToPayload === 'function') {
     return FWOnetQuizSeed.attachVectorsToPayload(payload).then(function (enriched) {
       qzApplyObjectiveToPayload(enriched);
-      const token = qzB64UrlEncode(JSON.stringify(enriched));
+      const token = qzB64UrlEncode(JSON.stringify(tokenBody(enriched)));
       const url = window.location.origin + '/dashboard.html#r=' + token;
-      try { localStorage.setItem('fw_hub_quiz_v1', JSON.stringify(enriched)); } catch (_) {}
+      try { if (window.FWUser) FWUser.putBlob(enriched); } catch (_) {}
       return { url: url, token: token, payload: enriched };
     });
   }
   qzApplyObjectiveToPayload(payload);
-  const token = qzB64UrlEncode(JSON.stringify(payload));
+  const token = qzB64UrlEncode(JSON.stringify(tokenBody(payload)));
   const url = window.location.origin + '/dashboard.html#r=' + token;
-  try { localStorage.setItem('fw_hub_quiz_v1', JSON.stringify(payload)); } catch(_){}
+  try { if (window.FWUser) FWUser.putBlob(payload); } catch(_){}
   return Promise.resolve({ url, token, payload });
 }
 
@@ -2457,13 +2621,24 @@ async function qzCreateAccount(ev){
 
   qzSignupBusy = true;
   emailEl.disabled = true; if (pwEl) pwEl.disabled = true;
-  if (btn) { btn.disabled = true; btn.textContent = 'Creating account…'; }
+  const restoreBtn = window.FWButtonBusy ? FWButtonBusy.start(btn, { label: 'Creating account…' }) : function () {};
 
   try {
     const built = await qzBuildHubUrl();
-    const url = built.url;
-    const token = built.token;
-    await FWAuth.authRegister(email, password, qzRegisterProfilePayload(built.payload));
+    // Slim register payload crosses as v2 (the server normalizes both shapes).
+    await FWAuth.authRegister(email, password,
+      window.FWUser ? FWUser.normalizeUser(qzRegisterProfilePayload(built.payload)) : qzRegisterProfilePayload(built.payload));
+
+    // Account created — let the gate confetti finish, then offer the "one last
+    // thing" résumé upload before dropping them into the hub.
+    if (btn) btn.textContent = 'Account created ✓';
+    try { await qzConfettiDonePromise; } catch (_) {}
+    await qzShowSharpenStep();
+    await qzShowAcademicsStep();
+    await qzShowPostSignupResume();
+
+    // Apply whatever résumé they added (or nothing, if skipped) to the objective vector.
+    try { await qzApplyResumeRules(); } catch (applyErr) { console.warn('resume rules apply failed', applyErr); }
     if (!qzObjectiveSkipped && global.FWResumeIngest) {
       var rulesOpts = {
         rulesOnly: true,
@@ -2492,15 +2667,25 @@ async function qzCreateAccount(ev){
         }
       }
     }
-    qzSendResultsInBackground(email, url, token);
-    if (btn) btn.textContent = 'Opening Career Hub…';
-    window.location.href = url;
+
+    // Rebuild the hub link so it carries the résumé-tuned objective vector.
+    (function(){
+      var st=document.getElementById('qz-resume-status');
+      var cb=document.getElementById('qz-resume-continue');
+      if(st) st.textContent='All set — opening your Career Hub…';
+      if(cb) cb.textContent='Opening your Career Hub…';
+    })();
+    const finalBuilt = await qzBuildHubUrl();
+    qzSendResultsInBackground(email, finalBuilt.url, finalBuilt.token);
+    window.location.href = finalBuilt.url;
   } catch (err) {
     errEl.classList.remove('qz-signup-warn');
-    errEl.textContent = (err && err.message) ? err.message : 'Something went wrong. Please try again.';
+    errEl.textContent = window.FWErr
+      ? FWErr.forUser(err, 'Something went wrong. Please try again.')
+      : 'Something went wrong. Please try again.';
     qzSignupBusy = false;
     emailEl.disabled = false; if (pwEl) pwEl.disabled = false;
-    if (btn) { btn.disabled = false; btn.innerHTML = 'Create account &amp; see results <span aria-hidden="true">→</span>'; }
+    restoreBtn();
   }
 }
 
@@ -2539,3 +2724,22 @@ function qzBootFromHash(){
     return false;
   }
 }
+
+// quiz.html#sharpen — standalone entry for returning users (portal's "Sharpen
+// matches" action): sharpen → academics, then back to the hub.
+// quiz.html#academics jumps straight to the Academic Profile step (portal's
+// "Academics" action — the panel no longer lives on the hub).
+(function(){
+  function bootStandalone(){
+    var hash=(window.location.hash||'');
+    if(hash!=='#sharpen' && hash!=='#academics') return;
+    var intro=document.getElementById('qz-intro');
+    if(intro) intro.classList.add('qz-hidden');
+    var flow=(hash==='#sharpen')
+      ? qzShowSharpenStep().then(function(){ return qzShowAcademicsStep(); })
+      : qzShowAcademicsStep();
+    flow.then(function(){ window.location.href='dashboard.html'; });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bootStandalone);
+  else bootStandalone();
+})();

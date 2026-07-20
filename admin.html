@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="/favicon.ico?v=20260717h" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/favicon.png?v=20260717h">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=20260717h">
+<title>Admin console — FlightWay</title>
+<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260720c">
+<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260720c">
+<link rel="stylesheet" href="assets/css/flightway-2.css?v=20260720c">
+<script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
+<script src="assets/js/shared/global-shim.js?v=20260703p"></script>
+<script src="assets/js/shared/flags.js?v=20260716h"></script>
+<script src="assets/js/shared/events.js?v=20260716h" defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="assets/vendor/lucide-lite.js?v=20260720a" defer></script>
+<style>
+  /* Same page-shell padding as #page-resume/#page-portal — without it the H1
+     slides under the fixed nav on mobile. */
+  #page-admin { padding: clamp(96px, 12vw, 110px) clamp(16px, 4vw, 24px) 80px; min-height: 100vh; background: var(--bg-solid); }
+  .admin-card { border: 1px solid rgb(var(--border)); border-radius: 12px; padding: 16px 18px; margin-bottom: 18px; background: rgb(var(--surface)); }
+  .admin-card > h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 4px 0; font-size: 17px; }
+  .admin-card > h2 svg { width: 17px; height: 17px; opacity: 0.75; }
+  .admin-card-note { margin: 0 0 14px 0; font-size: 13px; color: rgb(var(--text-muted)); }
+  .admin-identity { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 13px; }
+  .admin-badge { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 8px; border-radius: 999px; background: rgb(var(--surface-2)); border: 1px solid rgb(var(--border)); }
+  .admin-badge--root { border-color: var(--accent); color: var(--accent); }
+  .admin-badge--locked { color: rgb(var(--text-muted)); }
+  .admin-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+  .admin-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .admin-field label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: rgb(var(--text-muted)); }
+  .admin-field input, .admin-field select { padding: 8px 10px; border-radius: 8px; border: 1px solid rgb(var(--border)); background: rgb(var(--surface-2)); color: rgb(var(--text)); font: inherit; box-sizing: border-box; min-width: 0; }
+  .admin-field--email input { width: 240px; max-width: 100%; }
+  .admin-field--note input { width: 220px; max-width: 100%; }
+  .admin-field--days input { width: 96px; }
+  .admin-msg { font-size: 12px; margin: 10px 0 0 0; min-height: 16px; }
+  .admin-msg--error { color: #b3261e; }
+  [data-theme="dark"] .admin-msg--error { color: #ff8888; }
+  .admin-table-wrap { overflow-x: auto; margin-top: 14px; }
+  .admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .admin-table th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: rgb(var(--text-muted)); font-weight: 600; padding: 6px 10px 6px 0; border-bottom: 1px solid rgb(var(--border)); white-space: nowrap; }
+  .admin-table td { padding: 8px 10px 8px 0; border-bottom: 1px solid rgb(var(--border)); vertical-align: top; }
+  .admin-table tr:last-child td { border-bottom: none; }
+  .admin-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; word-break: break-all; }
+  .admin-dim { color: rgb(var(--text-muted)); }
+  .admin-empty { font-size: 13px; color: rgb(var(--text-muted)); margin: 12px 0 0 0; }
+  .admin-btn-quiet { font-size: 12px; padding: 6px 12px; border-radius: 999px; border: 1px solid rgb(var(--border)); background: rgb(var(--surface-2)); color: inherit; cursor: pointer; font-family: inherit; }
+  .admin-btn-quiet:hover { border-color: var(--accent); }
+  .admin-detail { max-width: 340px; }
+  @media (max-width: 640px) { .admin-field--email input, .admin-field--note input { width: 100%; } .admin-field { flex: 1 1 100%; } }
+</style>
+</head>
+<body class="portal-page">
+<div id="fw-page-veil" class="fw-page-veil" aria-live="polite" aria-busy="true">
+</div>
+
+<canvas id="fw-data-field" aria-hidden="true"></canvas>
+
+<nav>
+  <div class="nav-inner">
+    <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay home"></a>
+    <div class="nav-links app-nav" aria-label="App">
+      <a href="portal.html" class="app-nav-tab" data-app-nav="home"><span class="app-nav-label">Home</span></a>
+      <a href="dashboard.html" class="app-nav-tab" data-app-nav="hub"><span class="app-nav-label">Career Hub</span></a>
+      <a href="coach.html" class="app-nav-tab" data-app-nav="advisor"><span class="app-nav-label">Marco</span></a>
+      <a href="roadmap.html" class="app-nav-tab" data-app-nav="roadmap"><span class="app-nav-label">Career Roadmap</span></a>
+      <a href="auth.html#signin" class="app-nav-tab nav-signin-link" id="nav-signin-link">Sign in</a>
+      <button type="button" class="fw-theme-toggle" aria-label="Switch to dark mode" aria-pressed="false">
+        <span class="fw-theme-icon" aria-hidden="true"></span>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<div id="page-admin" class="page active" role="main" aria-label="Admin console">
+  <section class="portal-wrap">
+    <header class="portal-head">
+      <h1>Admin console</h1>
+      <p>Comp grants, admin roles and the audit trail. Every change here is recorded.</p>
+    </header>
+
+    <!-- Shown when /admin/whoami answers 404 (not an admin, or signed out). -->
+    <div class="admin-card" id="admin-denied" hidden>
+      <h2><i data-lucide="lock" aria-hidden="true"></i>Not available</h2>
+      <p class="admin-card-note" id="admin-denied-msg">This console is not available for your account.</p>
+    </div>
+
+    <div id="admin-app" hidden>
+      <div class="admin-card" id="admin-session-card">
+        <h2><i data-lucide="shield" aria-hidden="true"></i>Session</h2>
+        <div class="admin-identity">
+          <span class="admin-mono" id="admin-who">—</span>
+          <span class="admin-badge" id="admin-role-badge">admin</span>
+          <span class="admin-badge admin-badge--locked" id="admin-elev-badge">locked</span>
+        </div>
+        <form class="admin-form" id="admin-elevate-form" style="margin-top:14px">
+          <div class="admin-field admin-field--email">
+            <label for="admin-elev-password">Confirm your password to make changes</label>
+            <input type="password" id="admin-elev-password" autocomplete="current-password" placeholder="Your FlightWay password">
+          </div>
+          <button type="submit" class="fw-iv-btn fw-iv-btn--primary" id="admin-elev-btn">Unlock for 15 min</button>
+        </form>
+        <p class="admin-msg" id="admin-elev-msg" aria-live="polite"></p>
+      </div>
+
+      <div class="admin-card">
+        <h2><i data-lucide="ticket" aria-hidden="true"></i>Comp grants</h2>
+        <p class="admin-card-note">
+          A comp writes the same plan columns a purchase writes, so it takes effect immediately.
+          An email with no account yet stays pending and applies itself at signup.
+        </p>
+        <form class="admin-form" id="admin-grant-form">
+          <div class="admin-field admin-field--email">
+            <label for="admin-grant-email">Email</label>
+            <input type="email" id="admin-grant-email" autocomplete="off" placeholder="person@example.com" required>
+          </div>
+          <div class="admin-field">
+            <label for="admin-grant-plan">Plan</label>
+            <select id="admin-grant-plan">
+              <option value="premium">premium</option>
+              <option value="lifetime">lifetime</option>
+            </select>
+          </div>
+          <div class="admin-field admin-field--days">
+            <label for="admin-grant-days">Days</label>
+            <input type="number" id="admin-grant-days" min="1" max="3650" placeholder="∞">
+          </div>
+          <div class="admin-field admin-field--note">
+            <label for="admin-grant-note">Note</label>
+            <input type="text" id="admin-grant-note" maxlength="300" placeholder="Why this comp exists">
+          </div>
+          <button type="submit" class="fw-iv-btn fw-iv-btn--primary" id="admin-grant-btn">Grant</button>
+        </form>
+        <p class="admin-msg" id="admin-grant-msg" aria-live="polite"></p>
+        <div class="admin-table-wrap">
+          <table class="admin-table" id="admin-grants-table">
+            <thead>
+              <tr>
+                <th scope="col">Email</th><th scope="col">Plan</th><th scope="col">Expires</th>
+                <th scope="col">Status</th><th scope="col">Granted by</th><th scope="col">Note</th><th scope="col"></th>
+              </tr>
+            </thead>
+            <tbody id="admin-grants-body"></tbody>
+          </table>
+        </div>
+        <p class="admin-empty" id="admin-grants-empty" hidden>No comp grants yet.</p>
+      </div>
+
+      <!-- Root-only. Sub-admins get a 404 from /admin/admins, so this stays hidden. -->
+      <div class="admin-card" id="admin-admins-card" hidden>
+        <h2><i data-lucide="users" aria-hidden="true"></i>Admins</h2>
+        <p class="admin-card-note">
+          Sub-admins can grant and revoke comps but cannot manage this list. The root admin is set
+          by the ROOT_ADMIN_EMAIL environment variable and never appears here.
+        </p>
+        <form class="admin-form" id="admin-admin-form">
+          <div class="admin-field admin-field--email">
+            <label for="admin-admin-email">Email</label>
+            <input type="email" id="admin-admin-email" autocomplete="off" placeholder="colleague@flightway.ai" required>
+          </div>
+          <button type="submit" class="fw-iv-btn fw-iv-btn--primary" id="admin-admin-btn">Add admin</button>
+        </form>
+        <p class="admin-msg" id="admin-admin-msg" aria-live="polite"></p>
+        <div class="admin-table-wrap">
+          <table class="admin-table" id="admin-admins-table">
+            <thead>
+              <tr><th scope="col">Email</th><th scope="col">Added by</th><th scope="col">Added</th><th scope="col"></th></tr>
+            </thead>
+            <tbody id="admin-admins-body"></tbody>
+          </table>
+        </div>
+        <p class="admin-empty" id="admin-admins-empty" hidden>No sub-admins.</p>
+      </div>
+
+      <div class="admin-card">
+        <h2><i data-lucide="scroll-text" aria-hidden="true"></i>Audit log</h2>
+        <p class="admin-card-note">Append-only. Newest first.</p>
+        <div class="admin-table-wrap">
+          <table class="admin-table" id="admin-audit-table">
+            <thead>
+              <tr><th scope="col">When</th><th scope="col">Actor</th><th scope="col">Action</th><th scope="col">Target</th><th scope="col">Detail</th></tr>
+            </thead>
+            <tbody id="admin-audit-body"></tbody>
+          </table>
+        </div>
+        <p class="admin-empty" id="admin-audit-empty" hidden>Nothing recorded yet.</p>
+        <p class="admin-msg" id="admin-audit-msg" aria-live="polite"></p>
+        <button type="button" class="admin-btn-quiet" id="admin-audit-more" hidden style="margin-top:10px">Load more</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-left">
+      <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay"></a>
+      <p>&copy; 2026 FlightWay. All rights reserved.</p>
+    </div>
+    <div class="footer-links"><a href="mailto:hello@flightway.app">Contact</a></div>
+  </div>
+</footer>
+
+<script src="assets/js/shared/page-veil.js?v=20260720c" defer></script>
+<script src="assets/js/shared/page-boot.js?v=20260703p" defer></script>
+<script src="assets/js/shared/fw-errors.js?v=20260720a" defer></script>
+<script src="assets/js/shared/auth.js?v=20260720c" defer></script>
+<script src="assets/js/shared/fw-busy.js?v=20260720a" defer></script>
+<script src="assets/js/shared/fw-confirm.js?v=20260703p" defer></script>
+<script src="assets/js/shared/auth-nav.js?v=20260703p" defer></script>
+<script src="assets/js/app/admin-console.js?v=20260720b" defer></script>
+<script src="assets/js/shared/data-field.js?v=20260703p" defer></script>
+<script src="assets/js/shared/brand.js?v=20260717g" defer></script>
+<script src="assets/js/shared/app-nav.js?v=20260703p" defer></script>
+<script src="assets/js/shared/theme.js?v=20260703p" defer></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    FWPageBoot.authBootThen(function () {
+      if (!FWPageBoot.requireAuth('admin.html')) return;
+      if (window.FWAdminConsole && typeof FWAdminConsole.init === 'function') FWAdminConsole.init();
+      if (window.FWAppNav) FWAppNav.sync('home');
+    });
+  });
+</script>
+</body>
+</html>

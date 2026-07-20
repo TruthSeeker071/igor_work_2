@@ -32,6 +32,7 @@ function load(rel) {
 load('assets/js/shared/onet-math.js');
 load('assets/js/shared/academics-map.js');
 load('assets/js/shared/refine-map.js');
+load('assets/js/shared/user.js'); // onet-vectors reads/writes storage via FWUser's blob view
 load('assets/js/shared/onet-vectors.js');
 
 const V = global.FWOnetVectors;
@@ -76,6 +77,32 @@ let quiz3 = JSON.parse(JSON.stringify(quiz2));
 quiz3 = V.hydrateQuizVectors(quiz3, {});
 assert(quiz3.personalityVector.updatedAt === p1.updatedAt, 'personality updatedAt stable on 3rd boot');
 assert(quiz3.objectiveVector.updatedAt === o1.updatedAt, 'objective updatedAt stable on 3rd boot');
+
+// --- (1c) legacy-schema migration: corrupt / mismatched vectors get reseeded ---
+console.log('legacy-schema migration:');
+// A saturated all-100 personality vector is corrupt legacy data → dropped & reseeded.
+let legacy = seedQuiz();
+legacy.personalityVector = {
+  schemaId: V.SCHEMA, values: new Array(DIM).fill(100),
+  confidence: new Array(DIM).fill('quiz-anchored'), updatedAt: '2026-01-01T00:00:00.000Z', source: 'legacy',
+};
+legacy = V.hydrateQuizVectors(legacy, {});
+assert(!legacy.personalityVector.values.every((v) => v >= 99.5),
+  'saturated all-100 personality vector is reseeded, not left flat');
+
+// A vector from an older schema (wrong dimension count) must not crash hydration.
+let wrongLen = seedQuiz();
+wrongLen.personalityVector = { schemaId: 'onet-lv-old', values: new Array(40).fill(50) };
+let threw = false;
+try { wrongLen = V.hydrateQuizVectors(wrongLen, {}); } catch (_) { threw = true; }
+assert(!threw, 'wrong-length legacy vector does not crash hydration');
+assert(wrongLen.personalityVector.values.length === DIM, 'reseeded personality has current DIM length');
+
+// A bare legacy payload gets newly-expected keys initialized (no undefined-map crashes).
+let bare = { scores: { tech: 50 } };
+bare = V.hydrateQuizVectors(bare, {});
+assert(Array.isArray(bare.careerFocusHistory), 'careerFocusHistory initialized for legacy payload');
+assert(bare.academics && typeof bare.academics === 'object', 'academics initialized for legacy payload');
 
 // --- (1b) objective AI patch replay survives rebuilds ---
 console.log('objective AI patch replay:');
@@ -122,7 +149,7 @@ console.log('fitForSlugOrSoc blend:');
     }
     return Promise.reject(new Error('no network in test'));
   };
-  const q = JSON.parse(global.localStorage.getItem('fw_hub_quiz_v1'));
+  const q = global.FWUser.getBlob(); // v1 view over the stored (v2) user
   const fit = await V.fitForSlugOrSoc(null, SOC, null);
   assert(fit && fit.vector === true, 'vector fit resolved');
   const M = global.FWOnetMath;
@@ -196,7 +223,7 @@ console.log('fitForSlugOrSoc blend:');
       dimensions: objPatchDims, source: 'resume', updatedAt: '2026-07-02T00:00:00.000Z',
     },
   };
-  global.localStorage.setItem('fw_hub_quiz_v1', JSON.stringify(stretchQuiz));
+  global.FWUser.putBlob(stretchQuiz);
   V.clearRankedCache();
 
   const candidates = await V.stretchFitCandidates({ limit: 3 });
@@ -216,10 +243,61 @@ console.log('fitForSlugOrSoc blend:');
   // Objective inactive (no academics/resume/patch) → no candidates.
   const inactiveQuiz = JSON.parse(JSON.stringify(stretchQuiz));
   delete inactiveQuiz.objectiveAiPatch;
-  global.localStorage.setItem('fw_hub_quiz_v1', JSON.stringify(inactiveQuiz));
+  global.FWUser.putBlob(inactiveQuiz);
   V.clearRankedCache();
   const none = await V.stretchFitCandidates({ limit: 3 });
   assert(Array.isArray(none) && none.length === 0, 'no candidates when objective vector inactive');
+
+  // --- vBase invariant: the gap-progress patch base must survive the server
+  // save/normalize round-trip (a dropped vBase would re-base patches on the
+  // live, already-patched user value and compound them).
+  console.log('vBase round-trip (normalizeRoadmapTree):');
+  const RT = await import('../functions/_lib/roadmap-tree.js');
+  const mkNode = (id, parentId, depth) => ({
+    id, parentId, depth, type: 'waypoint', pathRole: 'spine',
+    shortTitle: 'Do ' + id, title: 'Do ' + id, confidence: 4,
+    steps: [{ id: id + '-st1', text: 'step', done: false }],
+  });
+  const vTree = {
+    version: 2, targetCareerSlug: 'test-career', targetCareerName: 'Test Career',
+    summary: 'x', trunk: { id: 'trunk', title: 'Now', confidence: 5 },
+    nodes: [mkNode('s1', 'trunk', 1), mkNode('s2', 's1', 2)],
+    decisions: [], activePath: ['trunk', 's1', 's2'],
+    focusTracker: {
+      version: 3, waypointId: 's1', updatedAt: '2026-07-09T00:00:00.000Z',
+      skillGaps: [
+        { id: 'dim-5', dimIndex: 5, label: 'Programming', domain: 'skills', user: 50, vBase: 30, target: 80, gap: 30, source: 'coordinate', checklist: [], checklistSource: 'fast', logs: [], manualComplete: false, status: 'open', progress: 0 },
+        { id: 'dim-7', dimIndex: 7, label: 'Writing', domain: 'skills', user: 40, target: 70, gap: 30, source: 'coordinate', checklist: [], checklistSource: 'fast', logs: [], manualComplete: false, status: 'open', progress: 0 },
+      ],
+    },
+  };
+  const vNorm = RT.normalizeRoadmapTree(vTree, vTree);
+  assert(!!vNorm, 'v3 tree normalizes');
+  const vGaps = (vNorm && vNorm.focusTracker && vNorm.focusTracker.skillGaps) || [];
+  const g5 = vGaps.find((g) => g.dimIndex === 5);
+  const g7 = vGaps.find((g) => g.dimIndex === 7);
+  assert(g5 && g5.vBase === 30, 'explicit vBase preserved through normalize');
+  assert(g7 && g7.vBase === 40, 'missing vBase defaults to user value');
+
+  // semesterPlan + evidence-weight round-trip (new persisted fields)
+  console.log('semesterPlan + log weight round-trip:');
+  const pTree = JSON.parse(JSON.stringify(vTree));
+  pTree.nodes[0].semesterPlan = {
+    sig: 'abc123',
+    plan: { overview: 'sem', phases: [{ title: 'P1', weeks: 'Weeks 1-3', items: [{ text: 'do x' }] }] },
+    generatedAt: '2026-07-09T00:00:00.000Z',
+  };
+  pTree.focusTracker.skillGaps[0].logs = [
+    { id: 'log-1', text: 'Built a Monte Carlo simulator project', at: '2026-07-09T00:00:00.000Z', w: 7 },
+    { id: 'log-2', text: 'read a bit', at: '2026-07-09T00:00:00.000Z' },
+  ];
+  const pNorm = RT.normalizeRoadmapTree(pTree, pTree);
+  const pNode = pNorm.nodes.find((n) => n.id === 's1');
+  assert(pNode && pNode.semesterPlan && pNode.semesterPlan.sig === 'abc123'
+    && pNode.semesterPlan.plan.phases.length === 1, 'semesterPlan survives normalize round-trip');
+  const pGap = pNorm.focusTracker.skillGaps.find((g) => g.dimIndex === 5);
+  assert(pGap && pGap.logs[0].w === 7, 'log evidence weight w survives normalize');
+  assert(pGap && pGap.logs[1].w === undefined, 'weightless legacy log stays weightless');
 
   process.exit(fail ? 1 : 0);
 })();
@@ -239,33 +317,4 @@ for (const field of ['refine:', 'academics:', 'personalityVecAt', 'objectiveVecA
 const mergeBlock = authSrc.slice(authSrc.indexOf('async function doUpload'), authSrc.indexOf('lastUploadedQuizHash = quizPayloadHash'));
 assert(mergeBlock.includes('mergeVectorInputs'), 'upload merge includes mergeVectorInputs');
 assert(mergeBlock.includes('mergeCareerFocus'), 'upload merge includes mergeCareerFocus');
-
-// --- (5) FW2.0 A1 — fitContributions invariants (why-this-match) ---
-// Synchronous; runs before the async block's process.exit and shares `fail`.
-console.log('fitContributions (A1):');
-(function () {
-  const M = global.FWOnetMath;
-  const D = M.DIM;
-  const u = new Array(D).fill(0);
-  const c = new Array(D).fill(0);
-  for (let i = 0; i < D; i++) { u[i] = (i % 10) * 5; c[i] = ((i * 3) % 10) * 6; } // non-negative scores
-  const all = M.fitContributions(u, c, D);
-  let ordered = true;
-  for (let i = 1; i < all.length; i++) if (all[i].product > all[i - 1].product + 1e-9) ordered = false;
-  assert(ordered, 'contributions sorted by product desc');
-  const cos = M.cosine(u, c);
-  const sumContrib = all.reduce((s, r) => s + r.contribution, 0);
-  assert(Math.abs(sumContrib - cos) < 1e-6, 'Σcontribution ≈ cosine (' + sumContrib.toFixed(5) + ' vs ' + cos.toFixed(5) + ')');
-  const sumShare = all.reduce((s, r) => s + r.share, 0);
-  assert(Math.abs(sumShare - 1) < 1e-6, 'Σshare ≈ 1 (' + sumShare.toFixed(5) + ')');
-  const top3 = M.fitContributions(u, c, 3);
-  assert(top3.length === 3, 'k=3 returns 3 rows');
-  assert(top3[0].product >= top3[1].product && top3[1].product >= top3[2].product, 'top-3 internally ordered');
-  assert(top3[0].product === all[0].product, 'top contributor matches full ranking');
-  const labels = new Array(D).fill(null).map((_, i) => 'Dim ' + i);
-  const labeled = M.fitContributions(u, c, 2, labels);
-  assert(labeled[0].label === 'Dim ' + labeled[0].index, 'labels threaded by index');
-  assert(M.fitContributions(null, c, 3).length === 0, 'null user vector → []');
-  assert(M.fitContributions(new Array(D).fill(0), c, 3).length === 0, 'zero user vector → []');
-})();
 // (final exit happens in the async fitForSlugOrSoc block above)

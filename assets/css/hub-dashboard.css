@@ -1,30 +1,11 @@
 /* Career Hub (dashboard.html) — theme-aligned overrides */
 
-:root,
-[data-theme="dark"] {
-  --hub-canvas-bg: rgb(var(--bg));
-  --hub-topbar-bg: rgb(26 24 22 / 0.92);
-  --hub-panel-bg: rgb(var(--panel));
-  --hub-control-bg: rgb(var(--control));
-  --hub-border: rgb(var(--border-strong));
-  --hub-text: rgb(var(--text));
-  --hub-text-muted: rgb(var(--text-muted));
-  --hub-accent: rgb(var(--primary));
-  --hub-accent-hover: rgb(var(--primary-hover));
-  --hub-accent-fg: rgb(var(--primary-fg));
-}
-
+/* --hub-* chrome tokens are single-sourced in flightway-theme.css. The ONE
+   hub-specific divergence: the canvas stays ALWAYS-dark even in light theme
+   (legacy behavior restored 2026-07-18) so the cursor spotlight reads; page
+   chrome (topbar, panels, HUD) stays theme-aware via the shared tokens. */
 [data-theme="light"] {
-  --hub-canvas-bg: rgb(var(--bg));
-  --hub-topbar-bg: rgb(255 255 255 / 0.94);
-  --hub-panel-bg: rgb(var(--panel));
-  --hub-control-bg: rgb(var(--control));
-  --hub-border: rgb(var(--border-strong));
-  --hub-text: rgb(15 15 15);
-  --hub-text-muted: rgb(100 100 100);
-  --hub-accent: rgb(var(--primary));
-  --hub-accent-hover: rgb(var(--primary-hover));
-  --hub-accent-fg: rgb(var(--primary-fg));
+  --hub-canvas-bg: rgb(20 19 18);
 }
 
 body.hub-page {
@@ -101,8 +82,8 @@ body.hub-page .hub-brand:hover .fw-brand-text {
 }
 
 body.hub-page .hub-brand .fw-brand-icon {
-  background: var(--hub-accent) !important;
-  color: var(--hub-accent-fg) !important;
+  /* No badge box on the hub either — the orange bird reads on the dark map. */
+  background: transparent !important;
 }
 
 .hub-loading {
@@ -114,7 +95,14 @@ body.hub-page .hub-brand .fw-brand-icon {
   justify-content: center;
   background: var(--hub-canvas-bg);
   color: var(--hub-text);
-  transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1), visibility 0.45s;
+  transition: opacity 0.45s var(--fw-ease-out), visibility 0.45s;
+}
+
+/* The loading/error veils sit on the always-dark canvas bg — light-theme
+   --hub-text (near-black) would vanish on it. */
+[data-theme="light"] .hub-loading,
+[data-theme="light"] .hub-boot-error {
+  color: rgb(240 238 236);
 }
 
 .hub-loading.is-hidden {
@@ -125,28 +113,56 @@ body.hub-page .hub-brand .fw-brand-icon {
 
 .hub-loading-inner {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 18px;
   font-size: 0.875rem;
   font-weight: 500;
   letter-spacing: 0.02em;
 }
 
-.hub-loading-spinner {
-  width: 22px;
-  height: 22px;
-  border: 2px solid rgb(var(--primary) / 0.2);
-  border-top-color: rgb(var(--primary));
-  border-radius: 50%;
-  animation: hub-spin 0.75s linear infinite;
+/* Hub-shaped boot skeleton: the map plate plus the HUD strip under it.
+   Size only — .fw-skeleton supplies the shimmer. */
+.hub-loading-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(720px, 86vw);
 }
+.hub-skel-map {
+  display: block;
+  width: 100%;
+  height: min(46vh, 320px);
+  border-radius: 16px;
+}
+.hub-skel-hud {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+.hub-skel-pill {
+  display: block;
+  width: 96px;
+  height: 34px;
+  border-radius: 999px;
+}
+.hub-skel-pill--wide { width: 150px; }
 
-@keyframes hub-spin {
-  to { transform: rotate(360deg); }
+/* The canvas is always dark, so the theme's surface-token shimmer would glare
+   in light mode — restate it as a translucent white wash (animation is
+   inherited from .fw-skeleton). */
+.hub-loading .fw-skeleton {
+  background: linear-gradient(100deg,
+    rgb(255 255 255 / 0.06) 30%,
+    rgb(255 255 255 / 0.13) 50%,
+    rgb(255 255 255 / 0.06) 70%);
+  background-size: 200% 100%;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hub-loading-spinner { animation: none; border-top-color: rgb(var(--primary) / 0.5); }
+  .hub-hud-btn,
+  .hub-hud-btn:hover,
+  .hub-hud-btn:active { transform: none; }
 }
 
 .hub-boot-error {
@@ -362,13 +378,6 @@ body.hub-page .panel-description {
   color: var(--hub-text-muted) !important;
 }
 
-body.hub-page .btn-daylife {
-  background: var(--hub-control-bg) !important;
-  border: 1px solid var(--hub-border) !important;
-  color: var(--hub-text-muted) !important;
-  opacity: 1 !important;
-}
-
 /* From dashboard.html layout */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -464,8 +473,8 @@ body.hub-page .btn-daylife {
     width: 128px;
     height: 8px;
     border-radius: 999px;
+    filter: saturate(0.5) opacity(0.85); /* muted: keeps rarity hue mapping, kills the loudness */
     background: linear-gradient(to right, #9AA0AD, #5ED152, #3FAEF0, #BD4AE8, #F2A82E, #FFD24A);
-    filter: saturate(0.5) opacity(0.85); /* muted: keeps the rarity hue mapping, kills the loudness */
   }
   .legend-bar--zones {
     background: linear-gradient(to right, #3B82F6, #10B981, #F59E0B, #8B5CF6, #EC4899, #78716C);
@@ -487,7 +496,8 @@ body.hub-page .btn-daylife {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 10px;
+    column-gap: 10px;
+    row-gap: 20px;
     max-width: min(420px, calc(100% - 40px));
     pointer-events: none;
   }
@@ -510,11 +520,15 @@ body.hub-page .btn-daylife {
   .hub-hud-btn {
     font-weight: 600;
     cursor: pointer;
-    transition: border-color 0.18s, background 0.18s;
+    transition: border-color 0.18s, background 0.18s, transform 0.18s var(--fw-ease-out);
   }
   .hub-hud-btn:hover {
     border-color: rgb(var(--primary) / 0.45);
     background: var(--hub-control-bg);
+    transform: translateY(-1px);
+  }
+  .hub-hud-btn:active {
+    transform: translateY(0) scale(0.96);
   }
   .hub-map-hint {
     font-weight: 500;
@@ -526,7 +540,8 @@ body.hub-page .btn-daylife {
     border-color: rgb(var(--primary) / 0.28);
   }
   .hub-map-hud.is-sector .hub-sector-title {
-    background: linear-gradient(135deg, var(--hub-panel-bg) 0%, rgb(var(--primary) / 0.08) 100%);
+    background-color: var(--hub-panel-bg);
+    background-image: linear-gradient(135deg, var(--hub-panel-bg) 0%, rgb(var(--primary) / 0.08) 100%);
   }
   .legend--overview .legend-bar--rarity {
     display: block;
@@ -552,7 +567,7 @@ body.hub-page .btn-daylife {
   .panel-fit-bar-fill--objective {
     height: 100%;
     border-radius: 2px;
-    transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+    transition: width 0.45s var(--fw-ease-standard), box-shadow 0.3s ease;
   }
   .panel-fit-bar-fill--glow {
     box-shadow: 0 0 14px rgba(255, 205, 70, 0.45);
@@ -630,6 +645,10 @@ body.hub-page .btn-daylife {
     inset: 0;
     width: 100%;
     height: 100%;
+    /* Zoom/pan gestures stay on the map: no browser scroll/pinch fallthrough,
+       no rubber-band chaining into the page. */
+    touch-action: none;
+    overscroll-behavior: none;
   }
 
   /* ── TOOLTIP ── */
@@ -683,7 +702,7 @@ body.hub-page .btn-daylife {
     border-left: 1px solid var(--hub-border);
     box-shadow: -8px 0 40px rgb(0 0 0 / 0.12);
     transform: translateX(100%);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.3s var(--fw-ease-standard);
     /* Above the Sharpen/Academics panels (.hr-panel z-index 115) so a clicked
        career's detail supersedes an open quiz panel. */
     z-index: 120;
@@ -766,7 +785,7 @@ body.hub-page .btn-daylife {
   .panel-fit-bar-fill {
     height: 100%;
     border-radius: 6px;
-    transition: width 0.45s cubic-bezier(0.4,0,0.2,1);
+    transition: width 0.45s var(--fw-ease-standard);
   }
 
   .panel-body {
@@ -840,35 +859,26 @@ body.hub-page .btn-daylife {
   }
 
   .btn-daylife {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 100%;
     padding: 12px;
     border-radius: 10px;
-    background: rgba(255,255,255,0.07);
-    border: 1px solid rgba(255,255,255,0.12);
-    color: rgba(255,255,255,0.3);
+    background: rgb(var(--primary));
+    border: none;
+    color: rgb(var(--primary-fg));
     font-family: 'Inter', sans-serif;
     font-size: 0.875rem;
-    font-weight: 500;
-    cursor: not-allowed;
-    opacity: 0.5;
-    position: relative;
+    font-weight: 600;
+    cursor: pointer;
+    opacity: 1;
+    transition: opacity 0.18s, transform 0.18s;
   }
-  .btn-daylife .coming-soon-tip {
-    display: none;
-    position: absolute;
-    bottom: calc(100% + 8px);
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(18,18,42,0.98);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 6px;
-    padding: 5px 10px;
-    font-size: 0.6875rem;
-    color: rgba(255,255,255,0.6);
-    white-space: nowrap;
-    pointer-events: none;
+  .btn-daylife:hover {
+    opacity: 0.92;
+    transform: translateY(-1px);
   }
-  .btn-daylife:hover .coming-soon-tip { display: block; }
 
 /* ── "Sharpen your matches" refine panel ─────────────────────────────────── */
 .hub-refine-slot {
@@ -918,7 +928,7 @@ body.hub-page .btn-daylife {
   border-left: 1px solid var(--hub-border);
   box-shadow: -8px 0 40px rgb(0 0 0 / 0.18);
   transform: translateX(100%);
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.3s var(--fw-ease-standard);
   z-index: 115;
   display: flex;
   flex-direction: column;
@@ -1146,7 +1156,7 @@ body.hub-page .btn-daylife {
   gap: 10px;
   cursor: pointer;
   user-select: none;
-  animation: marco-pop 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: marco-pop 0.45s var(--fw-ease-out);
 }
 @keyframes marco-pop {
   from { opacity: 0; transform: translateY(12px) scale(0.9); }
@@ -1457,6 +1467,12 @@ body.hub-page .btn-daylife {
   line-height: 1.4;
   color: var(--hub-text-muted);
 }
+.hub-stretch-asof {
+  margin: 6px 0 0;
+  font-size: 0.6875rem;
+  color: var(--hub-text-muted);
+  opacity: 0.75;
+}
 
 @media (max-width: 480px) {
   .hub-stretch-fits {
@@ -1473,7 +1489,15 @@ body.hub-page .btn-daylife {
   .hub-stretch-list { max-height: none; }
 }
 
-/* ── UI overhaul Phase 4 — ranked list view (wireframe 1g, tokens only) ── */
+/* CAM3 / M5 departure fade — the page dims as the camera pushes into the orb,
+   handing off to career.html's boot veil. The class is only added when motion
+   is allowed, so reduced-motion users navigate instantly with no fade. */
+body.fw-departing {
+  opacity: 0;
+  transition: opacity 120ms var(--fw-ease-out);
+}
+
+/* ── Hub list view (ported from igor_work_2 UI overhaul) ── */
 #fw-hub-list {
   position: relative;
   z-index: 95; /* above canvas + loading overlay (90), below topbar (fixed) */

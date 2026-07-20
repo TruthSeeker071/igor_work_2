@@ -12,6 +12,11 @@
 (function (global) {
   'use strict';
 
+  // Display gate (WS3): only FWErr-marked copy prints verbatim.
+  function fwErr(err, fallback) {
+    return global.FWErr ? FWErr.forUser(err, fallback) : fallback;
+  }
+
   var DRAFT_KEY = 'fw_resume_draft_v1';
   var AUTOSAVE_MS = 800;
   var SECTION_KINDS = ['experience', 'education', 'projects', 'skills'];
@@ -21,7 +26,7 @@
     projects: 'Projects',
     skills: 'Skills',
   };
-  var SRC_VALUES = ['manual', 'dossier', 'resume', 'artifact', 'sim_trial'];
+  var SRC_VALUES = ['manual', 'dossier', 'resume', 'artifact', 'sim_trial', 'experience'];
 
   var els = {};
   var state = {
@@ -35,6 +40,8 @@
     variants: [],          // in-memory tailored variants for the current resume
     activeVariantId: null, // null = base resume is active
     tailorBusy: false,
+    template: null,        // chosen template/variant id, mirrored onto resume.template
+    formatProfile: null,   // last /resume-format response's `profile`
   };
   var autosaveTimer = null;
   var atsTimer = null;
@@ -98,6 +105,11 @@
   function apiTailor(body) { return apiFetch('/resume-tailor', { method: 'POST', body: body, timeoutMs: TAILOR_TIMEOUT_MS }); }
   function apiVariants(resumeId) { return apiFetch('/resume-tailor?resumeId=' + encodeURIComponent(resumeId), { method: 'GET' }); }
   function apiSuggest(body) { return apiFetch('/resume-builder', { method: 'POST', body: body, timeoutMs: TAILOR_TIMEOUT_MS }); }
+  // Public, unauthenticated reference data — plain fetch, no session cookie needed.
+  function apiFormat(soc, careerName) {
+    var qs = 'soc=' + encodeURIComponent(soc || '') + '&career=' + encodeURIComponent(careerName || '');
+    return fetch('/resume-format?' + qs, { method: 'GET' });
+  }
 
   // ---- active document ----
 
@@ -116,6 +128,100 @@
       if (v && v.json) return v.json;
     }
     return state.resume;
+  }
+
+  // ---- format profile & template (progressive disclosure) ----
+  // The recommended template is applied automatically on load — the first
+  // screen never asks the student to choose anything. The <details> section
+  // is purely optional, collapsed disclosure for changing it.
+
+  function templateVariants() {
+    return (state.formatProfile && Array.isArray(state.formatProfile.templateVariants))
+      ? state.formatProfile.templateVariants : [];
+  }
+
+  function recommendedTemplateId() {
+    var rec = null;
+    templateVariants().forEach(function (v) { if (v.recommended) rec = v.id; });
+    return rec || 'classic';
+  }
+
+  // Reconciles state.template once the format profile is known: a
+  // previously-saved choice wins if it is still a valid variant for this
+  // profile, otherwise the profile's recommended variant is applied.
+  function applyDefaultTemplate() {
+    if (!state.formatProfile) return;
+    var ids = templateVariants().map(function (v) { return v.id; });
+    if (!state.template || ids.indexOf(state.template) === -1) {
+      state.template = recommendedTemplateId();
+    }
+    if (state.resume) state.resume.template = state.template;
+    renderFormatDetails();
+    updateTexButtonVisibility();
+    renderPreview();
+  }
+
+  function renderFormatDetails() {
+    if (!els.formatWhy || !els.templatePicker) return;
+    var profile = state.formatProfile;
+    if (!profile) { els.formatWhy.textContent = ''; els.templatePicker.innerHTML = ''; return; }
+    els.formatWhy.textContent = 'Auto-picked ' + profile.label + ' formatting — ' + (profile.tone || '');
+    els.templatePicker.innerHTML = '';
+    templateVariants().forEach(function (v) {
+      var row = document.createElement('label');
+      row.className = 'resume-template-option';
+      var radio = document.createElement('input');
+      radio.type = 'radio';
+      radio.name = 'resume-template';
+      radio.value = v.id;
+      radio.checked = state.template === v.id;
+      radio.addEventListener('change', function () {
+        if (!radio.checked) return;
+        state.template = v.id;
+        if (state.resume) state.resume.template = v.id;
+        renderPreview();
+        scheduleAutosave();
+      });
+      var text = document.createElement('span');
+      text.innerHTML = '<strong>' + esc(v.label) + '</strong>'
+        + (v.recommended ? ' <span class="resume-template-rec">Recommended</span>' : '')
+        + '<br><span class="resume-template-desc">' + esc(v.description || '') + '</span>';
+      row.appendChild(radio);
+      row.appendChild(text);
+      els.templatePicker.appendChild(row);
+    });
+  }
+
+  function updateTexButtonVisibility() {
+    if (!els.texBtn) return;
+    els.texBtn.hidden = !templateVariants().some(function (v) { return v.engine === 'latex'; });
+  }
+
+  // Only 'project-forward' has an HTML rendering; a LaTeX-recommended
+  // template (e.g. finance's latex-onepager) previews as classic HTML —
+  // the actual LaTeX layout only appears in the downloaded .tex file.
+  function htmlVariantForTemplate(templateId) {
+    return templateId === 'project-forward' ? 'project-forward' : 'classic';
+  }
+
+  // Picks up a previously-saved template choice from state.resume.template
+  // (draft or server doc) before applyDefaultTemplate() validates/defaults it.
+  function syncTemplateFromResume() {
+    if (state.resume && typeof state.resume.template === 'string' && state.resume.template) {
+      state.template = state.resume.template;
+    }
+  }
+
+  function loadFormatProfile() {
+    var focus = currentFocus();
+    apiFormat(focus && focus.soc, focus && focus.name)
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d || !d.profile) return;
+        state.formatProfile = d.profile;
+        applyDefaultTemplate();
+      })
+      .catch(function () { /* format profile is an enhancement — stay silent */ });
   }
 
   // ---- draft (localStorage) ----
@@ -181,7 +287,7 @@
     var html;
     try {
       if (global.FWResumeRender && typeof FWResumeRender.toHtml === 'function') {
-        html = FWResumeRender.toHtml(resume);
+        html = FWResumeRender.toHtml(resume, { variant: htmlVariantForTemplate(state.template) });
       } else {
         html = fallbackToHtml(resume);
       }
@@ -287,6 +393,15 @@
         card.appendChild(chipsWrap);
       }
 
+      var omittedRoles = (v.score && Array.isArray(v.score.omittedRoles)) ? v.score.omittedRoles : [];
+      if (omittedRoles.length) {
+        var noteEl = document.createElement('p');
+        noteEl.className = 'resume-variant-note';
+        var n = omittedRoles.length;
+        noteEl.textContent = n + (n === 1 ? ' role omitted — its bullets didn\'t match this posting.' : ' roles omitted — their bullets didn\'t match this posting.');
+        card.appendChild(noteEl);
+      }
+
       var gaps = (v.score && Array.isArray(v.score.gaps)) ? v.score.gaps : [];
       if (gaps.length) {
         var gapList = document.createElement('ul');
@@ -372,7 +487,7 @@
       })
       .catch(function (err) {
         setTailorBusy(false);
-        showTailorMsg((err && err.message) || 'Could not tailor this resume — check your connection.', true);
+        showTailorMsg(fwErr(err, 'Could not tailor this resume — check your connection.'), true);
       });
   }
 
@@ -494,6 +609,8 @@
     var body = { soc: focus.soc, careerName: focus.name, includeArtifacts: true };
     var trials = readSimTrials();
     if (trials.length) body.simTrials = trials;
+    var freeText = els.suggestFacts ? els.suggestFacts.value.trim().slice(0, 2500) : '';
+    if (freeText) body.freeText = freeText;
     apiSuggest(body)
       .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
       .then(function (res) {
@@ -508,6 +625,8 @@
         var bullets = Array.isArray(res.d.bullets) ? res.d.bullets : [];
         if (!bullets.length) { showSuggestMsg('No suggestions right now — add more to your profile first.', true); return; }
         renderSuggestions(bullets);
+        renderSuggestQuestions(res.d.questions);
+        renderSuggestProvenance(res.d);
         var covered = res.d.coverage && res.d.coverage.covered;
         var total = res.d.coverage && res.d.coverage.total;
         showSuggestMsg(typeof covered === 'number' && total
@@ -516,8 +635,344 @@
       })
       .catch(function (err) {
         setSuggestBusy(false);
-        showSuggestMsg((err && err.message) || 'Could not draft suggestions — check your connection.', true);
+        showSuggestMsg(fwErr(err, 'Could not draft suggestions — check your connection.'), true);
       });
+  }
+
+  // Clarifying questions the AI needs answered to quantify bullets further —
+  // answering them in the facts textarea above and regenerating tightens
+  // the next draft.
+  function renderSuggestQuestions(questions) {
+    if (!els.suggestQuestionsWrap || !els.suggestQuestions) return;
+    var list = Array.isArray(questions) ? questions.filter(function (q) { return typeof q === 'string' && q.trim(); }) : [];
+    els.suggestQuestions.innerHTML = '';
+    if (!list.length) { els.suggestQuestionsWrap.hidden = true; return; }
+    list.forEach(function (q) {
+      var li = document.createElement('li');
+      li.textContent = q;
+      els.suggestQuestions.appendChild(li);
+    });
+    els.suggestQuestionsWrap.hidden = false;
+  }
+
+  function isoDatePart(iso) {
+    var m = String(iso || '').match(/^\d{4}-\d{2}-\d{2}/);
+    return m ? m[0] : '';
+  }
+
+  // Quiet provenance line — only shown when the draft is grounded in
+  // real-time search (gemini-grounded.js), never fabricated as a claim.
+  function renderSuggestProvenance(d) {
+    if (!els.suggestProvenance) return;
+    if (!d || !d.grounded) { els.suggestProvenance.hidden = true; els.suggestProvenance.innerHTML = ''; return; }
+    els.suggestProvenance.innerHTML = '';
+    var label = document.createElement('span');
+    label.textContent = 'Industry guidance as of ' + (isoDatePart(d.fetchedAt) || 'today') + '. ';
+    els.suggestProvenance.appendChild(label);
+    var sources = Array.isArray(d.sources) ? d.sources : [];
+    sources.forEach(function (s, idx) {
+      if (!s || typeof s.url !== 'string' || !/^https?:\/\//i.test(s.url)) return;
+      var a = document.createElement('a');
+      a.href = s.url;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.textContent = (s.title && String(s.title).trim()) || s.url;
+      els.suggestProvenance.appendChild(a);
+      if (idx < sources.length - 1) els.suggestProvenance.appendChild(document.createTextNode(', '));
+    });
+    els.suggestProvenance.hidden = false;
+  }
+
+  // ---- Guided AI build (R.5): modal Q&A → full-document draft ----
+  // Mirrors the Roadmap's fw-qwiz clarifying-question wizard (roadmap.js):
+  // POST {mode:'questions'} proposes up to 5 questions with clickable options,
+  // the student answers one at a time (typed answers always possible), a final
+  // step picks the template, then POST {mode:'draft-doc'} lands the complete
+  // resume in the editor. Progress persists in localStorage + on the server's
+  // saved doc, so a reload resumes mid-flow instead of starting over.
+
+  var GUIDED_KEY = 'fw_resume_guided_v1';
+
+  function apiBuilderGet(soc) {
+    return apiFetch('/resume-builder?soc=' + encodeURIComponent(soc), { method: 'GET' });
+  }
+
+  function loadGuidedState() {
+    try {
+      var parsed = JSON.parse(localStorage.getItem(GUIDED_KEY));
+      if (parsed && Array.isArray(parsed.questions) && parsed.questions.length) return parsed;
+    } catch (_) { /* ignore */ }
+    return null;
+  }
+
+  function saveGuidedState(s) {
+    try { localStorage.setItem(GUIDED_KEY, JSON.stringify(s)); } catch (_) { /* ignore */ }
+  }
+
+  function clearGuidedState() {
+    try { localStorage.removeItem(GUIDED_KEY); } catch (_) { /* ignore */ }
+  }
+
+  function resumeIsEmpty() {
+    var r = state.resume || {};
+    if (r.summary && r.summary.trim()) return false;
+    var hasContent = false;
+    (r.sections || []).forEach(function (s) {
+      if (s.kind === 'skills') { if ((s.flat || []).length) hasContent = true; return; }
+      (s.items || []).forEach(function (it) {
+        if (it.org || it.role || (it.bullets || []).length) hasContent = true;
+      });
+    });
+    return !hasContent;
+  }
+
+  function showGuidedMsg(msg, isError) {
+    if (!els.guidedMsg) return;
+    els.guidedMsg.textContent = msg || '';
+    els.guidedMsg.className = 'resume-tailor-msg' + (isError ? ' resume-tailor-msg--error' : '');
+  }
+
+  function setGuidedBusy(busy, label) {
+    if (!els.guidedBtn) return;
+    els.guidedBtn.disabled = busy;
+    els.guidedBtn.textContent = busy ? (label || 'Working…') : guidedCtaLabel();
+  }
+
+  function guidedCtaLabel() {
+    var pending = loadGuidedState();
+    if (pending && pending.idx < pending.questions.length) {
+      return 'Continue building (' + (pending.questions.length - pending.idx) + ' questions left)';
+    }
+    return resumeIsEmpty() ? 'Build my resume with AI' : 'Rebuild with AI';
+  }
+
+  function updateGuidedCard() {
+    if (!els.guidedCard) return;
+    var empty = resumeIsEmpty();
+    els.guidedCard.classList.toggle('resume-guided-card--hero', empty);
+    if (els.guidedCopy) {
+      els.guidedCopy.textContent = empty
+        ? 'FlightWay drafts your complete resume — summary, experience, projects, skills — from everything it knows about you, asking a few quick questions along the way. You refine the result below.'
+        : 'Re-run the guided build any time — it rebuilds the sections below from your profile and your answers. Contact info is never touched.';
+    }
+    if (els.guidedBtn && !els.guidedBtn.disabled) els.guidedBtn.textContent = guidedCtaLabel();
+  }
+
+  function runGuided() {
+    var focus = currentFocus();
+    if (!focus || !focus.soc) {
+      showGuidedMsg('Set a target career on your roadmap first — the resume is built for it.', true);
+      return;
+    }
+    var pending = loadGuidedState();
+    if (pending && pending.soc === focus.soc && pending.idx < pending.questions.length) {
+      openGuidedWizard(pending);
+      return;
+    }
+    if (!resumeIsEmpty()
+      && !global.confirm('Rebuild your resume with AI? Section content below will be replaced by the new draft (contact info stays). Your answers guide the rebuild.')) {
+      return;
+    }
+    showGuidedMsg('');
+    setGuidedBusy(true, 'Preparing questions…');
+    var body = { mode: 'questions', soc: focus.soc, careerName: focus.name };
+    var trials = readSimTrials();
+    if (trials.length) body.simTrials = trials;
+    var freeText = els.suggestFacts ? els.suggestFacts.value.trim().slice(0, 2500) : '';
+    if (freeText) body.freeText = freeText;
+    apiSuggest(body)
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (res) {
+        setGuidedBusy(false);
+        if (!res.ok || !Array.isArray(res.d.questions) || !res.d.questions.length) {
+          // Questions are an enhancement — a failure falls through to a
+          // direct build rather than blocking the whole flow.
+          finishGuided(focus, [], null);
+          return;
+        }
+        var s = { soc: focus.soc, careerName: focus.name, questions: res.d.questions, answers: [], idx: 0 };
+        saveGuidedState(s);
+        openGuidedWizard(s);
+      })
+      .catch(function () {
+        setGuidedBusy(false);
+        finishGuided(focus, [], null);
+      });
+  }
+
+  // One question at a time in a modal (fw-qwiz styles are global CSS).
+  // Every answer is persisted immediately, so closing/reloading resumes here.
+  function openGuidedWizard(s) {
+    var overlay = document.createElement('div');
+    overlay.className = 'fw-qwiz-overlay';
+    overlay.innerHTML = '<div class="fw-qwiz" role="dialog" aria-modal="true" aria-labelledby="fw-qwiz-q">'
+      + '<p class="fw-qwiz-eyebrow">Let’s build your resume</p>'
+      + '<p class="fw-qwiz-progress" id="fw-qwiz-progress"></p>'
+      + '<h3 class="fw-qwiz-question" id="fw-qwiz-q"></h3>'
+      + '<div class="fw-qwiz-options" id="fw-qwiz-options"></div>'
+      + '<div class="fw-qwiz-other" id="fw-qwiz-other" hidden>'
+      + '<input type="text" class="fw-qwiz-other-input" id="fw-qwiz-other-input" maxlength="200" placeholder="Type your answer…">'
+      + '<button type="button" class="cta-btn fw-qwiz-other-submit" id="fw-qwiz-other-submit">Answer</button>'
+      + '</div>'
+      + '<div class="fw-qwiz-foot">'
+      + '<button type="button" class="fw-qwiz-skip" id="fw-qwiz-skip">Skip the rest — build now</button>'
+      + '</div></div>';
+    document.body.appendChild(overlay);
+
+    var qEl = overlay.querySelector('#fw-qwiz-q');
+    var progEl = overlay.querySelector('#fw-qwiz-progress');
+    var optsEl = overlay.querySelector('#fw-qwiz-options');
+    var otherWrap = overlay.querySelector('#fw-qwiz-other');
+    var otherInput = overlay.querySelector('#fw-qwiz-other-input');
+    var otherSubmit = overlay.querySelector('#fw-qwiz-other-submit');
+    var skipBtn = overlay.querySelector('#fw-qwiz-skip');
+    var TEMPLATE_STEP = s.questions.length;
+    var focus = { soc: s.soc, name: s.careerName };
+
+    function close() {
+      document.removeEventListener('keydown', onKey);
+      overlay.remove();
+    }
+
+    // Escape pauses (state is saved) — the CTA offers "Continue building".
+    function onKey(e) { if (e.key === 'Escape') { close(); updateGuidedCard(); } }
+
+    function templateChoices() {
+      return templateVariants().map(function (v) {
+        return { id: v.id, label: v.label + (v.recommended ? ' (Recommended)' : '') };
+      });
+    }
+
+    function finishWith(templateId) {
+      close();
+      finishGuided(focus, s.answers, templateId);
+    }
+
+    function answer(text) {
+      var t = String(text || '').trim();
+      if (t) s.answers.push({ prompt: s.questions[s.idx].question, answer: t.slice(0, 200) });
+      s.idx += 1;
+      saveGuidedState(s);
+      paint();
+    }
+
+    function paint() {
+      otherWrap.hidden = true;
+      otherInput.value = '';
+      optsEl.innerHTML = '';
+      if (s.idx >= TEMPLATE_STEP) {
+        var choices = templateChoices();
+        if (!choices.length) { finishWith(null); return; }
+        progEl.textContent = 'Last step';
+        qEl.textContent = 'Which resume style do you prefer?';
+        choices.forEach(function (c) {
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'fw-qwiz-option';
+          btn.textContent = c.label;
+          btn.addEventListener('click', function () { finishWith(c.id); });
+          optsEl.appendChild(btn);
+        });
+        skipBtn.textContent = 'Use the recommended style';
+        return;
+      }
+      var q = s.questions[s.idx];
+      progEl.textContent = 'Question ' + (s.idx + 1) + ' of ' + s.questions.length;
+      qEl.textContent = q.question;
+      (Array.isArray(q.options) ? q.options : []).forEach(function (opt) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'fw-qwiz-option';
+        btn.textContent = opt;
+        btn.addEventListener('click', function () { answer(opt); });
+        optsEl.appendChild(btn);
+      });
+      var other = document.createElement('button');
+      other.type = 'button';
+      other.className = 'fw-qwiz-option fw-qwiz-option--other';
+      other.textContent = 'Type my own answer…';
+      other.addEventListener('click', function () {
+        otherWrap.hidden = false;
+        otherInput.focus();
+      });
+      optsEl.appendChild(other);
+    }
+
+    otherSubmit.addEventListener('click', function () { answer(otherInput.value); });
+    otherInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); answer(otherInput.value); }
+    });
+    skipBtn.addEventListener('click', function () {
+      if (s.idx >= TEMPLATE_STEP) { finishWith(null); return; }
+      s.idx = TEMPLATE_STEP;
+      saveGuidedState(s);
+      paint();
+    });
+    document.addEventListener('keydown', onKey);
+    paint();
+  }
+
+  function finishGuided(focus, answers, templateId) {
+    setGuidedBusy(true, 'Building your resume…');
+    showGuidedMsg('This takes ~20 seconds — drafting every section from your profile and answers.');
+    var body = { mode: 'draft-doc', soc: focus.soc, careerName: focus.name, answers: answers || [] };
+    if (templateId) body.template = templateId;
+    var trials = readSimTrials();
+    if (trials.length) body.simTrials = trials;
+    var freeText = els.suggestFacts ? els.suggestFacts.value.trim().slice(0, 2500) : '';
+    if (freeText) body.freeText = freeText;
+    apiSuggest(body)
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (res) {
+        setGuidedBusy(false);
+        if (!res.ok || !res.d || !res.d.resume) {
+          if (res.d && res.d.upgrade && els.gateHost && global.FWEnt && typeof FWEnt.gate === 'function') {
+            FWEnt.gate(els.gateHost, 'resume-builder');
+          }
+          showGuidedMsg((res.d && res.d.error) || 'Could not build the resume — your answers are saved, try again.', true);
+          return;
+        }
+        var built = res.d.resume;
+        // Contact stays the student's own — the AI never generates it.
+        built.contact = state.resume.contact || built.contact;
+        state.resume = built;
+        state.template = res.d.template || state.template;
+        state.resume.template = state.template;
+        clearGuidedState();
+        renderAll();
+        applyDefaultTemplate();
+        renderSuggestQuestions(res.d.questions);
+        saveNow();
+        showGuidedMsg('Your resume is built — refine anything below, then save or export.');
+        try { if (global.FWEvents) FWEvents.log('resume_guided_build', { soc: focus.soc, answered: (answers || []).length }); } catch (_) { /* ignore */ }
+      })
+      .catch(function () {
+        setGuidedBusy(false);
+        showGuidedMsg('Could not build the resume — your answers are saved, try again.', true);
+      });
+  }
+
+  // On load: restore server-side guided questions (cross-device) and any
+  // saved gap-questions from the suggest flow (fix plan 2.3) — a reload never
+  // silently discards either.
+  function restorePendingState() {
+    var focus = currentFocus();
+    if (!focus || !focus.soc) return;
+    apiBuilderGet(focus.soc)
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        var saved = d && d.saved;
+        if (!saved) return;
+        if (Array.isArray(saved.questions) && saved.questions.length) {
+          renderSuggestQuestions(saved.questions);
+        }
+        var g = saved.guided;
+        if (g && Array.isArray(g.questions) && g.questions.length && !g.completedAt && !loadGuidedState()) {
+          saveGuidedState({ soc: focus.soc, careerName: saved.careerName || focus.name, questions: g.questions, answers: [], idx: 0 });
+        }
+        updateGuidedCard();
+      })
+      .catch(function () { /* pending state is an enhancement — stay silent */ });
   }
 
   function bulletRow(item, sectionKind, itemIdx, bulletIdx) {
@@ -674,6 +1129,7 @@
     renderVariants();
     renderPreview();
     renderAtsBox();
+    updateGuidedCard();
   }
 
   // ---- DOCX export ----
@@ -761,6 +1217,25 @@
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
 
+  // ---- LaTeX export (only offered when the profile has a latex variant) ----
+
+  function exportLatex() {
+    if (!global.FWResumeRender || typeof FWResumeRender.toLatex !== 'function') {
+      showError('LaTeX export is unavailable right now.');
+      return;
+    }
+    var tex = FWResumeRender.toLatex(activeResume());
+    var blob = new Blob([tex], { type: 'text/plain' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = sanitizeFilename(activeDocTitle()) + '.tex';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
   // ---- state <-> fields ----
 
   function collectContactAndSummary() {
@@ -820,10 +1295,15 @@
     state.title = doc.title || 'My resume';
     state.resume = (doc.json && typeof doc.json === 'object') ? doc.json : emptyResume();
     state.updatedAt = doc.updated_at || null;
+    // A saved template choice wins over any default; applyDefaultTemplate()
+    // (called once the format profile is known) validates it against the
+    // profile's variant list and falls back to the recommendation otherwise.
+    syncTemplateFromResume();
     // Variants are per-resume; server-persisted ones are refetched below.
     state.variants = [];
     state.activeVariantId = null;
     renderAll();
+    applyDefaultTemplate();
     loadVariants();
   }
 
@@ -880,7 +1360,7 @@
         } else {
           showError((res.d && res.d.error) || 'Could not load your resumes.');
         }
-        if (draft) { state.resume = draft.resume; state.title = draft.title || state.title; state.id = draft.id || null; renderAll(); }
+        if (draft) { state.resume = draft.resume; state.title = draft.title || state.title; state.id = draft.id || null; syncTemplateFromResume(); renderAll(); applyDefaultTemplate(); }
         return;
       }
       state.resumes = Array.isArray(res.d.resumes) ? res.d.resumes : [];
@@ -894,14 +1374,17 @@
         state.title = draft.title || (serverLatest ? serverLatest.title : 'My resume');
         state.resume = draft.resume;
         state.updatedAt = null;
+        syncTemplateFromResume();
         renderAll();
+        applyDefaultTemplate();
         loadVariants();
       } else {
         renderAll();
+        applyDefaultTemplate();
       }
     }).catch(function () {
-      if (draft) { state.resume = draft.resume; state.title = draft.title || state.title; state.id = draft.id || null; renderAll(); }
-      else renderAll();
+      if (draft) { state.resume = draft.resume; state.title = draft.title || state.title; state.id = draft.id || null; syncTemplateFromResume(); renderAll(); applyDefaultTemplate(); }
+      else { renderAll(); applyDefaultTemplate(); }
     });
   }
 
@@ -930,21 +1413,32 @@
     }
   }
 
+  // Commits on Enter, comma, or blur — typing a skill and clicking away used
+  // to silently discard it (Enter was the only commit gesture). Comma-separated
+  // pastes ("Python, SQL, Excel") split into individual tags.
+  function commitSkillInput() {
+    if (!els.skillInput) return;
+    var parts = els.skillInput.value.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    if (!parts.length) return;
+    var section = sectionByKind('skills');
+    section.flat = section.flat || [];
+    parts.forEach(function (p) {
+      if (section.flat.indexOf(p) === -1) section.flat.push(p);
+    });
+    els.skillInput.value = '';
+    renderSkills();
+    renderPreview();
+    scheduleAutosave();
+  }
+
   function bindSkillInput() {
     if (!els.skillInput) return;
     els.skillInput.addEventListener('keydown', function (e) {
-      if (e.key !== 'Enter') return;
+      if (e.key !== 'Enter' && e.key !== ',') return;
       e.preventDefault();
-      var val = els.skillInput.value.trim();
-      if (!val) return;
-      var section = sectionByKind('skills');
-      section.flat = section.flat || [];
-      section.flat.push(val);
-      els.skillInput.value = '';
-      renderSkills();
-      renderPreview();
-      scheduleAutosave();
+      commitSkillInput();
     });
+    els.skillInput.addEventListener('blur', commitSkillInput);
   }
 
   function init() {
@@ -981,6 +1475,17 @@
     els.atsScore = document.getElementById('resume-ats-score');
     els.atsIssues = document.getElementById('resume-ats-issues');
     els.docxBtn = document.getElementById('resume-docx-btn');
+    els.texBtn = document.getElementById('resume-tex-btn');
+    els.formatWhy = document.getElementById('resume-format-why');
+    els.templatePicker = document.getElementById('resume-template-picker');
+    els.suggestFacts = document.getElementById('resume-suggest-facts');
+    els.suggestQuestionsWrap = document.getElementById('resume-suggest-questions-wrap');
+    els.suggestQuestions = document.getElementById('resume-suggest-questions');
+    els.suggestProvenance = document.getElementById('resume-suggest-provenance');
+    els.guidedCard = document.getElementById('resume-guided-card');
+    els.guidedBtn = document.getElementById('resume-guided-btn');
+    els.guidedMsg = document.getElementById('resume-guided-msg');
+    els.guidedCopy = document.getElementById('resume-guided-copy');
 
     if (els.saveBtn) els.saveBtn.addEventListener('click', saveNow);
     // Render fresh right before printing so the active document (base or
@@ -989,7 +1494,9 @@
     if (els.deleteBtn) els.deleteBtn.addEventListener('click', deleteCurrent);
     if (els.tailorBtn) els.tailorBtn.addEventListener('click', runTailor);
     if (els.suggestBtn) els.suggestBtn.addEventListener('click', runSuggest);
+    if (els.guidedBtn) els.guidedBtn.addEventListener('click', runGuided);
     if (els.docxBtn) els.docxBtn.addEventListener('click', exportDocx);
+    if (els.texBtn) els.texBtn.addEventListener('click', exportLatex);
 
     bindStaticFields();
     bindAddButtons();
@@ -1002,6 +1509,8 @@
     }
 
     boot();
+    loadFormatProfile();
+    restorePendingState();
   }
 
   global.FWResumePage = { init: init };

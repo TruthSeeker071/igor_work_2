@@ -1,10 +1,11 @@
 /**
  * FlightWay 2.0 — weekly nudge opt-in toggle (Pillar B2).
  *
- * A small toggle in the portal footer that reads/writes /notify-prefs. When on,
+ * A compact toggle that reads/writes /notify-prefs, rendered into the Flight
+ * Plan card's footer slot (#flightplan-notify-slot). No slot, no render — the
+ * flight-plan card re-invokes inject() after rendering the slot. When on,
  * the Monday cron worker emails the user their 3 Flight Plan tasks. Cadence is
- * stated at opt-in (CAN-SPAM); every email has one-click unsubscribe. Self-mounts
- * like the other portal cards — no edits to portal.js.
+ * stated at opt-in (CAN-SPAM); every email has one-click unsubscribe.
  */
 (function (global) {
   'use strict';
@@ -22,22 +23,25 @@
   }
 
   function inject() {
-    var actions = document.getElementById('portal-actions');
-    if (!actions || document.getElementById('fw-notify-optin')) return;
+    var host = document.getElementById('flightplan-notify-slot');
+    if (!host || document.getElementById('fw-notify-optin')) return;
     var row = document.createElement('div');
     row.id = 'fw-notify-optin';
     row.className = 'fw-notify-row';
     row.innerHTML = ''
-      + '<label class="fw-notify-toggle"><input type="checkbox" id="fw-notify-check" aria-label="Weekly nudge email">'
+      + '<label class="fw-notify-toggle"><input type="checkbox" id="fw-notify-check" aria-label="Email me these every Monday">'
       + '<span class="fw-notify-slider" aria-hidden="true"></span></label>'
-      + '<div class="fw-notify-copy"><span class="fw-notify-title">Weekly nudge</span>'
+      + '<div class="fw-notify-copy"><span class="fw-notify-title">Email me these every Monday</span>'
       + '<span class="fw-notify-sub" id="fw-notify-sub">One email a week with your 3 tasks — unsubscribe anytime.</span></div>';
-    actions.parentNode.appendChild(row);
+    host.appendChild(row);
 
     var check = row.querySelector('#fw-notify-check');
     var sub = row.querySelector('#fw-notify-sub');
 
     afetch('/notify-prefs').then(function (r) { return r.json(); }).then(function (d) {
+      // The weekly digest rides with the Flight Plan (§1) — hide the toggle
+      // rather than offering a switch the server will refuse to flip.
+      if (d && d.upgrade) { row.remove(); return; }
       check.checked = !!(d && d.optin);
     }).catch(function () { /* leave unchecked */ });
 

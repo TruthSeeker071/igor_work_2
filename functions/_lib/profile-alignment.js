@@ -2,10 +2,9 @@ import { saveDossier, loadDossier } from '../_lib.js';
 import { callGeminiJson } from './gemini-json.js';
 import {
   checkRateLimit,
-  loadQuizProfile,
-  saveQuizProfile,
   invalidateCareerAnalyses,
 } from './auth.js';
+import { loadUserBlob, saveUserBlob } from './user.js';
 import { maybeSyncRoadmap } from './roadmap-sync.js';
 import {
   ensureSectorFitSheet,
@@ -146,7 +145,7 @@ export async function applySmallAlignment(env, email, quiz, dossier) {
   meta.lastAlignedAt = nowIso();
   meta.lastSeverity = 'small';
   meta.lastCheckedAt = nowIso();
-  await saveQuizProfile(env, email, quiz);
+  await saveUserBlob(env, email, quiz);
 
   return { applied: true, dossier: updated, quiz, patches };
 }
@@ -261,7 +260,7 @@ Recent career switches: ${history || 'none'}`;
   meta.pendingProposalId = proposalId;
   meta.lastCheckedAt = nowIso();
   meta.lastSeverity = 'large';
-  await saveQuizProfile(env, email, quiz);
+  await saveUserBlob(env, email, quiz);
 
   return { proposal, rateLimited: false };
 }
@@ -273,7 +272,7 @@ export async function applyLargeAlignment(env, email, proposalId) {
   }
 
   const [quiz, dossier] = await Promise.all([
-    loadQuizProfile(env, email),
+    loadUserBlob(env, email),
     loadDossier(env, email),
   ]);
   if (!quiz || !dossier) return { applied: false, error: 'Profile not found.' };
@@ -315,27 +314,27 @@ export async function applyLargeAlignment(env, email, proposalId) {
   meta.pendingProposalId = null;
   meta.dismissedForSlug = null;
   meta.dismissedProposalAt = null;
-  await saveQuizProfile(env, email, quiz);
+  await saveUserBlob(env, email, quiz);
   await clearProposal(env, email);
 
   return { applied: true, dossier: updated, summary: proposal.summary };
 }
 
 export async function dismissAlignment(env, email) {
-  const quiz = (await loadQuizProfile(env, email)) || {};
+  const quiz = (await loadUserBlob(env, email)) || {};
   const meta = ensureProfileAlignmentMeta(quiz);
   meta.dismissedProposalAt = nowIso();
   meta.dismissedForSlug = quiz.careerFocus?.slug || null;
   meta.pendingProposalId = null;
   meta.lastCheckedAt = nowIso();
-  await saveQuizProfile(env, email, quiz);
+  await saveUserBlob(env, email, quiz);
   await clearProposal(env, email);
   return { dismissed: true };
 }
 
 export async function getAlignmentStatus(env, email) {
   const [quiz, dossier] = await Promise.all([
-    loadQuizProfile(env, email),
+    loadUserBlob(env, email),
     loadDossier(env, email).catch(() => ''),
   ]);
   if (!quiz || !dossier) {
@@ -364,7 +363,7 @@ export async function runAlignmentCheck(env, email, opts = {}) {
   const forceAfterSwitch = !!opts.forceAfterSwitch;
 
   const [quiz, dossier] = await Promise.all([
-    loadQuizProfile(env, email),
+    loadUserBlob(env, email),
     loadDossier(env, email).catch(() => ''),
   ]);
   if (!quiz || !dossier) {
@@ -388,10 +387,10 @@ export async function runAlignmentCheck(env, email, opts = {}) {
       const propResult = await proposeLargeAlignment(env, email, quiz, dossier);
       proposal = propResult.proposal || null;
     } else {
-      await saveQuizProfile(env, email, quiz);
+      await saveUserBlob(env, email, quiz);
     }
   } else {
-    await saveQuizProfile(env, email, quiz);
+    await saveUserBlob(env, email, quiz);
   }
 
   return {
@@ -404,7 +403,7 @@ export async function runAlignmentCheck(env, email, opts = {}) {
 
 export async function maybeSmallAlignAfterSectorPatch(env, email) {
   const [quiz, dossier] = await Promise.all([
-    loadQuizProfile(env, email),
+    loadUserBlob(env, email),
     loadDossier(env, email).catch(() => ''),
   ]);
   if (!quiz || !dossier) return { applied: false };
@@ -428,11 +427,22 @@ export function buildProfileSignalsBlock(quiz, dossier) {
   const fields = parseDossierFields(dossier || '');
   const prior = fields.prior_focus || fields.archived_interests || '';
 
+  // academics.gpa is the one live GPA in any v1 view — denormalizeUser writes
+  // it there whether it came from the academics panel, the quiz or the
+  // dossier — so there is nothing left to fall back to (see user-model.js).
+  const academics = quiz.academics && typeof quiz.academics === 'object' ? quiz.academics : {};
+  const gpaVal = academics.gpa != null && academics.gpa !== '' ? academics.gpa : null;
+
   const lines = ['## Profile signals (canonical)'];
   if (focus?.name) {
     lines.push(`Target career: ${focus.name}${sectors.length ? ` (${sectors.join(', ')})` : ''}`);
   }
   if (top) lines.push(`Top sector fits: ${top}`);
+  // Academics the student saved in the hub "Sharpen your matches" panel — surface
+  // them so the coach never re-asks for a GPA/major it already has on file.
+  if (gpaVal != null && gpaVal !== '') lines.push(`GPA: ${String(gpaVal).slice(0, 20)}`);
+  if (academics.major) lines.push(`Major/field: ${String(academics.major).slice(0, 160)}`);
+  if (academics.grad != null && academics.grad !== '') lines.push(`Graduation year: ${String(academics.grad).slice(0, 20)}`);
   if (prior) lines.push(`Prior focus (archived): ${prior.slice(0, 280)}`);
   return lines.join('\n');
 }

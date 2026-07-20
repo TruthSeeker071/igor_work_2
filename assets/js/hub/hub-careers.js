@@ -7,7 +7,6 @@
  * realestate, hr, agriculture.
  */
 (function () {
-  const HUB_QUIZ_KEY = 'fw_hub_quiz_v1';
 
   const careers = [
     { id:1,  name:'Software Engineer',       industry:'Technology',   x:84, y:14, fitScore:85, skills:['coding','problem-solving','logic'],            description:'Design and build software systems. You\'ll spend your days solving complex technical problems, writing clean code, and collaborating with teams to ship products people use.' },
@@ -145,15 +144,20 @@
   function readQuizStateFromUrl() {
     const m = (window.location.hash || '').match(/^#r=([A-Za-z0-9_-]+)$/);
     if (!m) return null;
-    try { return JSON.parse(b64UrlDecode(m[1])); }
+    try {
+      var parsed = JSON.parse(b64UrlDecode(m[1]));
+      // Tokens carry v2 after the quiz rollout (older tabs still send v1);
+      // downstream consumers work on the v1 view either way.
+      return (parsed && window.FWUser && typeof FWUser.denormalizeUser === 'function')
+        ? FWUser.denormalizeUser(FWUser.normalizeUser(parsed))
+        : parsed;
+    }
     catch (e) { console.warn('Bad results token in URL', e); return null; }
   }
 
   function readQuizStateFromStorage() {
     try {
-      const raw = localStorage.getItem(HUB_QUIZ_KEY);
-      if (!raw) return null;
-      const data = JSON.parse(raw);
+      const data = (window.FWUser && typeof FWUser.getBlob === 'function') ? FWUser.getBlob() : null;
       if (data && data.scores && typeof data.scores === 'object') return data;
     } catch (e) { /* private mode / corrupt */ }
     return null;
@@ -341,20 +345,19 @@
         if (window.FWSectorFitSheet && typeof FWSectorFitSheet.ensureSectorFitSheet === 'function') {
           FWSectorFitSheet.ensureSectorFitSheet(stored);
         }
-        localStorage.setItem(HUB_QUIZ_KEY, JSON.stringify(stored));
+        if (window.FWUser) FWUser.putBlob(stored);
       } catch (e) { /* quota */ }
     }
 
     let hubQuizScores = null;
     var quizForScores = null;
     try {
-      var rawQuiz = localStorage.getItem(HUB_QUIZ_KEY);
-      if (rawQuiz) quizForScores = JSON.parse(rawQuiz);
+      quizForScores = (window.FWUser && typeof FWUser.getBlob === 'function') ? FWUser.getBlob() : null;
     } catch (e) { /* ignore */ }
     if (!quizForScores && quizState) quizForScores = quizState;
     if (quizForScores && window.FWSectorFitSheet && typeof FWSectorFitSheet.ensureSectorFitSheet === 'function') {
       FWSectorFitSheet.ensureSectorFitSheet(quizForScores);
-      try { localStorage.setItem(HUB_QUIZ_KEY, JSON.stringify(quizForScores)); } catch (e) { /* quota */ }
+      try { if (window.FWUser) FWUser.putBlob(quizForScores); } catch (e) { /* quota */ }
     }
     if (quizForScores && quizForScores.scores && typeof quizForScores.scores === 'object') {
       hubQuizScores = (window.FWSectorFitSheet && typeof FWSectorFitSheet.getCanonicalScores === 'function')
@@ -384,7 +387,6 @@
   }
 
   window.FWHubCareers = {
-    HUB_QUIZ_KEY: HUB_QUIZ_KEY,
     careers: careers,
     careerToQuizKeys: careerToQuizKeys,
     subBranchNames: subBranchNames,

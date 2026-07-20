@@ -367,7 +367,7 @@ export async function resolveCareerTargetFromMessage(env, message, currentSlug, 
     return { slug: currentSlug || '', name: currentName || '', pivoted: false, source: null };
   }
 
-  const baseUrl = env?.SITE_URL || 'https://flightway.pages.dev';
+  const baseUrl = env?.SITE_URL || 'https://flightwayjacobprototype.pages.dev';
 
   function pivotIfChanged(hit) {
     if (!hit?.slug || !hit.name) return null;

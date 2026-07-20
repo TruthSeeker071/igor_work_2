@@ -2,16 +2,42 @@
  * Auth form pages (sign in, register, forgot/reset password) for auth.html.
  */
 (function (global) {
-  const HUB_KEY = 'fw_hub_quiz_v1';
-
   function loadHubQuiz() {
     try {
-      const raw = localStorage.getItem(HUB_KEY);
-      if (!raw) return null;
-      const data = JSON.parse(raw);
+      const data = (global.FWUser && typeof FWUser.getBlob === 'function') ? FWUser.getBlob() : null;
       if (data && data.scores && typeof data.scores === 'object') return data;
     } catch (_) { /* ignore */ }
     return null;
+  }
+
+  // Display gate: only errors FWErr marked user-facing print verbatim.
+  function fwErr(err, fallback) {
+    return global.FWErr ? FWErr.forUser(err, fallback) : fallback;
+  }
+
+  function busy(btn, label) {
+    return global.FWButtonBusy ? FWButtonBusy.start(btn, { label: label }) : function () {};
+  }
+
+  // Inline card alerts: same element renders the error (default) or the green
+  // counterpart, so the "password updated" hand-off doesn't read as a failure.
+  function setAlert(el, msg, kind) {
+    if (!el) return;
+    el.textContent = msg || '';
+    el.classList.toggle('auth-alert--ok', kind === 'ok');
+  }
+
+  function bindPasswordToggles() {
+    document.querySelectorAll('[data-pw-toggle]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const input = document.getElementById(btn.getAttribute('data-pw-toggle'));
+        if (!input) return;
+        const show = input.type === 'password';
+        input.type = show ? 'text' : 'password';
+        btn.setAttribute('aria-pressed', show ? 'true' : 'false');
+        btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+      });
+    });
   }
 
   function showAuthPage(page) {
@@ -46,7 +72,7 @@
     const btn = document.getElementById('signin-btn');
     const email = (emailEl.value || '').trim();
     const password = pwEl ? pwEl.value : '';
-    errEl.textContent = '';
+    setAlert(errEl, '');
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
       errEl.textContent = 'Please enter a valid email address.';
       return;
@@ -57,8 +83,7 @@
     }
     emailEl.disabled = true;
     if (pwEl) pwEl.disabled = true;
-    btn.disabled = true;
-    btn.textContent = 'Signing in…';
+    const restore = busy(btn, 'Signing in…');
     try {
       await FWAuth.authLogin(email, password);
       if (global.dispatchEvent) {
@@ -67,12 +92,11 @@
       if (global.FWPageBoot) FWPageBoot.redirectAfterAuth();
       else location.replace('portal.html');
     } catch (err) {
-      errEl.textContent = (err && err.message) || 'Sign in failed.';
+      errEl.textContent = fwErr(err, 'Sign in failed.');
     } finally {
       emailEl.disabled = false;
       if (pwEl) pwEl.disabled = false;
-      btn.disabled = false;
-      btn.textContent = 'Sign in →';
+      restore();
     }
   }
 
@@ -101,8 +125,7 @@
     emailEl.disabled = true;
     if (pwEl) pwEl.disabled = true;
     if (pw2El) pw2El.disabled = true;
-    btn.disabled = true;
-    btn.textContent = 'Creating…';
+    const restore = busy(btn, 'Creating…');
     try {
       await FWAuth.authRegister(email, password, loadHubQuiz());
       if (global.dispatchEvent) {
@@ -111,13 +134,12 @@
       if (global.FWPageBoot) FWPageBoot.redirectAfterAuth();
       else location.replace('portal.html');
     } catch (err) {
-      errEl.textContent = (err && err.message) || 'Registration failed.';
+      errEl.textContent = fwErr(err, 'Registration failed.');
     } finally {
       emailEl.disabled = false;
       if (pwEl) pwEl.disabled = false;
       if (pw2El) pw2El.disabled = false;
-      btn.disabled = false;
-      btn.textContent = 'Create account →';
+      restore();
     }
   }
 
@@ -127,7 +149,7 @@
     const err = document.getElementById('forgot-error');
     const ok = document.getElementById('forgot-success');
     if (err) err.textContent = '';
-    if (ok) ok.style.display = 'none';
+    if (ok) ok.hidden = true;
   }
 
   async function forgotPasswordSubmit() {
@@ -137,22 +159,20 @@
     const btn = document.getElementById('forgot-btn');
     const email = (emailEl.value || '').trim();
     errEl.textContent = '';
-    okEl.style.display = 'none';
+    okEl.hidden = true;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
       errEl.textContent = 'Please enter a valid email address.';
       return;
     }
-    btn.disabled = true;
-    btn.textContent = 'Sending…';
+    const restore = busy(btn, 'Sending…');
     try {
       await FWAuth.authForgotPassword(email);
       okEl.textContent = 'If an account exists for that email, we sent a reset link.';
-      okEl.style.display = 'block';
+      okEl.hidden = false;
     } catch (err) {
-      errEl.textContent = (err && err.message) || 'Could not send reset email.';
+      errEl.textContent = fwErr(err, 'Could not send reset email.');
     } finally {
-      btn.disabled = false;
-      btn.textContent = 'Send reset link →';
+      restore();
     }
   }
 
@@ -177,19 +197,17 @@
       errEl.textContent = 'Passwords do not match.';
       return;
     }
-    btn.disabled = true;
-    btn.textContent = 'Updating…';
+    const restore = busy(btn, 'Updating…');
     try {
       await FWAuth.authResetPassword(token, password);
       showAuthPage('signin');
       try { history.replaceState(null, '', '#signin'); } catch (_) { /* ignore */ }
       const signinErr = document.getElementById('signin-error');
-      if (signinErr) signinErr.textContent = 'Password updated. Sign in with your new password.';
+      setAlert(signinErr, 'Password updated. Sign in with your new password.', 'ok');
     } catch (err) {
-      errEl.textContent = (err && err.message) || 'Could not reset password.';
+      errEl.textContent = fwErr(err, 'Could not reset password.');
     } finally {
-      btn.disabled = false;
-      btn.textContent = 'Update password →';
+      restore();
     }
   }
 
@@ -210,6 +228,7 @@
   }
 
   function init() {
+    bindPasswordToggles();
     if (global.FWPageBoot) {
       FWPageBoot.authBootThen(function () {
         routeBoot();
@@ -234,6 +253,7 @@
     init: init,
     routeBoot: routeBoot,
     showAuthPage: showAuthPage,
+    setAlert: setAlert,
     signInFromPage: signInFromPage,
     registerFromPage: registerFromPage,
     openForgotPassword: openForgotPassword,

@@ -18,6 +18,7 @@ import {
   authErrorResponse,
   checkRateLimit,
   clientIp,
+  getSessionEmail,
 } from './_lib/auth.js';
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -61,6 +62,7 @@ function buildPrompt(name, critique) {
     ' "starters": ["<beginner question>"] (3),',
     ' "workSections": [{"id": "<short>", "label": "<Label>", "prompt": "<what to write>", "hint": "<nudge pointing where to look, not the answer>", "core": true|false}] (exactly 3, exactly 2 with "core": true — the two most essential),',
     ' "moments": ["<short gerund phrase for a distinct kind of moment in this work — include one boring/grind moment>"] (5),',
+    ' "scenario": { "intro": "<2-3 sentences setting up a pressured stretch of this job — a day where calls compound>", "nodes": [{"id": "a", "setup": "<the situation at this beat, 2-4 sentences, concrete>", "decision": "<the call to make, one sentence>", "options": [{"label": "<a genuinely reasonable move>", "outcome": "<what happens next + what it teaches, 2-3 sentences>", "next": "<id of the node this leads to, or null if it ends the scenario>", "tone": "strong"|"workable"|"costly"}] (2-3)}] (4-6 nodes forming a BRANCHING chain: the first node is the entry; at least one decision must lead to different next nodes depending on the choice; every branch ends within the node list) },',
     ' "debrief": null',
     '}',
     '',
@@ -134,6 +136,29 @@ function validate(raw, slug, name) {
   const task = str(raw.task, 400);
   if (!brief || !task || persona.length < 80) return null;
 
+  // Branching decision scenario (deep tier's ~20-minute narrative arc).
+  // Optional — a sim without one simply skips the Crossroads stage.
+  let scenario = null;
+  const scRaw = raw.scenario;
+  if (scRaw && typeof scRaw === 'object' && Array.isArray(scRaw.nodes)) {
+    const nodes = scRaw.nodes.slice(0, 6).map((n) => ({
+      id: (str(n && n.id, 12) || '').toLowerCase().replace(/[^a-z0-9]/g, ''),
+      setup: str(n && n.setup, 700),
+      decision: str(n && n.decision, 260),
+      options: (Array.isArray(n && n.options) ? n.options : []).slice(0, 3).map((o) => ({
+        label: str(o && o.label, 200),
+        outcome: str(o && o.outcome, 600),
+        next: str(o && o.next, 12).toLowerCase().replace(/[^a-z0-9]/g, '') || null,
+        tone: ['strong', 'workable', 'costly'].includes(o && o.tone) ? o.tone : 'workable',
+      })).filter((o) => o.label && o.outcome),
+    })).filter((n) => n.id && n.setup && n.decision && n.options.length >= 2);
+    const ids = new Set(nodes.map((n) => n.id));
+    nodes.forEach((n) => n.options.forEach((o) => { if (o.next && !ids.has(o.next)) o.next = null; }));
+    if (nodes.length >= 3) {
+      scenario = { intro: str(scRaw.intro, 500), nodes };
+    }
+  }
+
   const taxiRaw = raw.taxi || {};
   const taxi = {
     docLabel: str(taxiRaw.docLabel, 12),
@@ -167,6 +192,7 @@ function validate(raw, slug, name) {
     starters: strList(raw.starters, 3, 160),
     workSections,
     moments: strList(raw.moments, 5, 120),
+    scenario,
     generated: true,
     generatedAt: new Date().toISOString(),
   };
@@ -183,22 +209,39 @@ function validate(raw, slug, name) {
 
 /* ── Handler ───────────────────────────────────────────────────── */
 
-async function generateOnce(env, name, critique) {
+// Whole-pipeline wall-clock budget. Workers `fetch` has no default timeout, so
+// without this a slow/hung Gemini call has nothing to stop it and the Function
+// hangs until the platform kills it — which the client sees as "not ready yet"
+// after a long wait. Each call also carries its own timeoutMs; deadlineAt caps
+// the cascade and clamps every sub-call to the time remaining.
+const PIPELINE_BUDGET_MS = 55000;
+const GEN_TIMEOUT_MS = 30000;
+const CRITIC_TIMEOUT_MS = 12000;
+
+async function generateOnce(env, name, critique, deadlineAt) {
   return callGeminiJson(env, {
     prompt: buildPrompt(name, critique),
     temperature: 0.75,
-    maxTokens: 4096,
+    // Full headroom (thinkingBudget is 0 in JSON mode) so the larger payload —
+    // docs + interactions + the branching scenario — never truncates and forces
+    // a costly re-generation at a bumped token tier.
+    maxTokens: 8192,
     label: 'sim-generate',
+    softFail: true,
+    timeoutMs: GEN_TIMEOUT_MS,
+    deadlineAt,
   });
 }
 
-async function criticReview(env, name, rawSim) {
+async function criticReview(env, name, rawSim, deadlineAt) {
   try {
     const verdict = await callGeminiJson(env, {
       prompt: buildCriticPrompt(name, JSON.stringify(rawSim)),
       temperature: 0.2,
       maxTokens: 512,
       label: 'sim-critic',
+      timeoutMs: CRITIC_TIMEOUT_MS,
+      deadlineAt,
     });
     if (!verdict || typeof verdict.pass !== 'boolean') return { pass: true, problems: [] }; // critic broken → don't block
     return {
@@ -211,15 +254,54 @@ async function criticReview(env, name, rawSim) {
   }
 }
 
+/* ── Global index of generated sims (board discovery) ──────────── */
+// Lightweight KV doc listing every cached generated sim so the Career Tester
+// board can offer them alongside the authored seven. Best-effort: a failed
+// index write never blocks serving the sim itself.
+
+const INDEX_KEY = 'simv2-index';
+const INDEX_MAX = 100;
+
+async function addToIndex(env, pub) {
+  if (!env.COACH_KV) return;
+  try {
+    const list = (await env.COACH_KV.get(INDEX_KEY, 'json')) || [];
+    const entries = Array.isArray(list) ? list.filter((e) => e && e.id !== pub.id) : [];
+    entries.unshift({
+      id: pub.id,
+      title: pub.title,
+      domain: pub.domain,
+      tag: pub.tag,
+      org: pub.org,
+      orgPlain: pub.orgPlain,
+      hook: pub.hook,
+      at: pub.generatedAt,
+    });
+    await env.COACH_KV.put(INDEX_KEY, JSON.stringify(entries.slice(0, INDEX_MAX)));
+  } catch (err) {
+    console.warn('sim-generate: index update failed', err);
+  }
+}
+
 export async function onRequestOptions(context) {
-  return authPreflight(originFromEnv(context.env));
+  return authPreflight(originFromEnv(context.env, context.request));
 }
 
 export async function onRequest(context) {
   const { request, env } = context;
-  const origin = originFromEnv(env);
+  const origin = originFromEnv(env, request);
 
   if (request.method === 'OPTIONS') return authPreflight(origin);
+  if (request.method === 'GET') {
+    // Board discovery: list of generated sims available to open instantly.
+    let sims = [];
+    try {
+      if (env.COACH_KV) sims = (await env.COACH_KV.get(INDEX_KEY, 'json')) || [];
+    } catch (err) {
+      console.warn('sim-generate: index read failed', err);
+    }
+    return authJsonResponse(200, { sims: Array.isArray(sims) ? sims : [] }, origin);
+  }
   if (request.method !== 'POST') return authJsonResponse(405, { error: 'Method not allowed' }, origin);
 
   let payload;
@@ -248,6 +330,10 @@ export async function onRequest(context) {
     console.warn('sim-generate: KV read failed', err);
   }
 
+  // Cache miss → Gemini burn requires a signed-in session.
+  const email = await getSessionEmail(request, env);
+  if (!email) return authJsonResponse(401, { error: 'Not signed in.' }, origin);
+
   try {
     await checkRateLimit(env, 'simgen:' + clientIp(request), { max: RATE_MAX });
   } catch (err) {
@@ -255,15 +341,24 @@ export async function onRequest(context) {
   }
 
   try {
-    // Draft → critic gate → (one retry with the critic's notes) → validate.
-    let raw = await generateOnce(env, name, null);
-    let review = await criticReview(env, name, raw);
-    if (!review.pass) {
+    // Draft → critic gate → (one retry with the critic's notes, budget
+    // permitting) → validate. Bounded degradation: the critic is advisory,
+    // not a hard gate — a schema-valid draft SHIPS even if the critic keeps
+    // flagging it, rather than throwing away a usable sim with a 502. Only a
+    // total generation failure (nothing to validate) returns an error.
+    const deadlineAt = Date.now() + PIPELINE_BUDGET_MS;
+    let raw = await generateOnce(env, name, null, deadlineAt);
+    if (!raw) {
+      return authJsonResponse(502, { error: 'The simulation builder is busy right now. Please try again in a moment.' }, origin);
+    }
+    const review = await criticReview(env, name, raw, deadlineAt);
+    // Retry once with the critic's notes only if there's budget for another
+    // full generation + review; keep the retry only when it actually passes.
+    if (!review.pass && deadlineAt - Date.now() > GEN_TIMEOUT_MS + CRITIC_TIMEOUT_MS) {
       console.warn('sim-generate: draft failed critic', name, review.problems);
-      raw = await generateOnce(env, name, '- ' + review.problems.join('\n- '));
-      review = await criticReview(env, name, raw);
-      if (!review.pass) {
-        return authJsonResponse(502, { error: 'Simulation drafts failed quality review.' }, origin);
+      const retry = await generateOnce(env, name, '- ' + review.problems.join('\n- '), deadlineAt);
+      if (retry && (await criticReview(env, name, retry, deadlineAt)).pass) {
+        raw = retry;
       }
     }
     const result = validate(raw, slug, name);
@@ -277,6 +372,7 @@ export async function onRequest(context) {
     } catch (err) {
       console.warn('sim-generate: KV write failed', err);
     }
+    await addToIndex(env, result.pub);
     return authJsonResponse(200, { sim: result.pub, cached: false }, origin);
   } catch (err) {
     console.warn('sim-generate failed', err && err.message);

@@ -3,16 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/favicon.ico?v=20260717h" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/favicon.png?v=20260717h">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=20260717h">
 <title>FlightWay — Career Tester</title>
 <meta name="description" content="Try a real slice of a career before you commit to it — real documents, real decisions, honest feedback. Start with a 2-minute look.">
-<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260720b">
-<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260720b">
-<link rel="stylesheet" href="assets/css/simulation.css?v=20260720b">
+<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260720c">
+<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260720c">
+<link rel="stylesheet" href="assets/css/simulation.css?v=20260720c">
 <script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
 <script src="assets/js/shared/global-shim.js?v=20260703p"></script>
-<script src="assets/js/shared/flags.js?v=20260703p"></script>
-<link rel="stylesheet" href="assets/css/flightway-2.css?v=20260720b">
-<script src="assets/js/shared/events.js?v=20260708a" defer></script>
+<script src="assets/js/shared/flags.js?v=20260716h"></script>
+<link rel="stylesheet" href="assets/css/flightway-2.css?v=20260720c">
+<script src="assets/js/shared/events.js?v=20260716h" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -40,7 +43,17 @@
 
 <div class="fw-shell">
   <main id="fw-root" aria-live="polite">
-    <div class="fw-loading"><span class="fw-spinner"></span><span>Loading the Career Tester…</span></div>
+    <div class="fw-loading" role="status" aria-busy="true">
+      <span>Loading the Career Tester…</span>
+      <div class="fw-loading-skeleton" aria-hidden="true">
+        <div class="fw-skel-docs">
+          <span class="fw-skeleton fw-skel-doc"></span>
+          <span class="fw-skeleton fw-skel-doc"></span>
+          <span class="fw-skeleton fw-skel-doc"></span>
+        </div>
+        <span class="fw-skeleton fw-skel-panel"></span>
+      </div>
+    </div>
   </main>
 </div>
 
@@ -55,15 +68,18 @@
 </footer>
 
 <script src="assets/js/shared/page-boot.js?v=20260703p" defer></script>
-<script src="assets/js/shared/auth.js?v=20260705c" defer></script>
+<script src="assets/js/shared/fw-errors.js?v=20260720a" defer></script>
+<script src="assets/js/shared/auth.js?v=20260720c" defer></script>
+<script src="assets/js/shared/user.js?v=20260719g" defer></script>
 <script src="assets/js/shared/auth-nav.js?v=20260703p" defer></script>
-<script src="assets/js/shared/onet-catalog.js?v=20260705c" defer></script>
+<script src="assets/js/shared/onet-catalog.js?v=20260718f" defer></script>
 <script src="assets/js/quiz/quiz-data.js?v=20260703p" defer></script>
-<script src="assets/js/hub/hub-careers.js?v=20260705c" defer></script>
-<script src="assets/js/sim/sim-engine.js?v=20260708a" defer></script>
+<script src="assets/js/hub/hub-careers.js?v=20260719b" defer></script>
+<script src="assets/js/shared/entitlements.js?v=20260719a" defer></script>
+<script src="assets/js/sim/sim-engine.js?v=20260720d" defer></script>
 <script src="assets/js/sim/sim-share.js?v=20260708a" defer></script>
 <script src="assets/js/shared/data-field.js?v=20260703p" defer></script>
-<script src="assets/js/shared/brand.js?v=20260703p" defer></script>
+<script src="assets/js/shared/brand.js?v=20260717g" defer></script>
 <script src="assets/js/shared/app-nav.js?v=20260703p" defer></script>
 <script src="assets/js/shared/theme.js?v=20260703p" defer></script>
 <script>

@@ -16,8 +16,18 @@
   var DEFAULT_ZOOM = 1.8;
   var OVERVIEW_FILL = 0.94;
   var OVERVIEW_TOPBAR_FALLBACK_PX = 64;
-  var MIN_ZOOM = 0.5;
-  var MAX_ZOOM = 3.0;
+  // Bottom band kept clear of the Marco FAB (bottom-left overlay) at fit zoom.
+  var OVERVIEW_BOTTOM_SAFE_PX = 64;
+  var MIN_ZOOM = 0.35;
+  // Overview zoom-out floor: fraction of the fit zoom the user can pull back
+  // past "everything on screen" — breathing room around the whole map, capped
+  // below by MIN_ZOOM.
+  var OVERVIEW_MIN_ZOOM_MULT = 0.7;
+  // Headroom past SECTOR_ENTRY_ZOOM (3.0): when the cap equaled the entry
+  // threshold, the two-frame entry confirmation had to happen exactly at the
+  // pinned cap — one clamped tick and manual zoom-in just stalled instead of
+  // diving into the sector.
+  var MAX_ZOOM = 3.5;
   var SECTOR_ENTRY_ZOOM = 3.0;
   var SECTOR_EXIT_ZOOM = 2.6;
   var SECTOR_ZOOM_MIN = 0.7;
@@ -33,8 +43,173 @@
   var SECTOR_CANVAS_H = 1440;
   var LAYOUT_PAD = 24;
 
+  // Post-ship macro-hub redesign: merged macro-sectors need an explicit
+  // display label ("Engineering & Science") that naive hyphen-to-space
+  // title-casing can't produce ("Engineering Science").
+  var ZONE_LABEL_OVERRIDES = {
+    'engineering-science': 'Engineering & Science',
+    'creative-media': 'Creative & Media',
+    'business-finance': 'Business & Finance',
+  };
+
   function titleCaseZone(z) {
+    if (ZONE_LABEL_OVERRIDES[z]) return ZONE_LABEL_OVERRIDES[z];
     return String(z || '').replace(/-/g, ' ').replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+  }
+
+  // Per-zone background sub-area labels (the legacy hub's faint area names
+  // behind the orbs, e.g. Engineering & Science → PHYSICS & CHEMISTRY /
+  // ENGINEERING / BIOLOGY…). Each career is assigned to the sub-area whose
+  // `soc` prefix is the LONGEST match against career.soc; a label renders
+  // only when it has >= SUBAREA_MIN members, positioned at the centroid of
+  // its members' sector coordinates. Static per zone — NEVER gated on the
+  // top-fit lens or fit scores: these are spatial grounding, not results.
+  // Keying is per-zone on purpose: the same SOC prefix means different
+  // things in different zones ('15-12' is Software in tech, Cybersecurity
+  // in engineering-science).
+  var SUBAREA_MIN = 3;
+  var SECTOR_SUBAREAS = {
+    'business-finance': [
+      { label: 'Management & Leadership', soc: ['11-'] },
+      { label: 'Finance & Accounting', soc: ['13-20'] },
+      { label: 'Business Operations', soc: ['13-10', '13-11'] },
+      { label: 'Sales & Real Estate', soc: ['41-'] },
+    ],
+    'engineering-science': [
+      { label: 'Engineering', soc: ['17-10', '17-20', '17-21'] },
+      { label: 'Drafting & Eng. Technicians', soc: ['17-30'] },
+      { label: 'Biology & Life Sciences', soc: ['19-10'] },
+      // '19-20' catches physics/astronomy/chemistry/materials/misc physical
+      // sciences; earth sciences carve themselves out via longer prefixes.
+      { label: 'Physics & Chemistry', soc: ['19-20'] },
+      { label: 'Earth & Environmental Science', soc: ['19-2041', '19-2042', '19-2043'] },
+      { label: 'Social Sciences', soc: ['19-30'] },
+      { label: 'Science Technicians', soc: ['19-40'] },
+      { label: 'Security & Cybersecurity', soc: ['15-12', '13-11', '11-30', '33-'] },
+    ],
+    tech: [
+      { label: 'Software & IT', soc: ['15-12', '11-30'] },
+      { label: 'Data Science & Math', soc: ['15-20'] },
+      { label: 'Computer Hardware', soc: ['17-20'] }, // self-suppresses at current counts
+    ],
+    healthcare: [
+      { label: 'Physicians & Surgeons', soc: ['29-12'] },
+      { label: 'Dental, Pharmacy & Vision', soc: ['29-10'] },
+      { label: 'Nursing & Therapy', soc: ['29-11'] },
+      { label: 'Medical Technicians', soc: ['29-20', '29-90'] },
+      { label: 'Care Aides & Assistants', soc: ['31-'] },
+      { label: 'Mental Health & Counseling', soc: ['21-'] },
+      { label: 'Public Health & Science', soc: ['19-', '15-12', '17-20'] },
+    ],
+    'creative-media': [
+      { label: 'Art & Design', soc: ['27-10', '15-12'] },
+      { label: 'Performing Arts', soc: ['27-20'] },
+      { label: 'Writing & Journalism', soc: ['27-30'] },
+      { label: 'Media Production', soc: ['27-40'] },
+      { label: 'Marketing & PR', soc: ['11-20', '13-11', '41-30'] },
+    ],
+    education: [
+      { label: 'College Faculty', soc: ['25-10', '25-11'] },
+      { label: 'K–12 Teaching', soc: ['25-20'] },
+      { label: 'Adult & Continuing Ed', soc: ['25-30'] },
+      { label: 'Library & Museum', soc: ['25-40'] },
+      { label: 'Administration & Support', soc: ['11-90', '25-90', '21-'] },
+    ],
+    government: [
+      { label: 'Administrative Support', soc: ['43-10', '43-20', '43-40', '43-41', '43-60', '43-90', '43-91'] },
+      { label: 'Financial & Records Clerks', soc: ['43-30'] },
+      { label: 'Logistics & Dispatch', soc: ['43-50', '43-51'] },
+      { label: 'Military & Defense', soc: ['55-'] },
+      { label: 'Food Service', soc: ['35-'] },
+    ],
+    law: [
+      { label: 'Legal Practice', soc: ['23-', '43-60'] },
+      { label: 'Law Enforcement', soc: ['33-10', '33-30'] },
+      { label: 'Fire & Protective Services', soc: ['33-20', '33-90'] },
+    ],
+    social: [
+      { label: 'Counseling & Social Work', soc: ['21-'] },
+      { label: 'Personal Care', soc: ['39-50', '39-60', '39-90'] },
+      { label: 'Recreation & Gaming', soc: ['39-10', '39-20', '39-30'] },
+      { label: 'Funeral Services', soc: ['39-40'] },
+      { label: 'Hospitality & Guest Services', soc: ['39-70', '35-', '43-40'] },
+    ],
+    trades: [
+      { label: 'Manufacturing & Machining', soc: ['51-40', '51-41'] },
+      { label: 'Production & Plant Operations', soc: ['51-80', '51-90', '51-91'] },
+      { label: 'Agriculture & Forestry', soc: ['45-', '19-40', '11-90'] },
+      { label: 'Grounds & Maintenance', soc: ['37-'] },
+      { label: 'Culinary', soc: ['35-'] }, // self-suppresses at current counts
+    ],
+  };
+
+  function buildZoneSubareas(zoneId) {
+    var defs = SECTOR_SUBAREAS[zoneId] || [];
+    if (!defs.length) return [];
+    // Fragments orbit their parent client-side (fragmentSectorXY) and carry
+    // derived pseudo-SOCs — base careers only.
+    var members = (state.careersByZone[zoneId] || []).filter(function (c) { return !c.aiDerived; });
+    var buckets = defs.map(function () { return { n: 0, sx: 0, sy: 0 }; });
+    members.forEach(function (c) {
+      var soc = String(c.soc || '');
+      var best = -1;
+      var bestLen = 0;
+      defs.forEach(function (d, di) {
+        d.soc.forEach(function (prefix) {
+          if (prefix.length > bestLen && soc.indexOf(prefix) === 0) {
+            best = di;
+            bestLen = prefix.length;
+          }
+        });
+      });
+      if (best >= 0 && c.sectorX != null && c.sectorY != null) {
+        buckets[best].n += 1;
+        buckets[best].sx += c.sectorX;
+        buckets[best].sy += c.sectorY;
+      }
+    });
+    var out = [];
+    defs.forEach(function (d, di) {
+      var b = buckets[di];
+      if (b.n < SUBAREA_MIN) return;
+      out.push({ label: d.label, x: b.sx / b.n, y: b.sy / b.n, count: b.n });
+    });
+    // Gentle de-overlap: interleaved sector layouts can land two centroids in
+    // nearly the same spot, stacking the big backdrop names into mush. Push
+    // label anchors apart on an x-major ellipse (≈ the shape of a wide text
+    // line) until none overlap. Deterministic and bounded.
+    var SEP_X = 460;
+    var SEP_Y = 130;
+    for (var it = 0; it < 40; it++) {
+      var moved = false;
+      for (var i = 0; i < out.length; i++) {
+        for (var j = i + 1; j < out.length; j++) {
+          var a = out[i];
+          var b2 = out[j];
+          var dx = (b2.x - a.x) / SEP_X;
+          var dy = (b2.y - a.y) / SEP_Y;
+          if (!dx && !dy) dy = 0.01 * (j - i); // identical anchors: split vertically
+          var d = Math.hypot(dx, dy);
+          if (d < 1) {
+            var push = ((1 - d) / d) * 0.5;
+            var px = dx * push * SEP_X;
+            var py = dy * push * SEP_Y;
+            a.x -= px; a.y -= py;
+            b2.x += px; b2.y += py;
+            moved = true;
+          }
+        }
+      }
+      if (!moved) break;
+    }
+    return out;
+  }
+
+  function getZoneSubareas(zoneId) {
+    if (!zoneId) return [];
+    if (!state.subareaCache) state.subareaCache = {};
+    if (!state.subareaCache[zoneId]) state.subareaCache[zoneId] = buildZoneSubareas(zoneId);
+    return state.subareaCache[zoneId];
   }
 
   function slugify(name) {
@@ -67,6 +242,12 @@
     zoneAggregateVectors: null,
     zoneFits: {},
     registry: null,
+    // Top-matches lens: on by default; the user can opt out ("Show all").
+    lensOn: (function () {
+      try { return localStorage.getItem('fw_hub_lens') !== 'off'; } catch (e) { return true; }
+    })(),
+    fitsVersion: 0,
+    lensCache: { key: '', cutoff: null },
   };
 
   function worldW() {
@@ -84,6 +265,9 @@
   }
 
   function notifyVectorsUpdated() {
+    // Fit scores changed → an orb may cross a rarity band, so the cached
+    // sector link graph (which carries per-edge glow colors) must rebuild.
+    invalidateSectorLinkCache();
     if (typeof state.onVectorsUpdated === 'function') {
       try { state.onVectorsUpdated(); } catch (e) { /* ignore */ }
     }
@@ -211,20 +395,23 @@
 
   function computeOverviewFitZoom(viewW, viewH) {
     if (!viewW || !viewH) return 1;
-    var wW = worldW();
-    var wH = worldH();
+    // worldToScreen is viewport-normalized: zoom 1 maps the world onto the
+    // full viewport on BOTH axes. Fit math therefore works in viewport
+    // fractions only — the previous form divided viewport px by world units,
+    // which was ~1.0 by coincidence at desktop widths (top tile row hidden
+    // under the fixed HUD) and collapsed the map to ~30% scale on phones.
     var topbar = topbarHeightPx();
-    var availH = Math.max(viewH - topbar, viewH * 0.5);
-    var zoomX = OVERVIEW_FILL * viewW / wW;
-    var zoomY = OVERVIEW_FILL * availH / wH;
-    return Math.min(zoomX, zoomY, MAX_ZOOM);
+    var availH = Math.max(viewH - topbar - OVERVIEW_BOTTOM_SAFE_PX, viewH * 0.5);
+    return Math.min(OVERVIEW_FILL, OVERVIEW_FILL * availH / viewH, MAX_ZOOM);
   }
 
   function overviewCameraPan(viewW, viewH, zoom, focusX, focusY) {
     var topbar = topbarHeightPx();
-    var availH = Math.max(viewH - topbar, 1);
+    var availH = Math.max(viewH - topbar - OVERVIEW_BOTTOM_SAFE_PX, 1);
     var panX = viewW / 2 - (focusX / worldW() * viewW) * zoom;
-    var panY = topbar + availH / 2 - (focusY / worldH() * availH) * zoom;
+    // Center the focus point in the band between the HUD and the bottom-left
+    // FAB. The focus term uses viewH (worldToScreen's Y scale), not availH.
+    var panY = topbar + availH / 2 - (focusY / worldH() * viewH) * zoom;
     return { panX: panX, panY: panY };
   }
 
@@ -232,7 +419,7 @@
     if (state.hubMode === 'sector' && state.activeZone) {
       return sectorEffectiveZoom(state.activeZone, SECTOR_ZOOM_MIN, viewW, viewH);
     }
-    return computeOverviewFitZoom(viewW, viewH);
+    return Math.max(MIN_ZOOM, computeOverviewFitZoom(viewW, viewH) * OVERVIEW_MIN_ZOOM_MULT);
   }
 
   function getMaxZoom(viewW, viewH) {
@@ -274,6 +461,25 @@
     return found;
   }
 
+  // Nearest cluster to a world point, measured from the circle EDGE (negative
+  // dist = inside). The organic macro map has real gaps between clusters, so
+  // "which cluster does the user mean" needs a nearest-with-slack answer, not
+  // strict containment.
+  function nearestZoneToWorldPoint(wx, wy) {
+    if (!state.zoneLayout || !state.zoneLayout.zones) return null;
+    var best = null;
+    Object.keys(state.zoneLayout.zones).forEach(function (zone) {
+      var b = state.zoneLayout.zones[zone];
+      if (!b) return;
+      var cx = b.cx != null ? b.cx : (b.minX + b.maxX) / 2;
+      var cy = b.cy != null ? b.cy : (b.minY + b.maxY) / 2;
+      var r = b.r != null ? b.r : Math.min(b.maxX - b.minX, b.maxY - b.minY) / 2;
+      var d = Math.hypot(wx - cx, wy - cy) - r;
+      if (!best || d < best.dist) best = { zone: zone, dist: d };
+    });
+    return best;
+  }
+
   function viewportCenterWorld(panX, panY, zoom, viewW, viewH) {
     return {
       x: ((viewW / 2 - panX) / zoom) / viewW * worldW(),
@@ -283,12 +489,37 @@
 
   function buildZoneIndexes() {
     var byZone = {};
+    var bySoc = {};
+    var fragsByParent = {};
     state.all.forEach(function (c) {
       var z = c.hubZone;
       if (!byZone[z]) byZone[z] = [];
       byZone[z].push(c);
+      if (c.soc) bySoc[c.soc] = c;
+      if (c.aiDerived && c.derivedFrom && c.derivedFrom.soc) {
+        var ps = c.derivedFrom.soc;
+        if (!fragsByParent[ps]) fragsByParent[ps] = [];
+        fragsByParent[ps].push(c.soc);
+      }
     });
     state.careersByZone = byZone;
+    state.bySoc = bySoc;
+    state.subareaCache = null; // membership may have changed; rebuilt lazily
+    // Deterministic satellite ordering: each fragment knows its index i of n
+    // siblings around its parent, so the client-side orbit layout is stable
+    // across sessions and identical for render, hit-test, and badge counts.
+    var fragOrder = {};
+    Object.keys(fragsByParent).forEach(function (ps) {
+      var socs = fragsByParent[ps].slice().sort();
+      socs.forEach(function (soc, i) {
+        fragOrder[soc] = { i: i, n: socs.length, parentSoc: ps };
+      });
+    });
+    state.fragOrder = fragOrder;
+    state.fragCountByParent = {};
+    Object.keys(fragsByParent).forEach(function (ps) {
+      state.fragCountByParent[ps] = fragsByParent[ps].length;
+    });
   }
 
   function visibleZones(rect) {
@@ -318,15 +549,20 @@
       })
       .map(function (zone) {
       var b = state.zoneLayout.zones[zone];
+      var inZone = state.careersByZone[zone] || [];
       return {
         id: zone,
         label: titleCaseZone(zone),
         bounds: b,
-        count: (state.careersByZone[zone] || []).length,
+        count: inZone.length,
         orbColor: state.zoneColors[zone]
-          || ((state.careersByZone[zone] && state.careersByZone[zone][0])
-            ? state.careersByZone[zone][0].orbColor : '#78716C'),
+          || (inZone[0] ? inZone[0].orbColor : '#78716C'),
         zoneFit: state.zoneFits[zone] || null,
+        // Hover/zoom-in reveal (rich detail on demand, not at rest): a taste
+        // of what this macro-sector actually contains. Deterministic (first
+        // N in load order) rather than random, so it doesn't flicker on
+        // every hover re-render.
+        exampleTitles: inZone.slice(0, 3).map(function (c) { return c.name; }).filter(Boolean),
       };
     });
   }
@@ -433,6 +669,7 @@
     state.renderCareers = state.careersByZone[zoneId] || [];
     state.mountedIds = new Set(state.renderCareers.map(function (c) { return c.id; }));
     applyCachedFit(state.renderCareers);
+    invalidateSectorLinkCache();
     refreshSimilarityLinks('local');
     startFragmentOverlay();
 
@@ -456,6 +693,7 @@
     state.renderCareers = [];
     state.mountedIds = new Set();
     state.similarityLinks = [];
+    invalidateSectorLinkCache();
     var zoom = computeOverviewFitZoom(viewW, viewH);
     var panX = viewW / 2 - (worldW() / 2 / worldW() * viewW) * zoom;
     var panY = overviewCameraPan(viewW, viewH, zoom, worldW() / 2, worldH() / 2).panY;
@@ -467,19 +705,27 @@
     if (state.hubMode === 'overview') {
       if (zoom >= SECTOR_ENTRY_ZOOM - 0.001) {
         var center = viewportCenterWorld(panX, panY, zoom, viewW, viewH);
-        var zone = zoneAtWorldPoint(center.x, center.y);
+        // Strict containment (zoneAtWorldPoint) made manual zoom-in stall:
+        // on the organic map the viewport center often sits in the gap
+        // BETWEEN clusters, so entry never fired and the user hit MAX_ZOOM
+        // with nowhere to go — "have to click the sector instead". Accept
+        // the nearest cluster within a generous slack so zooming in always
+        // resolves to whatever the user is clearly zooming toward.
+        var near = nearestZoneToWorldPoint(center.x, center.y);
+        var zone = near && near.dist <= worldH() * 0.18 ? near.zone : null;
         if (zone) {
           state.sectorEntryFrames++;
           if (state.sectorEntryFrames >= 2) {
             return {
               action: 'enter',
               zone: zone,
-              camera: enterSectorMode(zone, viewW, viewH, {
-                preserveView: true,
-                currentZoom: zoom,
-                currentPanX: panX,
-                currentPanY: panY,
-              }),
+              // No preserveView: manual zoom often crosses the threshold with
+              // the cluster half-off-center (nearest-with-slack entry), and
+              // preserving that camera landed users on a mostly-empty corner
+              // of the sector. Always compute the centered careers-bbox
+              // camera — the caller's short tween glides there, so entry is
+              // both centered and smooth.
+              camera: enterSectorMode(zone, viewW, viewH),
             };
           }
         } else {
@@ -563,21 +809,60 @@
     return FWOnetVectors.magnitude(state.objective.values) > 0.01;
   }
 
+  // Display-zone (11 macro-sector) aggregate vectors, derived once from the
+  // untouched 18-zone zone-aggregate-vectors.json (see rezone-hub.mjs):
+  // merged macro-sectors get a count-weighted average of their constituents.
+  // Every display-keyed consumer (zone fit %, neighbor links) must read THIS,
+  // never the raw file — reading raw keys is how the merged zones ended up
+  // with 0% fit and no similarity links after the redesign.
+  var DISPLAY_ZONE_MERGE = {
+    engineering: 'engineering-science', science: 'engineering-science', cybersecurity: 'engineering-science',
+    creative: 'creative-media', marketing: 'creative-media', media: 'creative-media',
+    business: 'business-finance', finance: 'business-finance',
+  };
+
+  function displayZoneAggregates() {
+    if (state._displayAggs) return state._displayAggs;
+    var aggs = state.zoneAggregateVectors;
+    if (!aggs) return null;
+    var acc = {};
+    Object.keys(aggs).forEach(function (z) {
+      var a = aggs[z];
+      if (!a || !a.lvMean) return;
+      var dz = DISPLAY_ZONE_MERGE[z] || z;
+      var n = a.count || 0;
+      if (!acc[dz]) {
+        acc[dz] = { count: n, sum: a.lvMean.map(function (v) { return v * n; }) };
+      } else {
+        acc[dz].count += n;
+        acc[dz].sum = acc[dz].sum.map(function (v, d) { return v + a.lvMean[d] * n; });
+      }
+    });
+    var out = {};
+    Object.keys(acc).forEach(function (dz) {
+      var a = acc[dz];
+      out[dz] = { count: a.count, lvMean: a.count ? a.sum.map(function (v) { return v / a.count; }) : a.sum };
+    });
+    state._displayAggs = out;
+    return out;
+  }
+
   function applySectorAggregateFits() {
-    if (!state.zoneAggregateVectors || !state.personality || !window.FWOnetVectors) return;
+    var displayAggs = displayZoneAggregates();
+    if (!displayAggs || !state.personality || !window.FWOnetVectors) return;
     if (window.FWHubZoneFit && typeof FWHubZoneFit.computeZoneFitsMap === 'function') {
       state.zoneFits = FWHubZoneFit.computeZoneFitsMap(
         state.personality,
         state.objective,
-        state.zoneAggregateVectors
+        displayAggs
       );
       return;
     }
     var V = FWOnetVectors;
     var cp = V.cosinePercent || function (cos) { return V.clamp100(Math.round((cos || 0) * 100)); };
     var byZone = {};
-    Object.keys(state.zoneAggregateVectors).forEach(function (zone) {
-      var agg = state.zoneAggregateVectors[zone];
+    Object.keys(displayAggs).forEach(function (zone) {
+      var agg = displayAggs[zone];
       if (!agg || !agg.lvMean || !agg.count) return;
       var pFit = cp(V.cosine(state.personality.values, agg.lvMean));
       byZone[zone] = {
@@ -614,6 +899,36 @@
       }
     });
     applySectorAggregateFits();
+    state.fitsVersion++;
+  }
+
+  // Nth-highest fitScore among a list (fragments excluded); null when fewer
+  // than n careers carry a score — the lens stays inert until fits exist.
+  function nthHighestFit(list, n) {
+    var scores = [];
+    (list || []).forEach(function (c) {
+      if (!c.aiDerived && c.fitScore != null) scores.push(c.fitScore);
+    });
+    if (scores.length < n) return null;
+    scores.sort(function (a, b) { return b - a; });
+    return scores[n - 1];
+  }
+
+  // Effective lens cutoff for the current sector view: careers at/above it
+  // render at full weight, the long tail dims. min(global top-40, zone top-8)
+  // so a zone whose careers all sit below the global bar still keeps its own
+  // best handful fully visible.
+  function lensCutoffValue() {
+    var key = String(state.activeZone || '') + '|' + state.fitsVersion;
+    if (state.lensCache.key === key) return state.lensCache.cutoff;
+    var globalCut = nthHighestFit(state.all, 40);
+    var zoneCut = state.activeZone
+      ? nthHighestFit(state.careersByZone[state.activeZone], 8) : null;
+    var cutoff = null;
+    if (globalCut != null && zoneCut != null) cutoff = Math.min(globalCut, zoneCut);
+    else if (globalCut != null) cutoff = globalCut;
+    state.lensCache = { key: key, cutoff: cutoff };
+    return cutoff;
   }
 
   function applyCachedFit(careerList) {
@@ -649,6 +964,19 @@
     enqueueVectorFetch(socs);
   }
 
+  // Sector layouts were precomputed fairly dense; stretch positions slightly
+  // away from the sector-canvas center for breathing room. CONSTRAINT: the
+  // camera clamp (clampPanSector) only reaches the fixed canvas ±8%, so
+  // spread coords MUST stay inside the canvas or edge careers become
+  // permanently unreachable (the 1.45x version put Quantitative Financial
+  // Analysts off-screen for good).
+  var SECTOR_SPREAD = 1.15;
+  function spreadSectorCoord(v, extent) {
+    var c = extent / 2;
+    var out = c + (Number(v) - c) * SECTOR_SPREAD;
+    return Math.max(70, Math.min(extent - 70, out));
+  }
+
   function mapOnetCareer(row) {
     return {
       id: 'soc:' + row.soc,
@@ -659,8 +987,8 @@
       jobZone: row.jobZone,
       x: row.layoutX,
       y: row.layoutY,
-      sectorX: row.sectorX != null ? row.sectorX : row.layoutX,
-      sectorY: row.sectorY != null ? row.sectorY : row.layoutY,
+      sectorX: spreadSectorCoord(row.sectorX != null ? row.sectorX : row.layoutX, SECTOR_CANVAS_W),
+      sectorY: spreadSectorCoord(row.sectorY != null ? row.sectorY : row.layoutY, SECTOR_CANVAS_H),
       sectorNX: row.sectorNX != null ? row.sectorNX : (row.layoutNX != null ? row.layoutNX : 0.5),
       sectorNY: row.sectorNY != null ? row.sectorNY : (row.layoutNY != null ? row.layoutNY : 0.5),
       layoutNX: row.layoutNX != null ? row.layoutNX : 0.5,
@@ -727,6 +1055,9 @@
     if (window.FWHubCanvasRender && typeof FWHubCanvasRender.invalidateOverviewLayer === 'function') {
       FWHubCanvasRender.invalidateOverviewLayer();
     }
+    // A derived career joined the active zone: its tether is drawn separately,
+    // but the sector link set changed, so drop the cached graph.
+    invalidateSectorLinkCache();
     return true;
   }
 
@@ -796,6 +1127,11 @@
 
   function buildBalancedSectorLinks(visibleCareers) {
     if (!state.similarityIndex || !visibleCareers || !visibleCareers.length) return [];
+    // Satellites never join the similarity web — their ONLY link is the
+    // tether to their parent (drawn in hub-canvas.js). Without this filter the
+    // min-links backfill below wires each satellite to arbitrary neighbors.
+    visibleCareers = visibleCareers.filter(function (c) { return !c.aiDerived; });
+    if (!visibleCareers.length) return [];
     var bySoc = {};
     visibleCareers.forEach(function (c) { bySoc[c.soc] = c; });
     var socs = visibleCareers.map(function (c) { return c.soc; });
@@ -945,12 +1281,39 @@
     return buildBalancedSectorLinks(visibleCareers);
   }
 
+  // F1: buildBalancedSectorLinks is O(n²) and was rebuilt EVERY frame from
+  // updateViewport (the loop runs continuously in sector mode). The link graph
+  // depends only on the visible career set (activeZone + count), never the
+  // camera, so cache it and hand back a STABLE array reference — the canvas
+  // backdrop/edge-color caches key on that reference identity. Invalidated on
+  // sector entry, overview reset, derived-row appends, and vector updates.
+  var _sectorLinkCache = { zone: null, count: -1, links: null };
+  function invalidateSectorLinkCache() {
+    _sectorLinkCache.zone = null;
+    _sectorLinkCache.count = -1;
+    _sectorLinkCache.links = null;
+  }
+
   function refreshSimilarityLinks(lod) {
     if (state.hubMode !== 'sector' || lod !== 'local') {
       state.similarityLinks = [];
       return state.similarityLinks;
     }
-    state.similarityLinks = getSimilarityLinks(state.renderCareers);
+    var count = state.renderCareers ? state.renderCareers.length : 0;
+    if (_sectorLinkCache.links && _sectorLinkCache.zone === state.activeZone && _sectorLinkCache.count === count) {
+      state.similarityLinks = _sectorLinkCache.links;
+      return state.similarityLinks;
+    }
+    var links = getSimilarityLinks(state.renderCareers);
+    // Only cache a real build: while the similarity index is still loading the
+    // build returns [] cheaply — keep retrying until real links appear rather
+    // than pinning the empty result behind the (zone,count) key.
+    if (links.length) {
+      _sectorLinkCache.zone = state.activeZone;
+      _sectorLinkCache.count = count;
+      _sectorLinkCache.links = links;
+    }
+    state.similarityLinks = links;
     return state.similarityLinks;
   }
 
@@ -993,10 +1356,16 @@
     initPromise = Promise.all([
       catalogLoad,
       Promise.all([
-        fetchArtifactJson(ARTIFACT_BASE + 'zone-layout.json'),
+        // /data/* is HTTP-cached for a day (+a week stale-while-revalidate,
+        // see _headers) — artifacts REGENERATED by an ETL run must carry a
+        // fresh ?v= or every returning visitor keeps the old taxonomy from
+        // cache while the (busted) hub JS expects the new one. This exact
+        // mix — new code, day-old cached zone-layout/careers — is how the
+        // dissolved 18-zone sectors kept appearing after the macro redesign.
+        fetchArtifactJson(ARTIFACT_BASE + 'zone-layout.json?v=20260718f'),
         fetchArtifactJsonOptional(ARTIFACT_BASE + 'zone-centroids.json'),
         fetchArtifactJsonOptional(ARTIFACT_BASE + 'zone-aggregate-vectors.json'),
-        fetchArtifactJsonOptional(ARTIFACT_BASE + 'zone-colors.json').then(function (data) {
+        fetchArtifactJsonOptional(ARTIFACT_BASE + 'zone-colors.json?v=20260718f').then(function (data) {
           return data || {};
         }),
         fetchWithTimeout('/data/onet/dimension-registry-v1.json').then(function (r) {
@@ -1045,6 +1414,9 @@
     return initPromise;
   }
 
+  // F3: mountedIds has no per-frame consumer and only changes with the visible
+  // set (active zone or its count) — rebuild the Set then, not every frame.
+  var _mountedIdsCache = { zone: null, count: -1 };
   function updateViewport(panX, panY, zoom, viewW, viewH) {
     if (!state.ready) return state.renderCareers;
 
@@ -1056,7 +1428,11 @@
     }
 
     state.renderCareers = visible;
-    state.mountedIds = new Set(visible.map(function (c) { return c.id; }));
+    if (_mountedIdsCache.zone !== state.activeZone || _mountedIdsCache.count !== visible.length) {
+      state.mountedIds = new Set(visible.map(function (c) { return c.id; }));
+      _mountedIdsCache.zone = state.activeZone;
+      _mountedIdsCache.count = visible.length;
+    }
 
     var rect = viewportRect(panX, panY, zoom, viewW, viewH, 0.05);
     state.visibleZoneLabels = visibleZones(rect);
@@ -1110,36 +1486,25 @@
     return {};
   }
 
-  function bestPersonalityZoneKey() {
-    if (!state.zoneCentroids || !state.personality || !window.FWOnetVectors) return null;
-    var bestZone = null;
-    var bestScore = -1;
-    Object.keys(state.zoneCentroids).forEach(function (zone) {
-      var centroid = state.zoneCentroids[zone];
-      if (!centroid || centroid.length !== FWOnetVectors.DIM) return;
-      var score = FWOnetVectors.cosine(state.personality.values, centroid);
-      if (score > bestScore) {
-        bestScore = score;
-        bestZone = zone;
-      }
-    });
-    return bestZone;
-  }
+  // Land ON the fit zoom: the hub opens showing the entire world — every
+  // cluster on screen — and the user zooms IN toward what interests them
+  // (the earlier 1.85x "readable clusters" landing read as opening already
+  // half-zoomed with most of the map off-screen). Zooming out further than
+  // the landing is still possible down to the OVERVIEW_MIN_ZOOM_MULT floor
+  // in getMinZoom.
+  var OVERVIEW_DEFAULT_ZOOM_MULT = 1.0;
 
   function suggestInitialCamera(viewW, viewH) {
-    var zoom = computeOverviewFitZoom(viewW, viewH);
+    var zoom = Math.min(computeOverviewFitZoom(viewW, viewH) * OVERVIEW_DEFAULT_ZOOM_MULT, MAX_ZOOM);
+    // Land centered on the map (not on the best-fit zone): starting off-center
+    // read as broken — half the clusters off-screen with orphaned edge labels.
     var focusX = worldW() / 2;
     var focusY = worldH() / 2;
-    var bestZone = bestPersonalityZoneKey();
-    if (bestZone && state.zoneLayout && state.zoneLayout.zones[bestZone]) {
-      var b = state.zoneLayout.zones[bestZone];
-      focusX = b.labelX;
-      focusY = b.labelY;
-    }
     var pan = overviewCameraPan(viewW, viewH, zoom, focusX, focusY);
     state.hubMode = 'overview';
     state.activeZone = null;
     state.sectorZoom = 1;
+    invalidateSectorLinkCache();
     var clamped = clampPanOverview(pan.panX, pan.panY, zoom, viewW, viewH);
     return {
       zoom: zoom,
@@ -1151,11 +1516,29 @@
   }
 
   function clampPanOverview(panX, panY, zoom, viewW, viewH) {
-    var minPanX = Math.min(0, viewW - zoom * viewW);
-    var maxPanX = Math.max(0, viewW - zoom * viewW);
+    // Post-ship macro-hub redesign: the world is now organically spread and
+    // several times bigger than the old fixed grid, so panning must work at
+    // every zoom level — including the default/fit zoom. Previously this
+    // forced panX to dead-center whenever the whole map fit horizontally
+    // (zoom*viewW <= viewW), which is why dragging never visibly moved the
+    // clusters (only the decorative backdrop, which follows raw pan deltas
+    // unclamped, appeared to move). Edge-clamp uniformly instead — with a
+    // wide overscroll border past the world edges (the "camera border"):
+    // without it, edge clusters could never be centered on screen, so
+    // cursor-anchored zoom near an edge fought the clamp (the camera visibly
+    // slid sideways each zoom tick) and the sector-entry condition (cluster
+    // near viewport center) was unreachable for perimeter clusters.
+    var marginX = viewW * 0.45;
+    var marginY = viewH * 0.4;
+    var minPanX = Math.min(0, viewW - zoom * viewW) - marginX;
+    var maxPanX = Math.max(0, viewW - zoom * viewW) + marginX;
     panX = Math.min(maxPanX, Math.max(minPanX, panX));
-    var minPanY = Math.min(0, viewH - zoom * viewH);
-    var maxPanY = Math.max(0, viewH - zoom * viewH);
+    // Y still respects the band between the fixed HUD and the FAB safe zone,
+    // widened by the same overscroll border.
+    var topbar = topbarHeightPx();
+    var k = viewH - OVERVIEW_BOTTOM_SAFE_PX - zoom * viewH;
+    var minPanY = Math.min(topbar, k) - marginY;
+    var maxPanY = Math.max(topbar, k) + marginY;
     panY = Math.min(maxPanY, Math.max(minPanY, panY));
     return { panX: panX, panY: panY };
   }
@@ -1196,7 +1579,21 @@
     return { panX: panX, panY: panY };
   }
 
-  function applySectorZoomDelta(delta, viewW, viewH, pivotX, pivotY, panX, panY) {
+  function applySectorZoomDelta(delta, viewW, viewH, pivotX, pivotY, panX, panY, curWorldZoom) {
+    // Reconcile sectorZoom to the ACTUAL current camera zoom before applying
+    // the delta. sectorZoom is set to its final value the instant a sector is
+    // entered, but the world zoom only eases to match over the entry camera
+    // tween — so a wheel zoom that lands mid-tween would read oldZoom from the
+    // final sectorZoom while panX/panY are mid-tween, snapping the camera to
+    // the sector frame. Deriving sectorZoom from the live world zoom (inverse
+    // of the entry*sz term) keeps the pair consistent, so the zoom takes over
+    // smoothly from wherever the tween currently is.
+    if (curWorldZoom != null) {
+      var entryZ = sectorEntryZoom(state.activeZone, viewW, viewH);
+      if (entryZ > 0) {
+        state.sectorZoom = Math.min(SECTOR_ZOOM_MAX, Math.max(SECTOR_ZOOM_MIN, curWorldZoom / entryZ));
+      }
+    }
     var oldZoom = sectorEffectiveZoom(state.activeZone, state.sectorZoom, viewW, viewH);
     var newSectorZoom = Math.min(SECTOR_ZOOM_MAX, Math.max(SECTOR_ZOOM_MIN, state.sectorZoom * delta));
     var newZoom = sectorEffectiveZoom(state.activeZone, newSectorZoom, viewW, viewH);
@@ -1240,9 +1637,72 @@
     return state.all.find(function (c) { return c.id === id; }) || null;
   }
 
+  // Small string hash for deterministic per-orb jitter (layout must be
+  // identical across frames, sessions, and the render/hit-test/badge paths).
+  function socHash(s) {
+    var h = 5381;
+    var str = String(s || '');
+    for (var i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) >>> 0;
+    return h;
+  }
+
+  // Client-side satellite orbit: fragments are laid out around their parent's
+  // sector position in evenly-spaced slots with deterministic angular/radial
+  // jitter (reads organic, never overlaps siblings). This REPLACES the
+  // server-stored offsetLayout coords in sector mode so render, hit-test,
+  // tethers, and count badges all derive from one function.
+  var SAT_RING_W = 104;  // world units — base orbit radius (sector canvas 2560x1440)
+  var SAT_RING_GAP = 62; // world units added per concentric ring for large clusters
+  var SAT_PER_RING = 8;  // orbs before a cluster spills to an outer ring
+  function fragmentSectorXY(c) {
+    var ord = state.fragOrder && state.fragOrder[c.soc];
+    if (!ord || !state.bySoc) return null;
+    var parent = state.bySoc[ord.parentSoc];
+    if (!parent || parent.sectorX == null || parent.sectorY == null) return null;
+
+    // Even angular slots on a stable elliptical ring. A firm inner radius
+    // clears the parent orb + its badge + glow; the variance below is kept
+    // small so no orb flings far from its siblings and none gets crushed into
+    // the parent (the failure modes of the old ±0.45-slot / 0.68–1.43× ring).
+    // Large clusters (> SAT_PER_RING) spill onto concentric rings rather than
+    // crowding one band.
+    var ring = Math.floor(ord.i / SAT_PER_RING);
+    var slot = ord.i - ring * SAT_PER_RING;
+    var inRing = Math.min(SAT_PER_RING, ord.n - ring * SAT_PER_RING);
+    var slots = Math.max(inRing, 3); // a lone orb still gets a full sweep, never a hug
+    var step = (Math.PI * 2) / slots;
+
+    // socHash is a full unsigned 32-bit value, so shift UNSIGNED (>>>): a
+    // signed >> on a high-bit-set hash yields a negative remainder, which
+    // silently flipped the squash and collapsed the radius — orbs landing on
+    // the wrong side of, or on top of, the parent. That was a real source of
+    // the placement mishaps this rewrite fixes.
+    var h = socHash(c.soc);
+    var jA = ((h % 1000) / 1000) - 0.5;    // angular jitter (kept < half a slot)
+    var jR = ((h >>> 10) % 1000) / 1000;   // radial variance
+    var jS = ((h >>> 20) % 1000) / 1000;   // ellipse squash
+
+    // Stable per-parent rotation, plus a half-step twist per ring so
+    // concentric rings interleave instead of radially aligning.
+    var rot = (socHash(ord.parentSoc) % 628) / 100;
+    var angle = rot + ring * step * 0.5 + slot * step + jA * step * 0.32;
+    var radius = (SAT_RING_W + ring * SAT_RING_GAP) * (0.92 + jR * 0.16);
+    var squash = 0.84 + jS * 0.12; // gentle ellipse — no vertical crush into the parent
+    return {
+      x: parent.sectorX + Math.cos(angle) * radius,
+      y: parent.sectorY + Math.sin(angle) * radius * squash,
+    };
+  }
+
   function careerWorldXY(c) {
-    if (state.hubMode === 'sector' && c.sectorX != null && c.sectorY != null) {
-      return { x: c.sectorX, y: c.sectorY };
+    if (state.hubMode === 'sector') {
+      if (c.aiDerived) {
+        var fp = fragmentSectorXY(c);
+        if (fp) return fp;
+      }
+      if (c.sectorX != null && c.sectorY != null) {
+        return { x: c.sectorX, y: c.sectorY };
+      }
     }
     return { x: c.x, y: c.y };
   }
@@ -1267,317 +1727,13 @@
     };
   }
 
-  // ── FRAGMENT-ORB OVERLAY ──
-  // AI-derived ("fragment") careers carry aiDerived:true + derivedFrom:{soc,
-  // title} into state.all/renderCareers, but the base orb draw loop and
-  // hit-test live in hub-canvas.js/hub-dashboard.js (owned by other agents).
-  // Rather than edit those files, this module draws a decorative overlay on
-  // its own transparent canvas layered on top of #map-canvas, matching the
-  // legacy main-branch "sub-branch spotlight reveal": fragments stay hidden
-  // (tiny dim dots) until the cursor comes near, then bloom into a full orb
-  // with a tether line back to the parent and a label. It reuses the
-  // *exported* FWHubCanvasRender.worldToScreen/rarityOf so the projection
-  // and palette always match the base renderer exactly, and it never
-  // intercepts pointer events (pointer-events:none) so existing
-  // hit-testing/hover/click handling in hub-dashboard.js is untouched —
-  // fragment orbs stay clickable through the same path as any other orb.
-  var FRAGMENT_MIN_R = 2.5; // floor so a fragment accent never disappears at low zoom (2.5 * 0.4 = 1.0px min)
-  var SPOT_R = 140; // screen-space proximity radius (px) that triggers bloom
-  var fragOverlay = {
-    canvas: null,
-    ctx: null,
-    raf: null,
-    pointerX: 0,
-    pointerY: 0,
-    pointerOn: false,
-    anim: Object.create(null), // per-fragment soc -> current bloom amount [0,1]
-    reduceMotion: (typeof window.matchMedia === 'function'
-      && window.matchMedia('(prefers-reduced-motion: reduce)').matches),
-  };
-
-  function isLightTheme() {
-    return !!(window.FWHubCanvasBg && typeof window.FWHubCanvasBg.isHubLightTheme === 'function'
-      && window.FWHubCanvasBg.isHubLightTheme());
-  }
-
-  function ensureFragmentCanvas() {
-    if (fragOverlay.canvas) return fragOverlay.canvas;
-    var host = document.getElementById('map-canvas');
-    if (!host || !host.parentNode) return null;
-    var c = document.createElement('canvas');
-    c.id = 'fw-fragment-overlay';
-    c.setAttribute('aria-hidden', 'true');
-    c.style.position = 'fixed';
-    c.style.inset = '0';
-    c.style.width = '100%';
-    c.style.height = '100%';
-    c.style.pointerEvents = 'none';
-    c.style.zIndex = '1';
-    host.parentNode.insertBefore(c, host.nextSibling);
-    fragOverlay.canvas = c;
-    fragOverlay.ctx = c.getContext('2d');
-    // The overlay never intercepts events (pointer-events:none), so this
-    // listener on the canvas element itself never fires — track the pointer
-    // via window instead, constrained to the underlying map canvas' rect so
-    // coordinates line up with FWHubCanvasRender.worldToScreen(). This is
-    // purely additive: it never calls preventDefault/stopPropagation and
-    // never touches hub-dashboard.js's own pointer handling.
-    window.addEventListener('pointermove', onWindowPointerMove);
-    window.addEventListener('pointerleave', onWindowPointerLeave);
-    document.addEventListener('mouseleave', onWindowPointerLeave);
-    return c;
-  }
-
-  function onWindowPointerMove(e) {
-    var host = document.getElementById('map-canvas');
-    if (!host) return;
-    var rect = host.getBoundingClientRect();
-    if (e.clientX < rect.left || e.clientX > rect.right
-      || e.clientY < rect.top || e.clientY > rect.bottom) {
-      setPointer(0, 0, false);
-      return;
-    }
-    setPointer(e.clientX - rect.left, e.clientY - rect.top, true);
-  }
-
-  function onWindowPointerLeave() {
-    setPointer(0, 0, false);
-  }
-
-  // Exported so hub-dashboard.js (or any other module that already tracks
-  // pointer position over the map) can feed it in directly instead of this
-  // module's own window listener, if a future wiring prefers that path.
-  function setPointer(x, y, on) {
-    var wasOn = fragOverlay.pointerOn;
-    fragOverlay.pointerX = x;
-    fragOverlay.pointerY = y;
-    fragOverlay.pointerOn = !!on;
-    if (fragOverlay.pointerOn || wasOn !== fragOverlay.pointerOn) {
-      scheduleFragmentFrame();
-    }
-  }
-
-  function resizeFragmentCanvas() {
-    var c = fragOverlay.canvas;
-    if (!c) return;
-    var dpr = Math.min(window.devicePixelRatio || 1, 2);
-    var w = window.innerWidth;
-    var h = window.innerHeight;
-    if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) {
-      c.width = Math.round(w * dpr);
-      c.height = Math.round(h * dpr);
-      c.style.width = w + 'px';
-      c.style.height = h + 'px';
-    }
-    fragOverlay.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-
-  function lerp(a, b, t) { return a + (b - a) * t; }
-
-  function smoothstep(t) {
-    var x = Math.max(0, Math.min(1, t));
-    return x * x * (3 - 2 * x);
-  }
-
-  function drawFragmentLabel(ctx, text, x, y, r, emphasized, alpha, hubLight) {
-    var fontSize = 8; // smaller than main orb labels (10-11)
-    ctx.font = '400 ' + fontSize + 'px Inter, sans-serif'; // lighter weight
-    var padX = 4, padY = 2;
-    var tw = ctx.measureText(text).width;
-    var w = tw + padX * 2;
-    var h = fontSize + padY * 2;
-    var lx = x - w / 2;
-    var ly = y + r + 8; // closer to orb
-    var radius = 3;
-    ctx.save();
-    ctx.globalAlpha = alpha * 0.5; // much more transparent
-    // No background box - just text with subtle outline for readability
-    ctx.strokeStyle = hubLight ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.15)';
-    ctx.lineWidth = 2;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.strokeText(text, x, ly + h / 2);
-    ctx.fillStyle = hubLight ? 'rgba(62,40,28,0.5)' : 'rgba(255,255,255,0.45)';
-    ctx.fillText(text, x, ly + h / 2);
-    ctx.restore();
-  }
-
-  function drawFragmentFrame() {
-    fragOverlay.raf = null;
-    if (state.hubMode !== 'sector' || !fragOverlay.canvas) return;
-    var render = window.FWHubCanvasRender;
-    if (!render || typeof render.worldToScreen !== 'function') {
-      scheduleFragmentFrame();
-      return;
-    }
-    resizeFragmentCanvas();
-    var ctx = fragOverlay.ctx;
-    var w = window.innerWidth;
-    var h = window.innerHeight;
-    ctx.clearRect(0, 0, w, h);
-
-    var visible = state.renderCareers || [];
-    var fragments = visible.filter(function (c) { return c.aiDerived; });
-    if (!fragments.length) {
-      scheduleFragmentFrame();
-      return;
-    }
-    var bySoc = {};
-    visible.forEach(function (c) { bySoc[c.soc] = c; });
-
-    var hubLight = isLightTheme();
-    var alphaFloor = hubLight ? 0.35 : 0.07;
-    var alphaSpan = hubLight ? 0.45 : 0.9;
-    var rarityOf = typeof render.rarityOf === 'function' ? render.rarityOf : function () {
-      return { glow: '154,160,173', base: '#9AA0AD' };
-    };
-    var pointerOn = fragOverlay.pointerOn && !(fragOverlay.reduceMotion && !fragOverlay.pointerOn);
-    var anyRestless = false;
-
-    // Group fragments by parent SOC
-    var fragmentsByParent = {};
-    fragments.forEach(function (c) {
-      var parentSoc = c.derivedFrom && c.derivedFrom.soc ? c.derivedFrom.soc : null;
-      if (!parentSoc) return;
-      if (!fragmentsByParent[parentSoc]) fragmentsByParent[parentSoc] = [];
-      fragmentsByParent[parentSoc].push(c);
-    });
-
-    // Shared zoom-aware radius (hub-canvas.js is the single source of truth for orb size)
-    var baseR = (typeof render.sectorOrbRadiusPx === 'function') ? render.sectorOrbRadiusPx(false) : 5.6;
-    var zoomScale = baseR / 5.6;
-
-    // Satellite orbit radius = 3x main orb radius
-    var ORBIT_RADIUS_MULTIPLIER = 3.0;
-
-    // Process each parent's fragments in an even orbit
-    Object.keys(fragmentsByParent).forEach(function (parentSoc) {
-      var parentFrags = fragmentsByParent[parentSoc];
-      var parent = bySoc[parentSoc];
-      if (!parent) return;
-
-      var ppos = careerWorldXY(parent);
-      var pscr = render.worldToScreen(ppos.x, ppos.y);
-      var orbitRadius = baseR * ORBIT_RADIUS_MULTIPLIER * zoomScale;
-
-      parentFrags.forEach(function (c, idx) {
-        var key = c.soc || c.name;
-        // Even angular spacing around the parent
-        var angle = (idx / parentFrags.length) * Math.PI * 2;
-        var scr = {
-          x: pscr.x + Math.cos(angle) * orbitRadius,
-          y: pscr.y + Math.sin(angle) * orbitRadius
-        };
-
-        // Proximity in screen space → target bloom amount, smoothstep falloff.
-        var target = 0;
-        if (fragOverlay.pointerOn) {
-          var d = Math.hypot(scr.x - fragOverlay.pointerX, scr.y - fragOverlay.pointerY);
-          target = smoothstep(1 - d / SPOT_R);
-        }
-        var prevAnim = fragOverlay.anim[key] || 0;
-        var a = fragOverlay.reduceMotion ? target : lerp(prevAnim, target, 0.2);
-        if (Math.abs(a - target) > 0.002 || a > 0.002) anyRestless = true;
-        fragOverlay.anim[key] = a;
-
-        var rarity = rarityOf(c.fitScore != null ? c.fitScore : 0);
-        var glowRgb = rarity.glow || '154,160,173';
-        var baseColor = rarity.base || '#9AA0AD';
-        // Satellite orb radius = 1.0 to 3.0 px (absolute, not scaled by main orb)
-        var subR = Math.max(1.0, 1.0 + 2.0 * a);
-
-        ctx.save();
-        ctx.globalAlpha = alphaFloor + alphaSpan * a;
-
-        // Tether from the parent orb's edge outward
-        var dx = scr.x - pscr.x, dy = scr.y - pscr.y;
-        var dlen = Math.hypot(dx, dy) || 1;
-        var pr = baseR;
-        ctx.strokeStyle = 'rgba(' + glowRgb + ',' + (0.1 + 0.5 * a).toFixed(3) + ')';
-        ctx.lineWidth = 0.8 + 1.3 * a;
-        ctx.beginPath();
-        ctx.moveTo(pscr.x + dx / dlen * pr, pscr.y + dy / dlen * pr);
-        ctx.lineTo(scr.x, scr.y);
-        ctx.stroke();
-
-        // Bloom glow once sufficiently lit.
-        if (a > 0.04) {
-          var g = ctx.createRadialGradient(scr.x, scr.y, subR * 0.4, scr.x, scr.y, subR * 2.6);
-          g.addColorStop(0, 'rgba(' + glowRgb + ',' + (0.45 * a).toFixed(3) + ')');
-          g.addColorStop(1, 'rgba(' + glowRgb + ',0)');
-          ctx.fillStyle = g;
-          ctx.beginPath();
-          ctx.arc(scr.x, scr.y, subR * 2.6, 0, Math.PI * 2);
-          ctx.fill();
-        }
-
-        // Orb body.
-        ctx.fillStyle = baseColor;
-        ctx.beginPath();
-        ctx.arc(scr.x, scr.y, subR, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Specular highlight, tracks the cursor when it's driving the bloom.
-        if (a > 0.1) {
-          var hx = scr.x - subR * 0.38, hy = scr.y - subR * 0.42;
-          if (fragOverlay.pointerOn) {
-            var mdx = fragOverlay.pointerX - scr.x, mdy = fragOverlay.pointerY - scr.y;
-            var mlen = Math.hypot(mdx, mdy) || 1;
-            hx = scr.x + (mdx / mlen) * subR * 0.46;
-            hy = scr.y + (mdy / mlen) * subR * 0.46;
-          }
-          var hi = ctx.createRadialGradient(hx, hy, 0, hx, hy, subR * 0.55);
-          hi.addColorStop(0, 'rgba(255,255,255,' + (0.65 * a).toFixed(3) + ')');
-          hi.addColorStop(1, 'rgba(255,255,255,0)');
-          ctx.fillStyle = hi;
-          ctx.beginPath();
-          ctx.arc(scr.x, scr.y, subR, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        ctx.restore();
-
-        // Label fades in only once meaningfully bloomed.
-        if (a > 0.4) {
-          var labelAlpha = (a - 0.4) / 0.6;
-          drawFragmentLabel(ctx, c.name, scr.x, scr.y, subR, a > 0.75, labelAlpha, hubLight);
-        }
-      });
-    });
-
-    if (anyRestless || fragOverlay.pointerOn) {
-      scheduleFragmentFrame();
-    }
-    // Otherwise every fragment is at rest (anim ≈ target ≈ 0, cursor off) —
-    // stop the rAF loop here; setPointer()/enterSectorMode wake it back up.
-  }
-
-  function scheduleFragmentFrame() {
-    if (fragOverlay.raf || state.hubMode !== 'sector') return;
-    if (document.hidden) return;
-    fragOverlay.raf = requestAnimationFrame(drawFragmentFrame);
-  }
-
-  function startFragmentOverlay() {
-    if (!ensureFragmentCanvas()) return;
-    scheduleFragmentFrame();
-  }
-
-  function stopFragmentOverlay() {
-    if (fragOverlay.raf) {
-      cancelAnimationFrame(fragOverlay.raf);
-      fragOverlay.raf = null;
-    }
-    if (fragOverlay.canvas && fragOverlay.ctx) {
-      fragOverlay.ctx.clearRect(0, 0, fragOverlay.canvas.width, fragOverlay.canvas.height);
-    }
-  }
-
-  document.addEventListener('visibilitychange', function () {
-    if (!document.hidden) scheduleFragmentFrame();
-  });
-  window.addEventListener('resize', function () {
-    if (fragOverlay.canvas) resizeFragmentCanvas();
-  });
+  // ── FRAGMENT ORBS ──
+  // Satellites now render inside the main hub-canvas.js sector pass (one
+  // renderer, one label solver, one layout source: careerWorldXY above).
+  // The old separate overlay canvas is gone; these stubs keep the
+  // enter/exit-sector call sites inert.
+  function startFragmentOverlay() {}
+  function stopFragmentOverlay() {}
 
   window.FWOnetHub = {
     WORLD_W: function () { return worldW(); },
@@ -1619,11 +1775,70 @@
     getVisibleZoneLabels: function () { return state.visibleZoneLabels; },
     getZoneLayout: function () { return state.zoneLayout; },
     getCareersByZone: function () { return state.careersByZone; },
+    getZoneSubareas: getZoneSubareas,
     getSimilarityLinks: function () { return state.similarityLinks; },
     getSimilarNeighbors: getSimilarNeighbors,
     relationLabel: relationLabel,
     getCareerBySoc: function (soc) {
       return state.all.find(function (c) { return c.soc === soc; }) || null;
+    },
+    // Single source of truth for "how many specializations branch off this
+    // career" — the renderer's badge, the side panel, and the satellite layout
+    // all read this same index, so the counts can never disagree.
+    getFragmentCount: function (soc) {
+      return (state.fragCountByParent && state.fragCountByParent[soc]) || 0;
+    },
+    // Macro-view cluster links: top related zone pairs by cosine of the zone
+    // aggregate vectors. Computed once (aggregates are static per session).
+    // zone-aggregate-vectors.json intentionally still keys off the original
+    // 18 real O*NET zones (FWOnetVectors.hydrateQuizVectors depends on that;
+    // see rezone-hub.mjs) — merged display macro-sectors don't exist in it,
+    // so their vector is derived here the same way the ETL derives it for
+    // cluster placement: a count-weighted average of the constituents'
+    // existing aggregate vectors, read-only.
+    getZoneNeighborLinks: function () {
+      if (state._zoneLinks) return state._zoneLinks;
+      var aggs11 = displayZoneAggregates();
+      if (!aggs11 || !window.FWOnetVectors || typeof FWOnetVectors.cosine !== 'function') return [];
+      var zones = Object.keys(aggs11).filter(function (z) {
+        // Only link zones actually present in the current overview render —
+        // dissolved zones (agriculture/operations/hospitality) never reach
+        // here since they have no entry in MERGE_INTO and no surviving
+        // careersByZone bucket of their own name.
+        return state.careersByZone && state.careersByZone[z] && state.careersByZone[z].length;
+      });
+      var pairs = [];
+      for (var i = 0; i < zones.length; i++) {
+        for (var j = i + 1; j < zones.length; j++) {
+          var s = FWOnetVectors.cosine(aggs11[zones[i]].lvMean, aggs11[zones[j]].lvMean);
+          pairs.push({ a: zones[i], b: zones[j], score: s });
+        }
+      }
+      // The Business&Finance↔Tech↔Engineering&Science bridge is spatially
+      // chained in rezone-hub.mjs; its two links are seeded ahead of the
+      // greedy fill so the link web always tells the same story as the
+      // placement (they'd usually win on score anyway — this makes it a
+      // guarantee, not a coincidence).
+      var BRIDGE_PAIRS = { 'business-finance|tech': 1, 'engineering-science|tech': 1 };
+      function zonePairKey(p) { return p.a < p.b ? p.a + '|' + p.b : p.b + '|' + p.a; }
+      pairs.sort(function (x, y) {
+        var bx = BRIDGE_PAIRS[zonePairKey(x)] || 0;
+        var by = BRIDGE_PAIRS[zonePairKey(y)] || 0;
+        if (bx !== by) return by - bx;
+        return y.score - x.score;
+      });
+      // Greedy: strongest pairs first, max 2 links per zone — a sparse web,
+      // not a hairball.
+      var degree = {};
+      var links = [];
+      pairs.forEach(function (p) {
+        if ((degree[p.a] || 0) >= 2 || (degree[p.b] || 0) >= 2) return;
+        links.push(p);
+        degree[p.a] = (degree[p.a] || 0) + 1;
+        degree[p.b] = (degree[p.b] || 0) + 1;
+      });
+      state._zoneLinks = links;
+      return links;
     },
     getMountedIds: function () { return state.mountedIds; },
     tradeOffLabel: tradeOffLabel,
@@ -1641,6 +1856,7 @@
     },
     getZoneColors: function () { return state.zoneColors; },
     zoneAtWorldPoint: zoneAtWorldPoint,
+    nearestZoneToWorldPoint: nearestZoneToWorldPoint,
     applySectorZoomDelta: applySectorZoomDelta,
     sectorBaseZoom: sectorBaseZoom,
     sectorEntryZoom: sectorEntryZoom,
@@ -1657,11 +1873,17 @@
     flyToCareer: flyToCareer,
     careerById: careerById,
     careerWorldXY: careerWorldXY,
+    lensAvailable: function () { return lensCutoffValue() != null; },
+    isLensOn: function () { return state.lensOn; },
+    setLensOn: function (on) {
+      state.lensOn = !!on;
+      try { localStorage.setItem('fw_hub_lens', on ? 'on' : 'off'); } catch (e) { /* private mode */ }
+    },
+    getLensCutoff: function () { return state.lensOn ? lensCutoffValue() : null; },
     getPersonalityVector: function () { return state.personality; },
     getObjectiveVector: function () { return state.objective; },
     set onVectorsUpdated(fn) { state.onVectorsUpdated = fn; },
     get onVectorsUpdated() { return state.onVectorsUpdated; },
     _syncPan: function (px, py) { state._lastPanX = px; state._lastPanY = py; },
-    setPointer: setPointer,
   };
 })();

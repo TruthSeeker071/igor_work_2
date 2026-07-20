@@ -3,24 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/favicon.ico?v=20260717h" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/favicon.png?v=20260717h">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=20260717h">
 <title>FlightWay — Your home</title>
-<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260720b">
-<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260720b">
-<link rel="stylesheet" href="assets/css/skill-gap-tracker.css?v=20260720b">
-<link rel="stylesheet" href="assets/css/good-fit-jobs.css?v=20260720b">
+<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260720c">
+<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260720c">
 <script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
 <script src="assets/js/shared/global-shim.js?v=20260703p"></script>
-<script src="assets/js/shared/flags.js?v=20260703p"></script>
-<script src="assets/js/shared/entitlements.js?v=20260708e" defer></script>
-<link rel="stylesheet" href="assets/css/flightway-2.css?v=20260720b">
-<script src="assets/js/shared/events.js?v=20260708a" defer></script>
-<script src="assets/js/shared/fw-tabbar.js?v=20260716a" defer></script>
+<script src="assets/js/shared/flags.js?v=20260716h"></script>
+<script src="assets/js/shared/entitlements.js?v=20260719a" defer></script>
+<link rel="stylesheet" href="assets/css/flightway-2.css?v=20260720c">
+<script src="assets/js/shared/events.js?v=20260716h" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="assets/vendor/lucide-lite.js?v=20260703p" defer></script>
+<link rel="stylesheet" href="assets/css/good-fit-jobs.css?v=20260720c">
+<script src="assets/js/job-matches.js?v=20260720c" defer></script>
 </head>
 <body class="portal-page">
+<div id="fw-page-veil" class="fw-page-veil" aria-live="polite" aria-busy="true">
+</div>
 
 <canvas id="fw-data-field" aria-hidden="true"></canvas>
 
@@ -41,17 +45,26 @@
   </div>
 </nav>
 
-<div id="page-portal" class="page active" role="main" aria-label="Your FlightWay home">
+<div id="page-portal" class="page active">
   <section class="portal-wrap">
     <header class="portal-head" id="portal-head"></header>
     <div id="portal-prompt-banner"></div>
     <div class="portal-empty-quiz" id="portal-empty-quiz"></div>
     <div class="portal-actions" id="portal-actions"></div>
+    <div class="portal-fw2-stack" id="portal-fw2-stack" aria-label="Progress and tools"></div>
     <div class="portal-profile-entry" id="portal-profile-entry"></div>
     <div class="portal-snapshot" id="portal-snapshot"></div>
-    <div class="dim-profile-section" id="portal-dimension-profile" hidden></div>
     <footer class="portal-footer" id="portal-footer" hidden>
+      <!-- plan + Stripe Customer Portal link; filled by assets/js/shared/billing.js -->
+      <div class="portal-billing" id="portal-billing" hidden></div>
       <button type="button" class="portal-signout-btn" id="portal-signout-btn">Sign out</button>
+      <button type="button" class="portal-doom-btn" id="portal-doom-btn"
+        style="margin-top:14px;width:100%;padding:12px 14px;border:2px solid #c0392b;border-radius:12px;background:#fdecea;color:#a5281b;font-weight:800;font-size:14px;letter-spacing:.01em;cursor:pointer;transition:background .18s ease,transform .06s ease;">
+        ⚠️ Do Not Press — Delete My Account
+      </button>
+      <p class="portal-doom-note" style="margin:8px 2px 0;font-size:12px;line-height:1.4;color:var(--text-tertiary,#8a8f98);text-align:center;">
+        Permanently erases your account and every trace of your data. You can sign up again with the same email as a brand-new user.
+      </p>
     </footer>
   </section>
 </div>
@@ -66,41 +79,38 @@
   </div>
 </footer>
 
+<script src="assets/js/shared/page-veil.js?v=20260720c" defer></script>
 <script src="assets/js/shared/page-boot.js?v=20260703p" defer></script>
-<script src="assets/js/shared/auth.js?v=20260703p" defer></script>
+<script src="assets/js/shared/fw-errors.js?v=20260720a" defer></script>
+<script src="assets/js/shared/auth.js?v=20260720c" defer></script>
+<script src="assets/js/shared/fw-busy.js?v=20260720a" defer></script>
+<script src="assets/js/shared/user.js?v=20260719g" defer></script>
 <script src="assets/js/shared/profile-alignment.js?v=20260703p" defer></script>
 <script src="assets/js/shared/roadmap-sync.js?v=20260703p" defer></script>
 <script src="assets/js/shared/sector-fit-sheet.js?v=20260703p" defer></script>
 <script src="assets/js/shared/academics-map.js?v=20260703p" defer></script>
 <script src="assets/js/shared/refine-map.js?v=20260703p" defer></script>
-<script src="assets/js/hub/hub-careers.js?v=20260703p" defer></script>
-<script src="assets/js/shared/onet-math.js?v=20260703p" defer></script>
-<script src="assets/js/shared/onet-catalog.js?v=20260705a" defer></script>
-<script src="assets/js/shared/onet-vectors.js?v=20260705a" defer></script>
+<script src="assets/js/hub/hub-careers.js?v=20260719b" defer></script>
+<script src="assets/js/shared/onet-math.js?v=20260713a" defer></script>
+<script src="assets/js/shared/onet-catalog.js?v=20260718f" defer></script>
+<script src="assets/js/shared/onet-vectors.js?v=20260719a" defer></script>
 <script src="assets/js/shared/career-focus-migrate.js?v=20260703p" defer></script>
-<script src="assets/js/shared/career-target.js?v=20260703p" defer></script>
-<script src="assets/js/shared/hub-zone-fit.js?v=20260703p" defer></script>
-<script src="assets/js/shared/onet-dimension-viewer.js?v=20260708a" defer></script>
+<script src="assets/js/shared/career-target.js?v=20260717b" defer></script>
+<script src="assets/js/shared/hub-zone-fit.js?v=20260718f" defer></script>
+<script src="assets/js/shared/onet-dimension-viewer.js?v=20260712d" defer></script>
 <script src="assets/js/shared/auth-nav.js?v=20260703p" defer></script>
-<script src="assets/js/shared/fw-toast.js?v=20260703p" defer></script>
-<script src="assets/js/app/roadmap-tree.js?v=20260705c" defer></script>
-<script src="assets/js/app/skill-gap-tracker.js?v=20260705b" defer></script>
-<script src="assets/js/profile/profile-building-fallback.js?v=20260703p" defer></script>
-<script src="assets/js/app/portal-target-switch.js?v=20260716a" defer></script>
-<script src="assets/js/shared/resume-ingest.js?v=20260703p" defer></script>
-<script src="assets/js/app/portal-resume.js?v=20260703p" defer></script>
-<script src="assets/js/app/portal.js?v=20260716a" defer></script>
-<script src="assets/js/sim/sim-portal-card.js?v=20260706s" defer></script>
-<script src="assets/js/app/portal-flightplan.js?v=20260708b" defer></script>
-<script src="assets/js/app/portal-receipts.js?v=20260708b" defer></script>
-<script src="assets/js/app/resume-builder.js?v=20260717a" defer></script>
-<script src="assets/js/app/notify-optin.js?v=20260708e" defer></script>
-<script src="assets/js/job-matches.js?v=20260718a" defer></script>
-<script src="assets/js/app/artifacts.js?v=20260708e" defer></script>
-<script src="assets/js/app/dimension-viewer.js?v=20260703q" defer></script>
-<script src="assets/js/app/portal-career-advisor.js?v=20260703p" defer></script>
+<script src="assets/js/shared/fw-toast.js?v=20260718i" defer></script>
+<script src="assets/js/app/roadmap-tree.js?v=20260709e" defer></script>
+<script src="assets/js/profile/profile-building-fallback.js?v=20260718q" defer></script>
+<script src="assets/js/app/portal-target-switch.js?v=20260718o" defer></script>
+<script src="assets/js/app/portal.js?v=20260720b" defer></script>
+<script src="assets/js/sim/sim-portal-card.js?v=20260710m" defer></script>
+<script src="assets/js/app/portal-flightplan.js?v=20260719a" defer></script>
+<script src="assets/js/app/notify-optin.js?v=20260719a" defer></script>
+<script src="assets/js/app/portal-career-advisor.js?v=20260720c" defer></script>
 <script src="assets/js/shared/data-field.js?v=20260703p" defer></script>
-<script src="assets/js/shared/brand.js?v=20260703p" defer></script>
+<script src="assets/js/shared/billing.js?v=20260720c" defer></script>
+<script src="assets/js/shared/brand.js?v=20260717g" defer></script>
 <script src="assets/js/shared/app-nav.js?v=20260703p" defer></script>
 <script src="assets/js/shared/theme.js?v=20260703p" defer></script>
 <script>
@@ -111,12 +121,7 @@
       if (window.FWPortal && typeof FWPortal.render === 'function') FWPortal.render();
       if (window.FWSimPortalCard) FWSimPortalCard.inject();
       if (window.FWFlightPlanCard) FWFlightPlanCard.inject();
-      if (window.FWReceiptsCard) FWReceiptsCard.inject();
-      if (window.FWResumeBuilder) FWResumeBuilder.inject();
       if (window.FWNotifyOptin) FWNotifyOptin.inject();
-      if (window.FWJobs) FWJobs.injectHomeCard();
-      if (window.FWArtifacts) FWArtifacts.injectCard();
-      if (window.FWDimensionViewer && typeof FWDimensionViewer.render === 'function') FWDimensionViewer.render();
       if (window.FWAppNav) FWAppNav.sync('home');
     });
   });

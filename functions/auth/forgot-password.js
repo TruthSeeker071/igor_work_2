@@ -25,12 +25,12 @@ function resetEmailHtml(resetUrl) {
 }
 
 export async function onRequestOptions(context) {
-  return authPreflight(originFromEnv(context.env));
+  return authPreflight(originFromEnv(context.env, context.request));
 }
 
 export async function onRequestPost(context) {
   const { request, env } = context;
-  const origin = originFromEnv(env);
+  const origin = originFromEnv(env, request);
 
   let payload;
   try {
@@ -53,25 +53,34 @@ export async function onRequestPost(context) {
     const user = await findUserByEmail(env, email);
     if (user) {
       const token = await createPasswordResetToken(env, email);
-      const siteOrigin = origin !== '*' ? origin : 'https://flightway-prototype.pages.dev';
+      const siteOrigin = origin !== '*' ? origin : 'https://flightwayjacobprototype.pages.dev';
       const resetUrl = `${siteOrigin}/auth.html#reset-password?token=${encodeURIComponent(token)}`;
 
       const { apiKey, fromEmail } = resendConfigFromEnv(env);
       if (apiKey) {
-        await fetch(RESEND_ENDPOINT, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            from: fromEmail,
-            to: [email],
-            subject: 'Reset your Flightway password',
-            html: resetEmailHtml(resetUrl),
-            text: `Reset your password: ${resetUrl}`,
-          }),
-        });
+        // Bound the upstream call (Workers fetch has no default timeout) and
+        // swallow its failure: the response must stay the generic 200 below
+        // whether or not the email actually sent, or a Resend error would leak
+        // (via a 500) that this email is registered.
+        try {
+          await fetch(RESEND_ENDPOINT, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              from: fromEmail,
+              to: [email],
+              subject: 'Reset your Flightway password',
+              html: resetEmailHtml(resetUrl),
+              text: `Reset your password: ${resetUrl}`,
+            }),
+            signal: AbortSignal.timeout(8000),
+          });
+        } catch (sendErr) {
+          console.error('forgot-password send failed', sendErr?.message || sendErr);
+        }
       }
     }
 

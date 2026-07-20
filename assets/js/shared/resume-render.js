@@ -32,6 +32,47 @@
       .replace(/'/g, '&apos;');
   }
 
+  // LaTeX special characters, escaped char-by-char over the ORIGINAL string
+  // (never re-scanning our own replacement output) so e.g. the braces inside
+  // "\textbackslash{}" never get double-escaped.
+  var LATEX_ESCAPES = {
+    '\\': '\\textbackslash{}',
+    '{': '\\{',
+    '}': '\\}',
+    '$': '\\$',
+    '&': '\\&',
+    '#': '\\#',
+    '%': '\\%',
+    '_': '\\_',
+    '^': '\\textasciicircum{}',
+    '~': '\\textasciitilde{}',
+  };
+
+  function escLatex(s) {
+    var str = String(s == null ? '' : s);
+    var out = '';
+    for (var i = 0; i < str.length; i++) {
+      var ch = str[i];
+      out += Object.prototype.hasOwnProperty.call(LATEX_ESCAPES, ch) ? LATEX_ESCAPES[ch] : ch;
+    }
+    return out;
+  }
+
+  // Free-text fields (summary, bullets, etc.) are sometimes pasted with blank
+  // lines or a trailing newline. toLatex appends a raw \\ line-break command
+  // right after the escaped text, and a \\ immediately following a blank line
+  // (a paragraph break) is a LaTeX compile error ("There's no line here to
+  // end"). Collapse embedded blank lines into a single space and trim leading/
+  // trailing newlines so the line-break command always follows real text.
+  function stripBlankLines(s) {
+    return String(s == null ? '' : s)
+      .replace(/\r\n?/g, '\n')
+      .split('\n')
+      .map(function (line) { return line.trim(); })
+      .filter(function (line) { return line !== ''; })
+      .join(' ');
+  }
+
   function contactLine(contact) {
     var c = contact || {};
     var parts = [c.email, c.phone, c.location]
@@ -49,17 +90,31 @@
     return dates;
   }
 
+  // Reorders sections for a given render variant. 'classic' (default) keeps
+  // document order; 'project-forward' moves the projects section ahead of
+  // experience. Unknown variants fall back to document order.
+  function orderSections(sections, variant) {
+    if (variant !== 'project-forward') return sections;
+    var projects = [];
+    var rest = [];
+    for (var i = 0; i < sections.length; i++) {
+      (sections[i] && sections[i].kind === 'projects' ? projects : rest).push(sections[i]);
+    }
+    return projects.concat(rest);
+  }
+
   // Walks the resume top-to-bottom, invoking visitor callbacks in the exact
   // order that toPlainText/toDocxXml must reproduce. Unknown section kinds
-  // are skipped entirely.
-  function walk(resume, visitor) {
+  // are skipped entirely. `variant` only affects section order (see
+  // orderSections); every other visitor call is identical across variants.
+  function walk(resume, visitor, variant) {
     var r = resume || {};
     var contact = r.contact || {};
     visitor.onName(contact.name || '');
     visitor.onContact(contactLine(contact));
     if (r.summary) visitor.onSummary(r.summary);
 
-    var sections = Array.isArray(r.sections) ? r.sections : [];
+    var sections = orderSections(Array.isArray(r.sections) ? r.sections : [], variant);
     for (var i = 0; i < sections.length; i++) {
       var section = sections[i];
       if (!section || typeof section !== 'object') continue;
@@ -117,7 +172,8 @@
     '.fw-resume li{margin:0 0 4px 0;}' +
     '.fw-resume .fw-item-header{font-weight:bold;margin:10px 0 2px 0;}';
 
-  function toHtml(resume) {
+  function toHtml(resume, opts) {
+    var variant = (opts && opts.variant) || 'classic';
     var out = [];
     out.push('<div class="fw-resume">');
     out.push('<style>' + STYLE + '</style>');
@@ -154,7 +210,7 @@
           out.push('<p class="fw-skills">' + escHtml(flat.join(', ')) + '</p>');
         }
       },
-    });
+    }, variant);
     closeListIfOpen();
     out.push('</div>');
     return out.join('');
@@ -183,6 +239,59 @@
       onSkills: function (flat) { if (flat.length) paras.push(docxPara(flat.join(', '))); },
     });
     return '<w:document ' + DOCX_NS + '><w:body>' + paras.join('') + '</w:body></w:document>';
+  }
+
+  // --- toLatex -----------------------------------------------------
+  // Conservative single-column one-page LaTeX layout (article class, 10pt,
+  // half-inch margins via geometry, name header, contact line, \section*
+  // headings, itemize bullets). No compilation — this just produces the
+  // .tex source. Optional `opts.variant` accepts the same values as toHtml
+  // ('project-forward' reorders projects ahead of experience).
+
+  function toLatex(resume, opts) {
+    var variant = (opts && opts.variant) || 'classic';
+    var lines = [];
+    lines.push('\\documentclass[10pt]{article}');
+    lines.push('\\usepackage[T1]{fontenc}');
+    lines.push('\\usepackage[margin=0.5in]{geometry}');
+    lines.push('\\pagestyle{empty}');
+    lines.push('\\setlength{\\parindent}{0pt}');
+    lines.push('\\begin{document}');
+
+    var openList = false;
+    function closeListIfOpen() {
+      if (openList) { lines.push('\\end{itemize}'); openList = false; }
+    }
+
+    walk(resume, {
+      onName: function (name) {
+        lines.push('{\\Large\\bfseries ' + escLatex(stripBlankLines(name)) + '}\\\\[2pt]');
+      },
+      onContact: function (line) {
+        if (line) lines.push(escLatex(stripBlankLines(line)) + '\\\\[6pt]');
+      },
+      onSummary: function (text) {
+        lines.push(escLatex(stripBlankLines(text)) + '\\\\[6pt]');
+      },
+      onSectionHeading: function (heading) {
+        closeListIfOpen();
+        lines.push('\\section*{' + escLatex(stripBlankLines(heading)) + '}');
+      },
+      onItem: function (headerLine) {
+        closeListIfOpen();
+        if (headerLine) lines.push('\\textbf{' + escLatex(stripBlankLines(headerLine)) + '}\\\\');
+      },
+      onBullet: function (text) {
+        if (!openList) { lines.push('\\begin{itemize}'); openList = true; }
+        lines.push('\\item ' + escLatex(stripBlankLines(text)));
+      },
+      onSkills: function (flat) {
+        if (flat.length) lines.push(escLatex(stripBlankLines(flat.join(', '))) + '\\\\');
+      },
+    }, variant);
+    closeListIfOpen();
+    lines.push('\\end{document}');
+    return lines.join('\n');
   }
 
   // --- atsCheck -----------------------------------------------------
@@ -258,6 +367,7 @@
     toHtml: toHtml,
     toPlainText: toPlainText,
     toDocxXml: toDocxXml,
+    toLatex: toLatex,
     atsCheck: atsCheck,
   };
 

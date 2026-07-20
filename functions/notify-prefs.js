@@ -5,17 +5,24 @@
 
 import { originFromEnv, jsonResponse, preflightResponse } from './_lib.js';
 import { getSessionEmail, checkRateLimit, clientIp } from './_lib/auth.js';
+import { requirePlan } from './_lib/entitlements.js';
 import { unsubToken } from './_lib/notify-token.js';
 
 export async function onRequestOptions(context) {
-  return preflightResponse(originFromEnv(context.env));
+  return preflightResponse(originFromEnv(context.env, context.request));
 }
 
 export async function onRequestGet(context) {
   const { request, env } = context;
-  const origin = originFromEnv(env);
+  const origin = originFromEnv(env, request);
   const email = await getSessionEmail(request, env);
   if (!email) return jsonResponse(401, { error: 'Not signed in.' }, origin);
+
+  // Free/paid merge §1: the weekly email digest is part of the Flight Plan.
+  // Read stays honest rather than 402 so the portal can simply hide the toggle.
+  const ent = await requirePlan(env, email, 'premium');
+  if (!ent.ok) return jsonResponse(200, { optin: false, upgrade: true, feature: 'notify-prefs' }, origin);
+
   let optin = false;
   try {
     const row = await env.DB.prepare('SELECT notify_optin FROM users WHERE email = ?').bind(email).first();
@@ -26,9 +33,14 @@ export async function onRequestGet(context) {
 
 export async function onRequestPost(context) {
   const { request, env } = context;
-  const origin = originFromEnv(env);
+  const origin = originFromEnv(env, request);
   const email = await getSessionEmail(request, env);
   if (!email) return jsonResponse(401, { error: 'Not signed in.' }, origin);
+
+  const ent = await requirePlan(env, email, 'premium');
+  if (!ent.ok) {
+    return jsonResponse(402, { error: 'The weekly digest is a Flight Plan feature.', upgrade: true, feature: 'notify-prefs' }, origin);
+  }
 
   try {
     await checkRateLimit(env, `notify:${clientIp(request)}`, { max: 20 });

@@ -15,16 +15,25 @@ import {
   geminiOverloadUserMessage,
   GEMINI_SAFETY_SETTINGS,
 } from './_lib.js';
+import { loadDossierWithCoordinates } from './_lib/dossier-coordinates.js';
+import { loadUserBlob } from './_lib/user.js';
+import { groundingEnabled, researchWeb, buildEvidenceBlock, GROUNDING_TTL } from './_lib/gemini-grounded.js';
+import {
+  isManualDossierCommand,
+  transcriptHasDurableFacts,
+  mergeDossierFromTranscript as updateDossierFromTranscript,
+} from './_lib/dossier-update.js';
 import {
   authPreflight,
   authJsonResponse,
   authErrorResponse,
   requireSession,
-  loadQuizProfile,
   loadRoadmap,
   saveRoadmap,
   checkRateLimit,
 } from './_lib/auth.js';
+import { requirePlan } from './_lib/entitlements.js';
+import { checkFeatureLimit } from './_lib/plan-limits.js';
 import {
   maybeUpdateRoadmapFromTranscript,
   isManualRoadmapCommand,
@@ -60,6 +69,16 @@ function sleep(ms) {
 
 const RETRYABLE_STATUS = new Set([500, 503]);
 const RETRY_DELAYS_MS = [800, 2000];
+
+// Degraded-grounding fallback (fix plan 2.6): when governed research produced
+// nothing (over budget, timeout, miss), fall back to the legacy in-call
+// google_search rather than leaving the model believing it has live search
+// (the system prompt says so) while actually having neither tool nor
+// evidence. Flag off → byte-identical to the pre-Pillar-W path.
+// Exported for grounding:check.
+export function shouldUseLegacySearch(wantsCurrent, enabled, grounding) {
+  return !!(wantsCurrent && (!enabled || !grounding));
+}
 
 function needsWebSearch(message, useSearchMode) {
   if (useSearchMode === 'always') return true;
@@ -222,89 +241,11 @@ ${dossier}
 </user_dossier>`;
 }
 
-function dossierUpdatePrompt(currentDossier, transcript) {
-  const transcriptText = transcript
-    .map((m) => `${m.role === 'assistant' ? 'COACH' : 'USER'}: ${m.content}`)
-    .join('\n');
-  return [
-    'You are updating a structured user dossier from a recent chat transcript.',
-    '',
-    'EXTRACTION RULES (apply in order):',
-    '1. Scan every USER line for durable facts: stated majors/minors, school decisions,',
-    '   goals, interests, constraints, preferences, deadlines, background details.',
-    '   A single mention is enough — if the user said "I want to major in X and minor',
-    '   in Y", that MUST appear in the goals field of the new dossier.',
-    '2. Statements late in the transcript matter just as much as early ones. Re-read',
-    '   the final USER messages carefully before finishing.',
-    '3. Newer statements supersede older dossier values when they conflict.',
-    '4. Merge into the existing dossier. Preserve the exact schema and field order.',
-    '   Keep values terse and comma-separated.',
-    '5. If a field has no new info, keep its existing value unchanged.',
-    '6. Use "recent:" for conversation topics that are not yet durable facts. Move',
-    '   stale recent items into stable sections (interests, goals) or drop them.',
-    '7. If the total dossier would exceed ~500 tokens, compress redundant items.',
-    '',
-    'SELF-CHECK before output: list (mentally) each durable fact stated by the USER',
-    'in the transcript, and verify each one appears somewhere in your output dossier.',
-    'Losing a user-stated fact is the worst possible failure.',
-    '',
-    `Output ONLY the new dossier text, starting with "${DOSSIER_VERSION_MARKER}".`,
-    'No markdown fences, no commentary.',
-    '',
-    '<current_dossier>',
-    currentDossier,
-    '</current_dossier>',
-    '',
-    '<recent_transcript>',
-    transcriptText,
-    '</recent_transcript>',
-  ].join('\n');
-}
-
-function isManualDossierCommand(message) {
-  const m = message.toLowerCase();
-  return (
-    /\b(update|refresh|save|sync|regenerate)\b[^.!?]{0,40}\bdossier\b/.test(m)
-    || /\bdossier\b[^.!?]{0,30}\b(update|refresh|save)\b/.test(m)
-  );
-}
-
-function transcriptHasDurableFacts(transcript) {
-  const userMsgs = (transcript || []).filter((m) => m && m.role === 'user');
-  if (userMsgs.length < 2) return false;
-  const durableRe = /\b(i am|i'm|i study|my major|my school|i work|i intern|i graduated|i want to|my goal|i live in|i'm from|i have a|i took|i'm taking)\b/i;
-  return userMsgs.some((m) => durableRe.test(String(m.content || '')));
-}
-
-async function updateDossierFromTranscript(env, userId, currentDossier, transcript) {
-  const newDossier = await callGemini(env, {
-    systemInstruction:
-      'You are a precise data-merger. Follow the user instructions exactly and output only the requested dossier text.',
-    contents: [
-      {
-        role: 'user',
-        parts: [{ text: dossierUpdatePrompt(currentDossier, transcript) }],
-      },
-    ],
-    temperature: 0.2,
-  });
-
-  const cleaned = newDossier
-    .replace(/^```[a-zA-Z]*\n?/, '')
-    .replace(/```\s*$/, '')
-    .trim();
-
-  if (!isValidDossier(cleaned)) {
-    console.warn('Dossier update produced invalid output; keeping previous dossier.');
-    return { updated: false, dossier: currentDossier };
-  }
-  const saved = await saveDossier(env, userId, cleaned);
-  return { updated: true, dossier: saved };
-}
-
 function chatResponsePayload({
   reply,
   exchangeCount,
+  remaining,
+  roadmapUpgrade,
   dossierUpdated,
   roadmapUpdated,
   roadmapUpdateType,
@@ -318,9 +259,11 @@ function chatResponsePayload({
   personalityVector,
   objectiveVector,
   objectiveAiPatch,
+  grounding,
 }) {
   return {
     reply,
+    ...(grounding ? { grounded: true, groundedSources: grounding.sources || [], groundedAt: grounding.fetchedAt || null } : {}),
     exchangeCount,
     dossierUpdated: !!dossierUpdated,
     roadmapUpdated: !!roadmapUpdated,
@@ -335,6 +278,12 @@ function chatResponsePayload({
     personalityVector: personalityVector || undefined,
     objectiveVector: objectiveVector || undefined,
     objectiveAiPatch: objectiveAiPatch || undefined,
+    // Free/paid merge §2: Marco messages left today (null = unlimited plan,
+    // undefined = counter not applicable), so the UI can nudge instead of wall.
+    remaining: remaining === undefined ? undefined : remaining,
+    // true when an AI roadmap rewrite was declined for plan reasons (§1), so the
+    // UI can nudge instead of looking like Marco just ignored the request.
+    roadmapUpgrade: roadmapUpgrade || undefined,
   };
 }
 
@@ -406,11 +355,18 @@ async function runCoachRoadmapSidecar(env, userId, {
     return { updated: false, roadmap, type: null, retargeted: false };
   }
 
+  // Checking a step off is deterministic, free, and stays free (§1: the roadmap
+  // is viewable and tickable on the free tier).
   const deterministic = tryDeterministicRoadmapPatch(userMessage, roadmap);
   if (deterministic.updated) {
     const saved = await saveRoadmapWithMeta(env, userId, deterministic.roadmap, { quiz, dossier });
     return { updated: true, roadmap: saved, type: 'patch', retargeted: false };
   }
+
+  // Everything past here is an AI rewrite of the plan — inline waypoint edits and
+  // full regeneration are the Flight Plan half of the roadmap (§1).
+  const ent = await requirePlan(env, userId, 'premium');
+  if (!ent.ok) return { updated: false, roadmap, type: null, retargeted: false, upgrade: true };
 
   if (isRoadmapPlanEditIntent(userMessage)) {
     const markDoneOnly = /\b(mark|marked|done|complete|completed|finished|checked off)\b/i.test(userMessage)
@@ -478,12 +434,12 @@ async function runCoachRoadmapSidecar(env, userId, {
 }
 
 export async function onRequestOptions(context) {
-  return authPreflight(originFromEnv(context.env));
+  return authPreflight(originFromEnv(context.env, context.request));
 }
 
 export async function onRequestPost(context) {
   const { request, env } = context;
-  const origin = originFromEnv(env);
+  const origin = originFromEnv(env, request);
   const { apiKey, useSearchMode } = geminiConfigFromEnv(env);
 
   if (!apiKey) {
@@ -521,10 +477,26 @@ export async function onRequestPost(context) {
     const { email: userId } = await requireSession(request, env);
     await checkRateLimit(env, `chat:${userId}`);
 
+    // Free/paid merge §1: Marco stays part of the free funnel but every message
+    // is a live Gemini call — 5/day free, unlimited on Flight Plan. Spent before
+    // any model work so a blocked message costs nothing upstream.
+    const marcoCap = await checkFeatureLimit(env, userId, 'marco-chat');
+    if (!marcoCap.ok) {
+      return authJsonResponse(429, {
+        error: marcoCap.message,
+        upgrade: !!marcoCap.upgrade,
+        remaining: 0,
+        feature: 'marco-chat',
+      }, origin);
+    }
+    const marcoRemaining = marcoCap.remaining;
+
     let [dossier, chat, quiz, roadmap] = await Promise.all([
-      loadDossier(env, userId).catch(() => null),
+      // Coordinates-aware read: Marco's prompt sees the live vector snapshot.
+      // saveDossier strips the fenced block, so the merge flow stays clean.
+      loadDossierWithCoordinates(env, userId).catch(() => null),
       loadChat(env, userId),
-      loadQuizProfile(env, userId).catch(() => null),
+      loadUserBlob(env, userId).catch(() => null),
       loadRoadmap(env, userId).catch(() => null),
     ]);
     if (!dossier) {
@@ -556,6 +528,22 @@ export async function onRequestPost(context) {
       const transcript = chat.messages.concat([{ role: 'user', content: userMessage }]);
       let roadmapUpdated = false;
       let roadmapUpdateType = null;
+      // "Update my roadmap" is an AI rewrite of the plan — premium (§1).
+      const editEnt = await requirePlan(env, userId, 'premium');
+      if (!editEnt.ok) {
+        return authJsonResponse(200, chatResponsePayload({
+          reply: 'Rewriting your roadmap from our conversation is a Flight Plan feature. '
+            + 'Your roadmap stays here either way — you can keep checking steps off, and see what Flight Plan adds on the pricing page.',
+          exchangeCount: chat.exchangeCount,
+          remaining: marcoRemaining,
+          dossierUpdated: false,
+          roadmapUpdated: false,
+          roadmapUpdateType: null,
+          reset: false,
+          manualUpdate: true,
+          roadmapUpgrade: true,
+        }), origin);
+      }
       if (chat.messages.length > 0 && roadmap) {
         const result = await maybeUpdateRoadmapFromTranscript(env, userId, roadmap, transcript);
         if (result.updated) {
@@ -580,6 +568,7 @@ export async function onRequestPost(context) {
         chatResponsePayload({
           reply,
           exchangeCount: chat.exchangeCount,
+          remaining: marcoRemaining,
           dossierUpdated: false,
           roadmapUpdated,
           roadmapUpdateType,
@@ -608,6 +597,7 @@ export async function onRequestPost(context) {
         chatResponsePayload({
           reply,
           exchangeCount: chat.exchangeCount,
+          remaining: marcoRemaining,
           dossierUpdated: updated,
           roadmapUpdated: false,
           roadmapUpdateType: null,
@@ -625,11 +615,33 @@ export async function onRequestPost(context) {
 
     chat.messages.push({ role: 'user', content: userMessage });
     const profileSignals = buildProfileSignalsBlock(quiz, dossier);
+
+    // Pillar W (Tier A): when governed grounding is on, current-fact questions
+    // go through the shared research layer (global cache, budgets, fenced
+    // evidence, provenance) and the reply call itself stays search-free. With
+    // the flag off this is byte-identical to the legacy path: the reply call
+    // itself carries google_search when the heuristic fires.
+    const wantsCurrent = needsWebSearch(userMessage, useSearchMode);
+    let grounding = null;
+    if (wantsCurrent && groundingEnabled(env)) {
+      const careerCtx = roadmap?.targetCareerName || quiz?.careerFocus?.name || '';
+      const topic = userMessage.replace(/\s+/g, ' ').trim().slice(0, 220)
+        + (careerCtx ? ` (asked by a student targeting: ${String(careerCtx).slice(0, 80)})` : '');
+      grounding = await researchWeb(env, {
+        query: topic,
+        freshnessTtl: GROUNDING_TTL.VOLATILE,
+        timeoutMs: 8000,
+        budgetKey: userId,
+      });
+    }
+    const evidenceSuffix = grounding
+      ? `\n\n${buildEvidenceBlock(grounding)}\nWhen your answer uses facts from the WEB EVIDENCE, say they are current as of its date; the client will show the sources.`
+      : '';
     const reply = await callGemini(env, {
-      systemInstruction: chatSystemPrompt(dossier, roadmapBlock, progressAckBlock, noRoadmapHint, switchHint, profileSignals),
+      systemInstruction: chatSystemPrompt(dossier, roadmapBlock, progressAckBlock, noRoadmapHint, switchHint, profileSignals) + evidenceSuffix,
       contents: toGeminiContents(chat.messages),
       temperature: 0.7,
-      useSearch: needsWebSearch(userMessage, useSearchMode),
+      useSearch: shouldUseLegacySearch(wantsCurrent, groundingEnabled(env), grounding),
     });
 
     chat.messages.push({ role: 'assistant', content: reply });
@@ -640,6 +652,7 @@ export async function onRequestPost(context) {
     let roadmapUpdateType = null;
     let roadmapRetargeted = false;
     let roadmapRateLimited = false;
+    let roadmapUpgrade = false;
     let sectorPatch = null;
 
     if (roadmap) {
@@ -658,6 +671,8 @@ export async function onRequestPost(context) {
           if (sidecar.retargeted || sidecar.type === 'regenerate') roadmapRetargeted = true;
         } else if (sidecar.rateLimited) {
           roadmapRateLimited = true;
+        } else if (sidecar.upgrade) {
+          roadmapUpgrade = true;
         }
       } catch (err) {
         console.error('Coach roadmap sidecar failed', err);
@@ -720,7 +735,10 @@ export async function onRequestPost(context) {
         200,
         chatResponsePayload({
           reply,
+          grounding,
           exchangeCount: 0,
+          remaining: marcoRemaining,
+          roadmapUpgrade,
           dossierUpdated,
           roadmapUpdated,
           roadmapUpdateType,
@@ -744,7 +762,10 @@ export async function onRequestPost(context) {
       200,
       chatResponsePayload({
         reply,
+        grounding,
         exchangeCount: chat.exchangeCount,
+        remaining: marcoRemaining,
+        roadmapUpgrade,
         dossierUpdated: false,
         roadmapUpdated,
         roadmapUpdateType,

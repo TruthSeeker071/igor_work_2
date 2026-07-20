@@ -6,7 +6,7 @@
  * AI Career Advisor chat (coach.html).
  *
  * Marco only exists inside the Career Hub AND only once the initial quiz is done
- * (i.e. fw_hub_quiz_v1.scores is present). With no quiz data there is nothing for
+ * (i.e. the local quiz blob's scores are present). With no quiz data there is nothing for
  * him to say, so he stays hidden.
  *
  * His message re-rolls (a) on hub entry and (b) whenever matches are updated —
@@ -18,11 +18,11 @@
   // last-resort rank fallback, so its absence must not hide him entirely.
   var FWH = window.FWHubCareers || null;
 
-  var QUIZ_KEY = (FWH && FWH.HUB_QUIZ_KEY) || 'fw_hub_quiz_v1';
-
   function readJson(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (_) { return null; } }
 
-  function quiz() { return readJson(QUIZ_KEY) || {}; }
+  function quiz() {
+    return ((window.FWUser && typeof FWUser.getBlob === 'function') ? FWUser.getBlob() : null) || {};
+  }
   function hasQuiz() { var q = quiz(); return !!(q && q.scores && Object.keys(q.scores).length); }
 
   function firstName() {
@@ -55,7 +55,7 @@
         return {
           top: topC ? topC.name : null,
           second: secondC ? secondC.name : null,
-          isGold: topScore >= 76,
+          isGold: topScore >= 56,
           topScore: topScore,
         };
       }
@@ -67,7 +67,7 @@
         return {
           top: cached[0].name || null,
           second: cached[1] ? cached[1].name : null,
-          isGold: (cached[0].score || 0) >= 76,
+          isGold: (cached[0].score || 0) >= 56,
           topScore: cached[0].score || 0,
         };
       }
@@ -79,7 +79,7 @@
         return {
           top: onetCached[0].name || null,
           second: onetCached[1] ? onetCached[1].name : null,
-          isGold: (onetCached[0].score || 0) >= 76,
+          isGold: (onetCached[0].score || 0) >= 56,
           topScore: onetCached[0].score || 0,
         };
       }
@@ -89,7 +89,7 @@
       var ranked = FWH.rankCareersFromQuizScores(q.scores || {});
       var top = ranked[0] && ranked[0].career ? ranked[0].career.name : null;
       var second = ranked[1] && ranked[1].career ? ranked[1].career.name : null;
-      var isGold = ranked[0] ? (ranked[0].score >= 76) : false;
+      var isGold = ranked[0] ? (ranked[0].score >= 56) : false;
       return { top: top, second: second, isGold: isGold, topScore: ranked[0] ? ranked[0].score : 0 };
     }
     return { top: null, second: null, isGold: false, topScore: 0 };

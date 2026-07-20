@@ -80,10 +80,20 @@ function applyAdjustments(baseVector, adjustments, nameToIndex) {
 // zone (empirically ~70-90 units), rather than the old +/-14 grid-jitter offset
 // (max ~20 units apart) that let siblings render almost on top of one another.
 function offsetLayout(baseRow, seed) {
-  const FRAGMENT_ORBIT_R = 46;
-  const angle = ((seed - 1) * (2 * Math.PI / FRAGMENT_COUNT)) + (Math.PI / 6);
-  const dx = Math.cos(angle) * FRAGMENT_ORBIT_R;
-  const dy = Math.sin(angle) * FRAGMENT_ORBIT_R;
+  const FRAGMENT_ORBIT_R = 92; // 2x — keeps satellites from crowding the parent orb
+  // Deterministic per-base jitter (hash of base SOC + seed) so sibling spacing
+  // reads organic rather than a perfect 120° tripod, while keeping siblings at
+  // least ~70° apart and the radius within ±30% of the nominal orbit.
+  let h = 0;
+  const key = String(baseRow.soc || '') + ':' + seed;
+  for (let i = 0; i < key.length; i++) h = ((h << 5) - h + key.charCodeAt(i)) | 0;
+  const j1 = ((h >>> 8) & 0xff) / 255;  // 0..1
+  const j2 = ((h >>> 16) & 0xff) / 255; // 0..1
+  const angle = ((seed - 1) * (2 * Math.PI / FRAGMENT_COUNT)) + (Math.PI / 6)
+    + (j1 - 0.5) * (Math.PI / 3.6); // ±25° wobble
+  const orbitR = FRAGMENT_ORBIT_R * (0.7 + 0.6 * j2);
+  const dx = Math.cos(angle) * orbitR;
+  const dy = Math.sin(angle) * orbitR;
   const out = {};
   for (const [xk, yk] of [['layoutX', 'layoutY'], ['sectorX', 'sectorY']]) {
     if (baseRow[xk] != null) out[xk] = round2(baseRow[xk] + dx);

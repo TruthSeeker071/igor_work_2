@@ -3,18 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/favicon.ico?v=20260717h" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/favicon.png?v=20260717h">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=20260717h">
 <title>FlightWay — Career Quiz</title>
-<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260720b">
-<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260720b">
+<meta name="description" content="A short quiz that matches you against 5,000+ real careers and shows you exactly why each one fits.">
+<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260720c">
+<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260720c">
+<link rel="stylesheet" href="assets/css/flightway-2.css?v=20260720c">
 <script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
 <script src="assets/js/shared/global-shim.js?v=20260703p"></script>
-<script src="assets/js/shared/flags.js?v=20260703p"></script>
-<script src="assets/js/shared/events.js?v=20260708a" defer></script>
+<script src="assets/js/shared/flags.js?v=20260716h"></script>
+<script src="assets/js/shared/events.js?v=20260716h" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 </head>
 <body class="quiz-page">
+<div id="fw-page-veil" class="fw-page-veil" aria-live="polite" aria-busy="true">
+</div>
 
 <nav>
   <div class="nav-inner">
@@ -33,26 +40,31 @@
   </div>
 </nav>
 
-<div id="page-quiz" class="page active" role="main" aria-label="Career quiz">
+<div id="page-quiz" class="page active">
   <div class="qz-wrap">
     <div id="qz-intro">
       <div class="qz-intro-card">
         <div class="qz-badge">Quick match</div>
         <h1 class="qz-intro-title">Find the Career<br>You Were Built For</h1>
-        <p class="qz-intro-desc">A few quick questions — tap, pick, done. We'll instantly match you to careers, then you can sharpen the results in your Career Hub.</p>
+        <p class="qz-intro-desc">A few quick questions — tap, pick, done. We'll instantly match you to careers, then we'll sharpen the results together.</p>
         <div class="qz-intro-trust">
           <span class="qz-intro-time">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
             ~90 seconds
           </span>
         </div>
-        <p class="qz-intro-note">Want more precision later? Use Sharpen matches in your Career Hub.</p>
+        <p class="qz-intro-note">Want more precision? A few deeper questions follow after you sign up.</p>
         <button class="qz-start-btn" onclick="qzStart()">Start</button>
-        <div style="margin-top:14px;">
+        <div style="margin-top:14px;" id="qz-dev-skip-wrap" hidden>
           <button class="qz-skip-quiz-btn" onclick="qzRandomizeAndShowResults()" title="Dev shortcut: generate a random answer set and jump to results">
             🎲 Skip with random answers (dev)
           </button>
         </div>
+        <script>
+          if (window.__FW_FLAGS && __FW_FLAGS.debugQuiz) {
+            document.getElementById('qz-dev-skip-wrap').hidden = false;
+          }
+        </script>
       </div>
     </div>
     <div id="qz-quiz" class="qz-hidden">
@@ -66,12 +78,32 @@
         <div class="qz-prog-track"><div class="qz-prog-fill" id="qz-prog-fill" style="width:12%"></div></div>
       </div>
       <div class="qz-card" id="qz-qcard"></div>
-      <p class="qz-reassure">Your answers build your personal career map — no account needed yet</p>
-      <aside class="qz-whyrail" aria-label="Why we ask">
-        <h3>Why we ask</h3>
-        <p>Each answer tunes the 161 dimensions of your personal career profile — interests, work styles, and values.</p>
-        <p>There are no wrong answers. You can sharpen or retake any of this later in your Career Hub.</p>
-      </aside>
+    </div>
+    <div id="qz-sharpen" class="qz-hidden">
+      <div class="qz-resume-card qz-card">
+        <div class="qz-resume-badge">Step 1 of 3</div>
+        <h2 class="qz-resume-title">Let's sharpen your matches</h2>
+        <p class="qz-resume-sub">A few deeper questions about how you like to work — every answer tunes your career map. Skip any that don't speak to you.</p>
+        <div id="qz-sharpen-root"></div>
+        <div class="qz-resume-actions">
+          <button type="button" class="qz-btn qz-btn-primary" id="qz-sharpen-continue">Save &amp; continue →</button>
+          <button type="button" class="qz-btn qz-btn-ghost" id="qz-sharpen-skip">Skip for now</button>
+        </div>
+        <p class="qz-resume-status" id="qz-sharpen-status" aria-live="polite"></p>
+      </div>
+    </div>
+    <div id="qz-academics" class="qz-hidden">
+      <div class="qz-resume-card qz-card">
+        <div class="qz-resume-badge">Step 2 of 3</div>
+        <h2 class="qz-resume-title">Your academic profile</h2>
+        <p class="qz-resume-sub">GPA, classes, major, and plans — this tunes your matches and sharpens your roadmap. Skip anything you're not sure about.</p>
+        <div id="qz-academics-root"></div>
+        <div class="qz-resume-actions">
+          <button type="button" class="qz-btn qz-btn-primary" id="qz-academics-continue">Save &amp; continue →</button>
+          <button type="button" class="qz-btn qz-btn-ghost" id="qz-academics-skip">Skip for now</button>
+        </div>
+        <p class="qz-resume-status" id="qz-academics-status" aria-live="polite"></p>
+      </div>
     </div>
     <div id="qz-resume" class="qz-hidden">
       <div class="qz-resume-card qz-card">
@@ -141,21 +173,38 @@
 
 <script src="assets/js/shared/page-boot.js?v=20260703p" defer></script>
 <script src="assets/js/app/salary-tiers.js?v=20260703p" defer></script>
-<script src="assets/js/hub/hub-careers.js?v=20260703p" defer></script>
+<script src="assets/js/hub/hub-careers.js?v=20260719b" defer></script>
 <script src="assets/js/quiz/quiz-data.js?v=20260703p" defer></script>
-<script src="assets/js/shared/career-target.js?v=20260703p" defer></script>
+<script src="assets/js/shared/career-target.js?v=20260717b" defer></script>
 <script src="assets/js/shared/sector-fit-sheet.js?v=20260703p" defer></script>
-<script src="assets/js/shared/onet-catalog.js?v=20260705a" defer></script>
+<script src="assets/js/shared/onet-catalog.js?v=20260718f" defer></script>
+<script src="assets/js/shared/user.js?v=20260719g" defer></script>
+<script src="assets/js/hub/hub-refine.js?v=20260719a" defer></script>
+<script src="assets/js/hub/hub-academics.js?v=20260719b" defer></script>
 <script src="assets/js/shared/academics-map.js?v=20260703p" defer></script>
-<script src="assets/js/shared/onet-vectors.js?v=20260705a" defer></script>
-<script src="assets/js/shared/resume-ingest.js?v=20260703p" defer></script>
-<script src="assets/js/quiz/onet-quiz-seed.js?v=20260703p" defer></script>
-<script src="assets/js/quiz/quiz-app.js?v=20260716a" defer></script>
-<script src="assets/js/shared/auth.js?v=20260703p" defer></script>
-<script src="assets/js/coach/coach.js?v=20260703p" defer></script>
+<script src="assets/js/shared/onet-vectors.js?v=20260719a" defer></script>
+<script src="assets/js/shared/entitlements.js?v=20260719a" defer></script>
+<script src="assets/js/shared/why-this-match.js?v=20260719a" defer></script>
+<script src="assets/js/shared/resume-ingest.js?v=20260720c" defer></script>
+<script src="assets/js/quiz/onet-quiz-seed.js?v=20260710m" defer></script>
+<script src="assets/js/quiz/quiz-app.js?v=20260720c" defer></script>
+<script src="assets/js/shared/fw-errors.js?v=20260720a" defer></script>
+<script src="assets/js/shared/auth.js?v=20260720c" defer></script>
+<script src="assets/js/shared/fw-busy.js?v=20260720a" defer></script>
+<script src="assets/js/coach/coach.js?v=20260720c" defer></script>
 <script src="assets/js/shared/auth-nav.js?v=20260703p" defer></script>
-<script src="assets/js/shared/brand.js?v=20260703p" defer></script>
+<script src="assets/js/shared/brand.js?v=20260717g" defer></script>
 <script src="assets/js/shared/app-nav.js?v=20260703p" defer></script>
 <script src="assets/js/shared/theme.js?v=20260703p" defer></script>
+<script src="assets/js/shared/fw-toast.js?v=20260718i" defer></script>
+<script src="assets/js/shared/page-veil.js?v=20260720c" defer></script>
+<script>
+  // Reveal the boot veil once the quiz DOM is ready (static intro, or the
+  // #sharpen/#academics step swapped in on DOMContentLoaded). Quiz keeps its
+  // own arcade "juice" idiom — the veil only does a clean fade-reveal.
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.FWPageVeil) FWPageVeil.notifyRender();
+  });
+</script>
 </body>
 </html>

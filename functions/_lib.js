@@ -22,8 +22,35 @@ export function cors(origin, { credentials = false } = {}) {
   return headers;
 }
 
-export function originFromEnv(env) {
-  return env.ALLOWED_ORIGIN || '*';
+/** Default CORS allowlist for prototype + canonical prod (comma-override via ALLOWED_ORIGIN). */
+export const DEFAULT_ALLOWED_ORIGINS = [
+  'https://flightwayjacobprototype.pages.dev',
+  'https://flightway.ai',
+];
+
+function parseAllowedOrigins(env) {
+  const raw = env && env.ALLOWED_ORIGIN != null ? String(env.ALLOWED_ORIGIN).trim() : '';
+  if (!raw) return null; // unset → caller uses *
+  if (raw === '*') return ['*'];
+  return raw.split(',').map((s) => s.trim()).filter(Boolean);
+}
+
+/**
+ * Resolve Access-Control-Allow-Origin for a response.
+ * - ALLOWED_ORIGIN unset → "*" (local / preview-friendly)
+ * - ALLOWED_ORIGIN="*" → "*"
+ * - ALLOWED_ORIGIN comma-list + optional request → echo Origin if allowlisted, else first entry
+ * Call sites may pass (env) or (env, request).
+ */
+export function originFromEnv(env, request) {
+  const list = parseAllowedOrigins(env);
+  if (!list) return '*';
+  if (list.length === 1 && list[0] === '*') return '*';
+  const reqOrigin = request && typeof request.headers?.get === 'function'
+    ? String(request.headers.get('Origin') || '').trim()
+    : '';
+  if (reqOrigin && list.includes(reqOrigin)) return reqOrigin;
+  return list[0] || DEFAULT_ALLOWED_ORIGINS[0];
 }
 
 export function jsonResponse(status, body, origin, opts = {}) {
@@ -65,10 +92,28 @@ export async function loadDossier(env, userId) {
   return text || null;
 }
 
+// The [[coordinates]] block is composed at read time (dossier-coordinates.js)
+// and must never persist: strip it from every save so a Gemini dossier merge
+// that echoes it back can't bake a stale vector snapshot into KV.
+export const COORDINATES_BLOCK_RE = /\n?\[\[coordinates\]\][\s\S]*?\[\[\/coordinates\]\]\n?/g;
+
 export async function saveDossier(env, userId, text) {
   if (typeof text !== 'string') throw new Error('Dossier must be a string.');
-  const trimmed = text.slice(0, DOSSIER_MAX_CHARS);
+  const trimmed = text.replace(COORDINATES_BLOCK_RE, '\n').slice(0, DOSSIER_MAX_CHARS);
   await requireKv(env).put(DOSSIER_PREFIX + userId, trimmed);
+  // The dossier is where durable identity facts get stated ("I'm transferring
+  // to X", "I'm a junior now") — the merge rewrites the named field line, and
+  // the user store is what prompts and features read. Mirroring here — the one
+  // path every dossier writer goes through — is what lets Marco and every
+  // derivative update those facts everywhere without knowing they exist.
+  // Best-effort and imported lazily: _lib.js must not take a static dependency
+  // on auth.js, and a failed mirror must never fail the dossier write.
+  try {
+    const { syncUserFromDossier } = await import('./_lib/user-sync.js');
+    await syncUserFromDossier(env, userId, trimmed);
+  } catch (err) {
+    console.warn('user sync from dossier failed', err && err.message ? err.message : err);
+  }
   return trimmed;
 }
 
@@ -124,6 +169,9 @@ export function buildSeedDossier(quizResults) {
     `recommended_majors: ${list(q.recommendedMajors)}`,
     `school: ${single(q.school)}`,
     `gpa: ${single(q.gpa)}`,
+    `year: ${single(q.year)}`,
+    `subjects_major: ${list(q.subjects)}`,
+    `career_leaning: ${single(q.careerLeaning)}`,
     `quiz_strengths: ${list(q.strengths)}`,
     `quiz_weaknesses: ${list(q.weaknesses)}`,
     `interests: (none yet)`,
@@ -177,14 +225,13 @@ export function resendConfigFromEnv(env) {
   return { apiKey, fromEmail };
 }
 
-// gemini-2.5-flash-lite is deprecated (shutdown 2026-10-16; its preview alias is
-// already gone). gemini-3.1-flash-lite is Google's GA replacement — cheapest in the
-// Gemini 3 family, supported through at least 2027-05-07. Override per-env with GEMINI_MODEL.
 export const DEFAULT_GEMINI_MODEL = 'gemini-3.1-flash-lite';
-/** GA overload fallback (successor to gemini-2.5-flash). */
+/** Next-cheapest stable model for 503 / overload fallback. */
 export const DEFAULT_GEMINI_FALLBACK_MODEL = 'gemini-3.5-flash';
 
-const DEPRECATED_GEMINI_MODEL_RE = /gemini-2\.0/i;
+// 2026-07-09: Google hard-retired ALL gemini-2.x generateContent (404
+// "no longer available"), so any stale 2.x env override must be discarded.
+const DEPRECATED_GEMINI_MODEL_RE = /gemini-2\./i;
 
 function sanitizeGeminiModelName(model) {
   const name = String(model || '').trim();
@@ -282,7 +329,7 @@ export function logGeminiUsage(fields = {}) {
   }));
 }
 
-export async function geminiGenerateContent({ apiKey, model, body, logMeta }) {
+export async function geminiGenerateContent({ apiKey, model, body, logMeta, timeoutMs }) {
   const key = normalizeGeminiApiKey(apiKey);
   if (!key) {
     const err = new Error('GEMINI_API_KEY is not configured.');
@@ -290,14 +337,38 @@ export async function geminiGenerateContent({ apiKey, model, body, logMeta }) {
     throw err;
   }
 
-  const resp = await fetch(geminiGenerateUrl(model), {
+  const fetchOpts = {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'x-goog-api-key': key,
     },
     body: JSON.stringify(body),
-  });
+  };
+  // Per-request deadline: a hung upstream call otherwise has nothing to stop
+  // it (Workers fetch has no default timeout), which is how roadmap
+  // generation once blew past the client's own timeout. Callers that omit
+  // timeoutMs get a 30s default — long enough for the largest single JSON
+  // generation, short enough that a hung connection can't outlive any
+  // client's budget. Abort is surfaced as a retryable (503) error so the
+  // caller's model/backoff logic moves on instead of failing hard.
+  const effTimeoutMs = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 30000;
+  if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+    fetchOpts.signal = AbortSignal.timeout(effTimeoutMs);
+  }
+
+  let resp;
+  try {
+    resp = await fetch(geminiGenerateUrl(model), fetchOpts);
+  } catch (err) {
+    if (err && (err.name === 'TimeoutError' || err.name === 'AbortError')) {
+      throw Object.assign(new Error(`Gemini request timed out after ${timeoutMs}ms.`), {
+        status: 503,
+        timedOut: true,
+      });
+    }
+    throw err;
+  }
 
   const detailText = resp.ok ? '' : await resp.text();
   if (!resp.ok) {

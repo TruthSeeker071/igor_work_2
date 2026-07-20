@@ -18,8 +18,30 @@ export function isoWeek(d = new Date()) {
 }
 
 /**
+ * Semester-plan sequencing: when a waypoint carries a generated semesterPlan,
+ * its phases define the week-by-week order of work. Returns Maps keyed by
+ * stepId → plan position / phase "weeks" label, so plan-anchored steps are
+ * offered in plan order (with their week window) before unanchored ones.
+ */
+function planOrderForNode(node) {
+  const order = new Map();
+  const weeks = new Map();
+  let i = 0;
+  for (const ph of node?.semesterPlan?.plan?.phases || []) {
+    for (const it of ph?.items || []) {
+      if (it && it.stepId && !order.has(it.stepId)) {
+        order.set(it.stepId, i++);
+        if (ph.weeks) weeks.set(it.stepId, String(ph.weeks).slice(0, 32));
+      }
+    }
+  }
+  return { order, weeks };
+}
+
+/**
  * Pick up to `limit` concrete tasks for this week: the earliest incomplete steps
- * on the active roadmap path (current waypoint first, then the next ones). Purely
+ * on the active roadmap path (current waypoint first, then the next ones),
+ * sequenced by the waypoint's semester plan when one exists. Purely
  * deterministic given a tree — same input → same 3 tasks, in the same order.
  * Each task id is "waypointId:stepId" so completion maps straight back to the tree.
  */
@@ -41,9 +63,17 @@ export function selectWeeklyTasks(tree, opts = {}) {
 
   for (const n of pool) {
     if (!n || n.done || !Array.isArray(n.steps)) continue;
-    for (const s of n.steps) {
+    const { order, weeks } = planOrderForNode(n);
+    const steps = n.steps
+      .map((s, i) => ({ s, i }))
+      .sort((a, b) => {
+        const ao = order.has(a.s?.id) ? order.get(a.s.id) : Infinity;
+        const bo = order.has(b.s?.id) ? order.get(b.s.id) : Infinity;
+        return ao !== bo ? ao - bo : a.i - b.i;
+      });
+    for (const { s } of steps) {
       if (!s || s.done || !s.id) continue;
-      out.push({
+      const task = {
         id: `${n.id}:${s.id}`,
         label: String(s.text || '').slice(0, 100),
         source: 'waypoint',
@@ -51,7 +81,9 @@ export function selectWeeklyTasks(tree, opts = {}) {
         waypointTitle: String(n.shortTitle || n.title || '').slice(0, 80),
         stepId: s.id,
         done: false,
-      });
+      };
+      if (weeks.has(s.id)) task.weeks = weeks.get(s.id);
+      out.push(task);
       if (out.length >= limit) return out;
     }
   }

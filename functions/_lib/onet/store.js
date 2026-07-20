@@ -27,8 +27,14 @@ const DERIVED_D1_TTL_MS = 60 * 1000;
 // into a warm catalog cache (replaces the old `some(aiDerived)` boolean guard).
 let careersDerivedSocs = null;
 
-async function fetchJson(url) {
-  const res = await fetch(url);
+async function fetchJson(url, opts) {
+  // derived-careers.json is edited by hand (career resets) outside the
+  // onet:build ETL that the /data/* 24h edge cache is designed around — an
+  // edit to its content can't bump its URL, so a plain fetch would keep
+  // serving a stale cached copy for up to a day. cf.cacheTtl:0 forces this
+  // one self-fetch to bypass Cloudflare's edge cache.
+  const fetchOpts = opts && opts.noCache ? { cf: { cacheTtl: 0, cacheEverything: false } } : undefined;
+  const res = await fetch(url, fetchOpts);
   if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
   return res.json();
 }
@@ -87,7 +93,7 @@ async function getStaticDerivedCareers(env, baseUrl) {
     data = await r2.json();
   } else {
     try {
-      data = await fetchJson(artifactUrl(baseUrl, 'derived-careers.json'));
+      data = await fetchJson(artifactUrl(baseUrl, 'derived-careers.json'), { noCache: true });
     } catch {
       data = null;
     }

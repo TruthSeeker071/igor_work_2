@@ -13,12 +13,21 @@ const ART = join(ROOT, 'data/onet/artifacts');
 const DIM_COUNT = 161;
 const OVERVIEW_FILL = 0.94;
 const OVERVIEW_TOPBAR_PX = 64;
+const OVERVIEW_BOTTOM_SAFE_PX = 64;
+const MIN_ZOOM = 0.35;
+// Overview zoom-out floor: users can pull back to 0.7x of the fit zoom, clamped
+// below by MIN_ZOOM. Mirrors getMinZoom() in hub-onet-map.js (added 2026-07-18).
+const OVERVIEW_MIN_ZOOM_MULT = 0.7;
 const LOD_CONTINENT_ZOOM = 2.2;
 const MAX_ZOOM = 3.0;
 const SECTOR_ENTRY_ZOOM = 3.0;
 const SECTOR_ZOOM_MIN = 0.7;
 const SECTOR_ZOOM_MAX = 2.2;
-const EXPECTED_ZONE_COUNT = 18;
+// Post-ship macro-hub redesign: 18 zones -> 10 (Agriculture/Operations/
+// Hospitality dissolved into other zones; Engineering+Science+Cybersecurity,
+// Creative+Marketing+Media, and Business+Finance merged). See
+// scripts/onet-etl/rezone-hub.mjs.
+const EXPECTED_ZONE_COUNT = 10;
 const LAW_CAREER_COUNT = 33;
 const SIMILARITY_ADJACENT = 0.75;
 const SIMILARITY_RELATED = 0.55;
@@ -32,11 +41,18 @@ function loadJson(name) {
 }
 
 function clampPanOverview(panX, panY, zoom, viewW, viewH) {
-  const minPanX = Math.min(0, viewW - zoom * viewW);
-  const maxPanX = Math.max(0, viewW - zoom * viewW);
+  // Mirrors hub-onet-map.js clampPanOverview: uniform edge-clamp with a wide
+  // overscroll border so edge clusters can be centered, plus a Y band between
+  // the fixed HUD (topbar) and the bottom safe zone.
+  const marginX = viewW * 0.45;
+  const marginY = viewH * 0.4;
+  const minPanX = Math.min(0, viewW - zoom * viewW) - marginX;
+  const maxPanX = Math.max(0, viewW - zoom * viewW) + marginX;
   panX = Math.min(maxPanX, Math.max(minPanX, panX));
-  const minPanY = Math.min(0, viewH - zoom * viewH);
-  const maxPanY = Math.max(0, viewH - zoom * viewH);
+  const topbar = OVERVIEW_TOPBAR_PX;
+  const k = viewH - OVERVIEW_BOTTOM_SAFE_PX - zoom * viewH;
+  const minPanY = Math.min(topbar, k) - marginY;
+  const maxPanY = Math.max(topbar, k) + marginY;
   panY = Math.min(maxPanY, Math.max(minPanY, panY));
   return { panX, panY };
 }
@@ -119,18 +135,27 @@ function sectorEffectiveZoom(zoneId, byZone, wW, wH, sectorZoom = 1) {
 }
 
 function computeOverviewFitZoom(viewW, viewH, wW, wH) {
+  // Mirrors hub-onet-map.js: worldToScreen is viewport-normalized (zoom 1 maps
+  // the world onto the full viewport on both axes), so fit math works in
+  // viewport fractions only — NOT viewport-px-over-world-units. wW/wH are
+  // accepted for signature compatibility but intentionally unused.
+  if (!viewW || !viewH) return 1;
   const topbar = OVERVIEW_TOPBAR_PX;
-  const availH = Math.max(viewH - topbar, viewH * 0.5);
-  const zoomX = OVERVIEW_FILL * viewW / wW;
-  const zoomY = OVERVIEW_FILL * availH / wH;
-  return Math.min(zoomX, zoomY, MAX_ZOOM);
+  const availH = Math.max(viewH - topbar - OVERVIEW_BOTTOM_SAFE_PX, viewH * 0.5);
+  return Math.min(OVERVIEW_FILL, OVERVIEW_FILL * availH / viewH, MAX_ZOOM);
+}
+
+function computeOverviewMinZoom(viewW, viewH, wW, wH) {
+  return Math.max(MIN_ZOOM, computeOverviewFitZoom(viewW, viewH, wW, wH) * OVERVIEW_MIN_ZOOM_MULT);
 }
 
 function overviewCameraPan(viewW, viewH, zoom, focusX, focusY, wW, wH) {
   const topbar = OVERVIEW_TOPBAR_PX;
-  const availH = Math.max(viewH - topbar, 1);
+  const availH = Math.max(viewH - topbar - OVERVIEW_BOTTOM_SAFE_PX, 1);
   const panX = viewW / 2 - (focusX / wW * viewW) * zoom;
-  const panY = topbar + availH / 2 - (focusY / wH * availH) * zoom;
+  // Center the focus in the band between the HUD and the bottom safe zone. The
+  // focus term uses viewH (worldToScreen's Y scale), not availH.
+  const panY = topbar + availH / 2 - (focusY / wH * viewH) * zoom;
   return { panX, panY };
 }
 
@@ -414,17 +439,23 @@ function main() {
   const sectorH = zoneLayout.sectorCanvas?.h || 1440;
   const zones = Object.values(zoneLayout.zones);
 
-  if (zoneLayout.gutter !== 0) {
-    console.error(`expected gutter=0, got ${zoneLayout.gutter}`);
-    process.exit(1);
-  }
-
+  // Macro-zones are now organic circles (see rezone-hub.mjs), not fixed grid
+  // tiles — the invariant that matters is circle non-overlap (with breathing
+  // room for the neighbor-link web), not a grid gutter or axis-aligned
+  // rectangle disjointness (two non-overlapping circles can still have
+  // intersecting bounding boxes; that's expected now, not a bug).
+  const CLUSTER_GAP_MIN = 40; // looser than the ETL's own pack target — catches real regressions, not float noise
   for (let i = 0; i < zones.length; i++) {
     for (let j = i + 1; j < zones.length; j++) {
       const a = zones[i];
       const b = zones[j];
-      if (a.minX < b.maxX && a.maxX > b.minX && a.minY < b.maxY && a.maxY > b.minY) {
-        console.error('Zone overlap detected');
+      if (a.r == null || b.r == null) {
+        console.error('Zone missing radius (r) — expected organic circle geometry');
+        process.exit(1);
+      }
+      const dist = Math.hypot(a.cx - b.cx, a.cy - b.cy);
+      if (dist < a.r + b.r + CLUSTER_GAP_MIN) {
+        console.error(`Zone overlap detected: dist=${dist.toFixed(1)} needs>=${(a.r + b.r + CLUSTER_GAP_MIN).toFixed(1)}`);
         process.exit(1);
       }
     }
@@ -474,6 +505,14 @@ function main() {
     ok = false;
   } else {
     console.log(`overview fit zoom ${cam.zoom} OK`);
+  }
+
+  const overviewMinZoom = computeOverviewMinZoom(viewW, viewH, wW, wH);
+  if (overviewMinZoom >= cam.zoom || overviewMinZoom < MIN_ZOOM - 1e-9) {
+    console.error(`overview min zoom ${overviewMinZoom.toFixed(3)} should be < fit ${cam.zoom.toFixed(3)} and >= MIN_ZOOM ${MIN_ZOOM}`);
+    ok = false;
+  } else {
+    console.log(`overview zoom-out floor ${overviewMinZoom.toFixed(3)} (fit x${OVERVIEW_MIN_ZOOM_MULT}, >= ${MIN_ZOOM}) OK`);
   }
 
   const overviewRect = viewportRect(cam.panX, cam.panY, cam.zoom, viewW, viewH, wW, wH, 0);

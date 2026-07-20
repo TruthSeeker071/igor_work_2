@@ -1,51 +1,233 @@
-/* Auth pages — extracted from inline styles in auth.html */
+/* Auth pages (sign in, register, forgot/reset password) — card layout.
+   Every style for auth.html lives here; the markup carries no inline styles.
+   The shell deliberately does NOT use .hero: that class carries forced
+   overrides in flightway-theme.css that fight card typography. */
 
-.auth-hero-title {
-  font-family: var(--font-display);
-  font-size: clamp(2rem, 5vw, 2.75rem);
-  margin-bottom: var(--space-3);
+.auth-shell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: var(--space-8);
+  padding-left: var(--space-4);
+  padding-right: var(--space-4);
 }
 
-.auth-hero-sub {
-  color: var(--text-secondary);
+.auth-card {
+  width: 100%;
   max-width: 420px;
-  margin: 0 auto var(--space-7);
-  font-size: var(--text-lg);
+  margin: 0 auto;
+  padding: 40px 32px 28px;
+  background: rgb(var(--surface));
+  border: 1px solid rgb(var(--border));
+  border-radius: 16px;
+  box-shadow: var(--elev-2);
+  text-align: left;
 }
+
+/* ── Card header (brand + heading + one sub-line) ── */
+
+.auth-card-head {
+  text-align: center;
+  margin-bottom: var(--space-6);
+}
+
+.auth-card-brand {
+  justify-content: center;
+  margin-bottom: var(--space-5);
+  font-size: 1.125rem;
+}
+
+.auth-card .auth-card-title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: var(--line-tight);
+  letter-spacing: -0.02em;
+  color: rgb(var(--text));
+  margin: 0 0 var(--space-2);
+}
+
+.auth-card .auth-card-sub {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--line-normal);
+  color: rgb(var(--text-muted));
+}
+
+/* ── Fields ── */
 
 .auth-form-shell {
-  max-width: 400px;
-  margin: 0 auto;
   text-align: left;
+}
+
+.auth-label {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: rgb(var(--text));
 }
 
 .auth-field {
   width: 100%;
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .auth-field--tight {
   margin-bottom: var(--space-2);
 }
 
-.auth-link-row {
-  margin: 0 0 var(--space-3);
+/* The theme's token'd input styling is keyed to legacy #page-* ids that this
+   page no longer uses — restate it card-scoped so dark mode reads right. */
+.auth-card .coach-email-input {
+  background: rgb(var(--surface-2));
+  color: rgb(var(--text));
+  border: 1px solid rgb(var(--border-strong));
+}
+
+.auth-card .coach-email-input::placeholder {
+  color: rgb(var(--text-muted));
+}
+
+.auth-card .coach-email-input:focus {
+  border-color: rgb(var(--primary));
+  box-shadow: 0 0 0 3px rgb(var(--primary) / 0.15);
+}
+
+/* ── Password show/hide ── */
+
+.auth-pw-wrap {
+  position: relative;
+  margin-bottom: var(--space-4);
+}
+
+.auth-pw-wrap--tight {
+  margin-bottom: var(--space-2);
+}
+
+/* Margin moves to the wrapper so the toggle can stretch the input's box. */
+.auth-pw-wrap .auth-field {
+  margin-bottom: 0;
+  padding-right: 46px;
+}
+
+.auth-pw-toggle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 10px;
+  color: rgb(var(--text-muted));
+  cursor: pointer;
+  transition: color var(--fw-dur-fast) var(--fw-ease-out);
+}
+
+.auth-pw-toggle:hover {
+  color: rgb(var(--text));
+}
+
+.auth-pw-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+
+.auth-pw-toggle .auth-eye-off { display: none; }
+.auth-pw-toggle[aria-pressed="true"] .auth-eye { display: none; }
+.auth-pw-toggle[aria-pressed="true"] .auth-eye-off { display: block; }
+
+/* ── Inline alerts (error + its green counterpart) ── */
+
+@keyframes fw-auth-alert-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+.auth-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: 10px 12px;
+  margin-bottom: var(--space-4);
+  border-radius: 10px;
+  border-left: 3px solid rgb(var(--err));
+  background: rgb(var(--err) / 0.10);
+  color: rgb(var(--text));
   font-size: var(--text-sm);
+  line-height: var(--line-normal);
+  word-break: break-word;
+  animation: fw-auth-alert-in var(--fw-dur-fast) var(--fw-ease-out);
+}
+
+/* Collapsed until a message lands — the card keeps its resting height. */
+.auth-alert:empty,
+.auth-alert[hidden] { display: none; }
+
+.auth-alert::before {
+  content: '!';
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  border-radius: 50%;
+  background: rgb(var(--err));
+  color: rgb(var(--primary-fg));
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+
+.auth-alert--ok {
+  border-left-color: rgb(var(--ok));
+  background: rgb(var(--ok) / 0.12);
+}
+
+.auth-alert--ok::before {
+  content: '✓';
+  background: rgb(var(--ok));
+  color: rgb(var(--bg));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-alert { animation: none; }
+}
+
+/* ── Links + button ── */
+
+.auth-link-row {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-sm);
+  text-align: right;
 }
 
 .auth-link-row a {
-  color: var(--text-secondary);
+  color: rgb(var(--text-muted));
+  text-decoration: none;
 }
 
-.auth-btn-full {
+.auth-link-row a:hover {
+  color: rgb(var(--primary));
+}
+
+.auth-card .auth-btn-full {
   width: 100%;
+  padding: 14px var(--space-5);
+  font-size: 1rem;
 }
 
 .auth-footnote {
   text-align: center;
-  margin-top: var(--space-4);
+  margin-top: var(--space-5);
   font-size: var(--text-sm);
-  color: var(--text-secondary);
+  color: rgb(var(--text-muted));
 }
 
 .auth-footnote a {
@@ -56,17 +238,26 @@
 
 .auth-footnote--muted {
   margin-top: var(--space-3);
-  font-size: var(--text-sm);
-  color: var(--text-tertiary);
+  font-size: var(--text-xs);
 }
 
 .auth-footnote--muted a {
-  color: var(--text-secondary);
+  color: rgb(var(--text-muted));
   font-weight: 400;
   text-decoration: none;
 }
 
-.auth-status-ok {
-  display: none;
-  margin-bottom: var(--space-3);
+@media (max-width: 480px) {
+  .auth-shell {
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+  }
+
+  .auth-card {
+    padding: 28px 20px 22px;
+    border-radius: 16px;
+  }
+
+  .auth-card-head { margin-bottom: var(--space-5); }
+  .auth-card .auth-card-title { font-size: 1.5rem; }
 }

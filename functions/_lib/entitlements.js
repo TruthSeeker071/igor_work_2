@@ -36,6 +36,25 @@ export function paywallEnabled(env) {
   return String((env && env.PAYWALL_ENABLED) || '').toLowerCase() === 'true';
 }
 
+/**
+ * Developer/tester full access (free/paid merge §3.5). DEV_TEST_EMAILS is a
+ * comma-separated Pages env var set per environment in the Cloudflare dashboard
+ * — never committed, empty/unset on production at launch, so this is a no-op
+ * unless Jacob populates it. It rides on each dev's own authenticated login
+ * (emails here are session-verified), so it grants nothing to anyone who can't
+ * already sign in as that address, and it is revocable without a DB write.
+ *
+ * Wired at exactly three chokepoints — resolveEntitlement(), requirePlan() and
+ * checkFeatureLimit() — because every gate in the product routes through one of
+ * them. Callers must carry the resulting `dev:true` through so dev traffic stays
+ * out of funnel analytics and out of gate-verification runs.
+ */
+export function isDevTester(env, email) {
+  if (!email || !env || !env.DEV_TEST_EMAILS) return false;
+  return String(env.DEV_TEST_EMAILS).toLowerCase().split(',')
+    .map((s) => s.trim()).filter(Boolean).includes(String(email).toLowerCase().trim());
+}
+
 /** Read a user's real, unexpired plan from D1. Defaults to 'free' on any failure. */
 export async function getPlan(env, email) {
   if (!email || !env || !env.DB) return 'free';
@@ -51,8 +70,10 @@ export async function getPlan(env, email) {
 
 /** What the client should treat the user as. Ship-dark: premium for all until paywall on. */
 export async function resolveEntitlement(env, email) {
-  const plan = await getPlan(env, email);
   const paywall = paywallEnabled(env);
+  // Chokepoint 1 of 3 for the dev allowlist — before any D1 read.
+  if (isDevTester(env, email)) return { plan: 'lifetime', effective: 'lifetime', paywall, dev: true };
+  const plan = await getPlan(env, email);
   return { plan, effective: paywall ? plan : 'premium', paywall };
 }
 
@@ -62,6 +83,9 @@ export async function resolveEntitlement(env, email) {
  * With the paywall off, always allows (beta).
  */
 export async function requirePlan(env, email, need = 'premium') {
+  // Chokepoint 2 of 3 — checked ahead of the paywall flag so `dev` is marked
+  // even while the paywall is dark (analytics exclusion depends on it).
+  if (isDevTester(env, email)) return { ok: true, plan: 'lifetime', dev: true };
   if (!paywallEnabled(env)) return { ok: true, plan: 'premium', beta: true };
   const plan = await getPlan(env, email);
   if (planSatisfies(plan, need)) return { ok: true, plan };

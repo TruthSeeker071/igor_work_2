@@ -3,7 +3,9 @@
  * Data is imported once via `npm run onet:build`; runtime reads deployed artifacts only.
  */
 (function (global) {
-  var CAREERS_URL = '/data/onet/artifacts/careers.json?v=20260703q';
+  // Bumped with the 2026-07-18 macro-hub rezone (18→11 hubZones) — careers.json
+  // changed and /data/* is day-cached, so a stale stamp serves the old taxonomy.
+  var CAREERS_URL = '/data/onet/artifacts/careers.json?v=20260718f';
   var DESCRIPTIONS_URL = '/data/onet/artifacts/career-descriptions.json?v=20260703q';
   var DERIVED_URL = '/data/onet/artifacts/derived-careers.json?v=20260703q';
   var HUB_MAP_URL = '/data/onet/hub-career-soc-map.json';

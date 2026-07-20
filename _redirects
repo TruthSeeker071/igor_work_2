@@ -8,6 +8,29 @@
 /profile.html        /profile-build.html  301
 /quiz.html       /quiz.html       200
 /auth.html       /auth.html       200
+/admin.html      /admin.html      200
 /career.html     /career.html     200
 /dreamforce.html /Flightway.html  301
 /assets/flightway-theme.css  /assets/css/flightway-theme.css  301
+
+# Internal repo files. pages_build_output_dir = "." means the whole repo is
+# uploaded as the static site, so docs/, scripts/, config and CI files were
+# publicly reachable. _redirects is evaluated before static assets, so these
+# rules make them unreachable. /data and /assets stay public (the app fetches
+# them); /functions, /migrations and /node_modules are already excluded from
+# upload by Pages — listed anyway as defense in depth.
+/docs/*           /  302
+/scripts/*        /  302
+/migrations/*     /  302
+/workers/*        /  302
+/node_modules/*   /  302
+/.github/*        /  302
+/.gitignore       /  302
+/wrangler.toml    /  302
+/package.json     /  302
+/package-lock.json  /  302
+/CLAUDE.md        /  302
+/HANDOFF_20260710_exposure_and_overview.md  /  302
+/FLIGHTWAY_LAUNCH_REVIEW_BRIEF.md  /  302
+/igor_work_2_repo/*  /  302
+/FLIGHTWAY_UI_POLISH_AND_AUDIT_BRIEF.md  /  302

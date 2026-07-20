@@ -30,9 +30,12 @@ binding = "DB"
 database_name = "flightway-db"
 database_id = "e9aa71fb-dbf8-482d-ba86-5c941cdedee0"
 
-# FW2.0 E (security pass): lock CORS to the canonical origin in production.
-# originFromEnv(env) reads ALLOWED_ORIGIN (functions/_lib.js). Preview / prototype
-# deployments should set their own ALLOWED_ORIGIN in the Pages dashboard; left unset
-# elsewhere so same-origin previews keep working (falls back to "*").
+# CORS allowlist: prototype pages.dev + canonical prod (comma-separated).
+# originFromEnv() echoes the request Origin when it matches; otherwise first entry.
 [env.production.vars]
-ALLOWED_ORIGIN = "https://flightway.ai"
+ALLOWED_ORIGIN = "https://flightwayjacobprototype.pages.dev,https://flightway.ai"
+# Pillar W web grounding master switch. ON activates grounded Google Search for
+# EVERY Pillar W caller (chat, weekly-plan, career-analysis, resume, mock-interview,
+# opportunity-finder) and spends the shared daily search budget. Requires the
+# Gemini key to have "Grounding with Google Search" billing enabled.
+GROUNDING_ENABLED = "true"

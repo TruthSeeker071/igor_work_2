@@ -3,19 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/favicon.ico?v=20260717h" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/favicon.png?v=20260717h">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=20260717h">
 <title>FlightWay — Career Hub</title>
-<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260720b">
-<link rel="stylesheet" href="assets/css/hub-dashboard.css?v=20260720b">
+<meta name="description" content="An interactive map of real careers, organized by field and scored against your own strengths.">
+<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260720c">
+<link rel="stylesheet" href="assets/css/hub-dashboard.css?v=20260720c">
+<link rel="stylesheet" href="assets/css/flightway-2.css?v=20260720c">
 <script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
 <script src="assets/js/shared/global-shim.js?v=20260703p"></script>
-<script src="assets/js/shared/flags.js?v=20260703p"></script>
-<link rel="stylesheet" href="assets/css/flightway-2.css?v=20260720b">
-<script src="assets/js/shared/events.js?v=20260708a" defer></script>
-<script src="assets/js/shared/fw-tabbar.js?v=20260716a" defer></script>
+<script src="assets/js/shared/flags.js?v=20260716h"></script>
+<script src="assets/js/shared/events.js?v=20260716h" defer></script>
+<script src="assets/js/shared/fw-tabbar.js?v=20260720c" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preload" href="/data/onet/artifacts/careers.json?v=20260703q" as="fetch" crossorigin>
-<link rel="preload" href="/data/onet/artifacts/zone-layout.json" as="fetch" crossorigin>
+<!-- Preload stamps MUST equal the runtime fetch stamps or the cache key differs
+     and the preload is wasted + refetched. careers.json → CAREERS_URL in
+     assets/js/shared/onet-catalog.js; zone-layout.json → hub-onet-map.js fetch.
+     Move all three in lockstep. -->
+<link rel="preload" href="/data/onet/artifacts/careers.json?v=20260718f" as="fetch" crossorigin>
+<link rel="preload" href="/data/onet/artifacts/zone-layout.json?v=20260718f" as="fetch" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body class="hub-page">
@@ -24,13 +32,13 @@
   <div id="topbar">
   <a href="/" class="fw-brand hub-brand" data-fw-brand data-fw-brand-href="/" aria-label="FlightWay home"></a>
 
-  <nav class="app-nav hub-app-nav" aria-label="App">
+  <div class="app-nav hub-app-nav" role="navigation" aria-label="App">
     <a href="portal.html" class="app-nav-tab" data-app-nav="home"><span class="app-nav-label">Home</span></a>
     <a href="dashboard.html" class="app-nav-tab is-active" data-app-nav="hub" aria-current="page"><span class="app-nav-label">Career Hub</span></a>
-    <!-- AI Career Advisor is reached via the Marco bubble (bottom-left), not a nav tab. -->
+    <a href="coach.html" class="app-nav-tab" data-app-nav="advisor"><span class="app-nav-label">Marco</span></a>
     <a href="roadmap.html" class="app-nav-tab" data-app-nav="roadmap"><span class="app-nav-label">Career Roadmap</span></a>
     <a href="quiz.html" class="app-nav-tab app-nav-tab--muted" data-app-nav="quiz"><span class="app-nav-label">Career Quiz</span></a>
-  </nav>
+  </div>
 
   <div id="search-wrap">
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
@@ -63,7 +71,14 @@
 <!-- CANVAS -->
 <div id="hub-loading" class="hub-loading" aria-live="polite" aria-busy="true">
   <div class="hub-loading-inner">
-    <span class="hub-loading-spinner" aria-hidden="true"></span>
+    <div class="hub-loading-skeleton" aria-hidden="true">
+      <span class="fw-skeleton hub-skel-map"></span>
+      <div class="hub-skel-hud">
+        <span class="fw-skeleton hub-skel-pill"></span>
+        <span class="fw-skeleton hub-skel-pill"></span>
+        <span class="fw-skeleton hub-skel-pill hub-skel-pill--wide"></span>
+      </div>
+    </div>
     <span>Loading career map…</span>
   </div>
 </div>
@@ -77,15 +92,16 @@
 <div id="hub-fit-explainer" class="hub-fit-explainer" hidden role="dialog" aria-labelledby="hub-fit-explainer-title" aria-modal="true">
   <div class="hub-fit-explainer-card">
     <h2 id="hub-fit-explainer-title" class="hub-fit-explainer-title">How we calculate fit</h2>
-    <p><strong>Overall fit</strong> is 75% personality cosine fit plus 25% objective cosine fit (when you have academics or resume signals). With personality only, overall fit equals personality fit.</p>
-    <p><strong>Personality fit</strong> compares your work-style vector to each career&rsquo;s O*NET profile. <strong>Objective fit</strong> compares your skills and academics vector to career requirements.</p>
-    <p class="hub-fit-explainer-note">Sector tile color and orb glow follow the overall fit rarity scale (common through mythic). Inside a sector, the same scale applies to each career orb.</p>
+    <p><strong>Overall fit</strong> blends how a career suits the way you like to work (75%) with what you already bring — your skills, classes, and experience (25%, once we know about them). Until then, it's based on your work style alone.</p>
+    <p><strong>Personality fit</strong> compares how you like to work against what each career actually involves, using real occupational data. <strong>Objective fit</strong> compares what you've built so far against what the career asks for.</p>
+    <p class="hub-fit-explainer-note">Brighter, warmer colors mean stronger fit — on the sector clouds out here and on each career orb inside. It's a starting read, not a final answer: it sharpens as we learn more about you.</p>
     <button type="button" id="hub-fit-explainer-close" class="hub-hud-btn hub-fit-explainer-close">Got it</button>
   </div>
 </div>
 
 <div id="hub-map-hud" class="hub-map-hud" aria-live="polite">
   <button type="button" id="hub-sector-back" class="hub-hud-btn" hidden aria-label="Back to all sectors">← All sectors</button>
+  <button type="button" id="hub-lens-toggle" class="hub-hud-btn" hidden aria-pressed="true">Top matches</button>
   <p id="hub-sector-title" class="hub-sector-title" hidden></p>
   <p id="hub-map-hint" class="hub-map-hint" hidden>Click a sector to explore careers</p>
   <p id="hub-search-hud" class="hub-search-hud" hidden></p>
@@ -126,6 +142,7 @@
     <div class="panel-industry-badge" id="panel-industry"></div>
     <div class="panel-career-name" id="panel-career-name"></div>
     <span id="panel-ai-derived" class="panel-ai-derived" hidden>AI-derived</span>
+    <span id="panel-subpaths" class="panel-ai-derived" hidden></span>
     <div id="panel-dual-fit" class="panel-dual-fit" hidden>
       <div class="panel-fit-row panel-fit-row--overall">
         <span class="panel-fit-label">Overall fit</span>
@@ -149,7 +166,9 @@
         <span class="panel-fit-label">Readiness</span>
         <span class="panel-fit-pct" id="panel-preparedness-fit">—</span>
       </div>
+      <p class="panel-fit-note">A starting point from your quiz answers — not a final verdict.</p>
       <p id="panel-tradeoff" class="panel-tradeoff" hidden></p>
+      <div id="panel-why" class="panel-why"></div>
     </div>
     <div class="panel-fit-wrap panel-fit-wrap--legacy">
       <div class="panel-fit-label">
@@ -181,34 +200,40 @@
     <button class="btn-daylife" id="panel-daylife" type="button">
       Try this career for 20 minutes →
     </button>
+    <button class="btn-deep-dive" id="panel-compare" type="button" hidden>
+      Compare careers →
+    </button>
   </div>
 </div>
 
-<script src="assets/js/shared/auth.js?v=20260703p" defer></script>
+<script src="assets/js/shared/fw-errors.js?v=20260720a" defer></script>
+<script src="assets/js/shared/auth.js?v=20260720c" defer></script>
+<script src="assets/js/shared/user.js?v=20260719g" defer></script>
 <script src="assets/js/shared/profile-alignment.js?v=20260703p" defer></script>
 <script src="assets/js/quiz/quiz-data.js?v=20260703p" defer></script>
-<script src="assets/js/shared/career-target.js?v=20260703p" defer></script>
+<script src="assets/js/shared/career-target.js?v=20260717b" defer></script>
 <script src="assets/js/shared/sector-fit-sheet.js?v=20260703p" defer></script>
 <script src="assets/js/shared/academics-map.js?v=20260703p" defer></script>
 <script src="assets/js/shared/refine-map.js?v=20260703p" defer></script>
-<script src="assets/js/hub/hub-careers.js?v=20260703p" defer></script>
-<script src="assets/js/shared/onet-math.js?v=20260703p" defer></script>
-<script src="assets/js/shared/onet-catalog.js?v=20260705a" defer></script>
-<script src="assets/js/shared/onet-vectors.js?v=20260705a" defer></script>
-<script src="assets/js/hub/hub-list-view.js?v=20260716a" defer></script>
+<script src="assets/js/hub/hub-careers.js?v=20260719b" defer></script>
+<script src="assets/js/shared/onet-math.js?v=20260713a" defer></script>
+<script src="assets/js/shared/onet-catalog.js?v=20260718f" defer></script>
+<script src="assets/js/shared/onet-vectors.js?v=20260719a" defer></script>
+<script src="assets/js/shared/entitlements.js?v=20260719a" defer></script>
+<script src="assets/js/shared/why-this-match.js?v=20260719a" defer></script>
 <script src="assets/js/shared/career-focus-migrate.js?v=20260703p" defer></script>
-<script src="assets/js/shared/hub-zone-fit.js?v=20260703p" defer></script>
-<script src="assets/js/hub/hub-onet-map.js?v=20260705i" defer></script>
+<script src="assets/js/shared/hub-zone-fit.js?v=20260718f" defer></script>
+<script src="assets/js/hub/hub-onet-map.js?v=20260718q" defer></script>
+<script src="assets/js/hub/career-compare.js?v=20260712c" defer></script>
   <script src="assets/js/hub/career-deep-dives.js?v=20260703p" defer></script>
   <script src="assets/js/shared/hub-drawer.js?v=20260703p" defer></script>
-  <script src="assets/js/shared/hub-canvas-bg.js?v=20260703p" defer></script>
-  <script src="assets/js/hub/hub-canvas.js?v=20260705g" defer></script>
-  <script src="assets/js/hub/hub-dashboard.js?v=20260705g" defer></script>
-<script src="assets/js/hub/hub-refine.js?v=20260703p" defer></script>
-<script src="assets/js/hub/hub-academics.js?v=20260703p" defer></script>
-<script src="assets/js/hub/marco.js?v=20260703p" defer></script>
-<script src="assets/js/shared/brand.js?v=20260703p" defer></script>
+  <script src="assets/js/shared/hub-canvas-bg.js?v=20260718p" defer></script>
+  <script src="assets/js/hub/hub-canvas.js?v=20260718s" defer></script>
+  <script src="assets/js/hub/hub-dashboard.js?v=20260719b" defer></script>
+<script src="assets/js/hub/marco.js?v=20260719a" defer></script>
+<script src="assets/js/shared/brand.js?v=20260717g" defer></script>
 <script src="assets/js/shared/theme.js?v=20260703p" defer></script>
+<script src="assets/js/shared/fw-toast.js?v=20260718i" defer></script>
 <script src="assets/js/shared/app-nav.js?v=20260703p" defer></script>
 <script src="assets/js/shared/auth-nav.js?v=20260703p" defer></script>
 <script>

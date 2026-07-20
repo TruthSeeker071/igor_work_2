@@ -1,23 +1,18 @@
 /**
- * Hub sector palette — synced with data/onet/artifacts/zone-colors.json
+ * Hub sector palette — the 10 live merged zones (synced with
+ * data/onet/artifacts/zone-colors.json and the baked orbColors in layout-2d.json).
+ * NOTE: these CSS vars currently have no consumers — canvas orb colors come from
+ * layout-2d.json `orbColor`. Kept as the human-readable zone→color reference.
  */
 :root {
   --zone-tech: #3B82F6;
   --zone-healthcare: #10B981;
-  --zone-finance: #F59E0B;
-  --zone-science: #8B5CF6;
-  --zone-engineering: #6366F1;
-  --zone-creative: #EC4899;
-  --zone-business: #78716C;
-  --zone-marketing: #F97316;
   --zone-education: #14B8A6;
   --zone-law: #64748B;
   --zone-social: #A855F7;
-  --zone-media: #E11D48;
   --zone-government: #475569;
-  --zone-operations: #0EA5E9;
   --zone-trades: #84CC16;
-  --zone-agriculture: #65A30D;
-  --zone-cybersecurity: #06B6D4;
-  --zone-hospitality: #D946EF;
+  --zone-engineering-science: #6366F1;
+  --zone-creative-media: #EC4899;
+  --zone-business-finance: #F59E0B;
 }

@@ -3,22 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/favicon.ico?v=20260717h" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/favicon.png?v=20260717h">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=20260717h">
 <title>FlightWay — Career Guide</title>
-<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260720b">
-<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260720b">
-<link rel="stylesheet" href="assets/css/good-fit-jobs.css?v=20260720b">
+<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260720c">
+<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260720c">
 <script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
 <script src="assets/js/shared/global-shim.js?v=20260703p"></script>
-<script src="assets/js/shared/flags.js?v=20260703p"></script>
-<link rel="stylesheet" href="assets/css/flightway-2.css?v=20260720b">
-<script src="assets/js/shared/events.js?v=20260708a" defer></script>
-<script src="assets/js/shared/fw-tabbar.js?v=20260716a" defer></script>
+<script src="assets/js/shared/flags.js?v=20260716h"></script>
+<link rel="stylesheet" href="assets/css/flightway-2.css?v=20260720c">
+<script src="assets/js/shared/events.js?v=20260716h" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="assets/vendor/lucide-lite.js?v=20260703p" defer></script>
+<link rel="stylesheet" href="assets/css/good-fit-jobs.css?v=20260720c">
+<script src="assets/js/job-matches.js?v=20260720c" defer></script>
 </head>
 <body class="career-page">
+<div id="fw-page-veil" class="fw-page-veil" aria-live="polite" aria-busy="true">
+</div>
 
 <nav>
   <div class="nav-inner">
@@ -37,34 +42,40 @@
   </div>
 </nav>
 
-<div id="page-career" class="page active" role="main" aria-label="Career deep dive"><div id="career-content" aria-live="polite"></div></div>
+<div id="page-career" class="page active"><div id="career-content"></div></div>
 
 <script src="assets/js/shared/page-boot.js?v=20260703p" defer></script>
-<script src="assets/js/shared/auth.js?v=20260703p" defer></script>
+<script src="assets/js/shared/page-veil.js?v=20260720c" defer></script>
+<script src="assets/js/shared/fw-errors.js?v=20260720a" defer></script>
+<script src="assets/js/shared/auth.js?v=20260720c" defer></script>
+<script src="assets/js/shared/fw-busy.js?v=20260720a" defer></script>
+<script src="assets/js/shared/user.js?v=20260719g" defer></script>
 <script src="assets/js/shared/format-scale.js?v=20260703p" defer></script>
 <script src="assets/js/shared/profile-alignment.js?v=20260703p" defer></script>
 <script src="assets/js/app/salary-tiers.js?v=20260703p" defer></script>
-<script src="assets/js/hub/hub-careers.js?v=20260703p" defer></script>
-<script src="assets/js/shared/hub-zone-fit.js?v=20260703p" defer></script>
-<script src="assets/js/shared/onet-math.js?v=20260708a" defer></script>
-<script src="assets/js/shared/onet-catalog.js?v=20260705a" defer></script>
-<script src="assets/js/shared/onet-vectors.js?v=20260705a" defer></script>
-<script src="assets/js/shared/onet-dimension-viewer.js?v=20260708a" defer></script>
+<script src="assets/js/hub/hub-careers.js?v=20260719b" defer></script>
+<script src="assets/js/shared/hub-zone-fit.js?v=20260718f" defer></script>
+<script src="assets/js/shared/onet-math.js?v=20260713a" defer></script>
+<script src="assets/js/shared/onet-catalog.js?v=20260718f" defer></script>
+<script src="assets/js/shared/onet-vectors.js?v=20260719a" defer></script>
+<script src="assets/js/shared/onet-dimension-viewer.js?v=20260712d" defer></script>
 <script src="assets/js/hub/career-deep-dives.js?v=20260703p" defer></script>
-<script src="assets/js/shared/why-this-match.js?v=20260716a" defer></script>
-<script src="assets/js/hub/ai-exposure.js?v=20260708c" defer></script>
-<script src="assets/js/hub/career-personalize.js?v=20260716a" defer></script>
-<script src="assets/js/job-matches.js?v=20260718a" defer></script>
-<script src="assets/js/app/app-pages.js?v=20260703q" defer></script>
-<script src="assets/js/shared/career-target.js?v=20260703p" defer></script>
+<script src="assets/js/shared/entitlements.js?v=20260719a" defer></script>
+<script src="assets/js/shared/why-this-match.js?v=20260719a" defer></script>
+<script src="assets/js/hub/ai-exposure.js?v=20260710p" defer></script>
+<script src="assets/js/hub/career-personalize.js?v=20260720d" defer></script>
+<script src="assets/js/app/app-pages.js?v=20260718p" defer></script>
+<script src="assets/js/shared/career-target.js?v=20260717b" defer></script>
 <script src="assets/js/shared/sector-fit-sheet.js?v=20260703p" defer></script>
 <script src="assets/js/shared/auth-nav.js?v=20260703p" defer></script>
-<script src="assets/js/shared/brand.js?v=20260703p" defer></script>
+<script src="assets/js/shared/brand.js?v=20260717g" defer></script>
 <script src="assets/js/shared/app-nav.js?v=20260703p" defer></script>
 <script src="assets/js/shared/theme.js?v=20260703p" defer></script>
+<script src="assets/js/shared/fw-toast.js?v=20260718i" defer></script>
 <script>
   // Deferred scripts finish before DOMContentLoaded, so globals exist here.
   document.addEventListener('DOMContentLoaded', function () {
+    if (window.FWPageVeil) FWPageVeil.hold();
     var slug = '';
     var params = new URLSearchParams(location.search || '');
     slug = params.get('slug') || '';
@@ -79,17 +90,24 @@
     function openCareer() {
       var socParam = params.get('soc') || '';
       var runShow = function (resolvedSoc) {
-        if (typeof showCareer === 'function') {
-          showCareer(slug, 'hub', { soc: resolvedSoc || socParam });
-          if (window.FWJobs) FWJobs.renderCareer(resolvedSoc || socParam);
+        if (typeof showCareer === 'function') showCareer(slug, 'hub', { soc: resolvedSoc || socParam });
+        else location.replace('dashboard.html');
+      };
+      var proceed = function () {
+        if (window.FWOnetVectors && typeof FWOnetVectors.resolveTargetSoc === 'function') {
+          FWOnetVectors.resolveTargetSoc(slug, socParam).then(runShow).catch(function () { runShow(socParam); });
         } else {
-          location.replace('dashboard.html');
+          runShow(socParam);
         }
       };
-      if (window.FWOnetVectors && typeof FWOnetVectors.resolveTargetSoc === 'function') {
-        FWOnetVectors.resolveTargetSoc(slug, socParam).then(runShow).catch(function () { runShow(socParam); });
+      // AI-derived (synthetic 99-…) careers live only in D1, never in
+      // careers.json — pull the single row into the catalog first, otherwise
+      // showCareer() misses and renders a blank page.
+      if (socParam.indexOf('99-') === 0 && window.FWOnetCatalog
+        && typeof FWOnetCatalog.ensureDerivedRow === 'function') {
+        FWOnetCatalog.ensureDerivedRow(socParam).then(proceed).catch(proceed);
       } else {
-        runShow(socParam);
+        proceed();
       }
     }
     function bootCareer() {

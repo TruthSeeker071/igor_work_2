@@ -4,8 +4,8 @@ import {
   authJsonResponse,
   authErrorResponse,
   requireSession,
-  loadQuizProfile,
 } from './_lib/auth.js';
+import { loadUserBlob } from './_lib/user.js';
 import {
   getAlignmentStatus,
   runAlignmentCheck,
@@ -15,12 +15,12 @@ import {
 } from './_lib/profile-alignment.js';
 
 export async function onRequestOptions(context) {
-  return authPreflight(originFromEnv(context.env));
+  return authPreflight(originFromEnv(context.env, context.request));
 }
 
 export async function onRequest(context) {
   const { request, env } = context;
-  const origin = originFromEnv(env);
+  const origin = originFromEnv(env, request);
 
   if (request.method === 'OPTIONS') return authPreflight(origin);
 
@@ -66,7 +66,7 @@ export async function onRequest(context) {
 
     if (action === 'propose') {
       const [quiz, dossier] = await Promise.all([
-        loadQuizProfile(env, email),
+        loadUserBlob(env, email),
         loadDossier(env, email).catch(() => ''),
       ]);
       const propResult = await proposeLargeAlignment(env, email, quiz, dossier);

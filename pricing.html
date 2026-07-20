@@ -3,19 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/favicon.ico?v=20260717h" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/favicon.png?v=20260717h">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=20260717h">
   <title>FlightWay Flight Plan — pricing</title>
   <meta name="description" content="Flight Plan turns career discovery into momentum: unlimited simulations, a weekly plan, interview prep and receipts that prove it's working. Under the price of one coaching hour.">
   <meta property="og:title" content="FlightWay Flight Plan — out-plan AI">
   <meta property="og:description" content="A career coach costs $150/hour. Flight Plan is about $2.30/week.">
   <meta property="og:type" content="website">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260720b">
-  <link rel="stylesheet" href="assets/css/flightway-2.css?v=20260720b">
+  <link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260720c">
+  <link rel="stylesheet" href="assets/css/flightway-2.css?v=20260720c">
   <script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
-  <script src="assets/js/shared/flags.js?v=20260708a"></script>
-  <script src="assets/js/shared/events.js?v=20260708a" defer></script>
+  <script src="assets/js/shared/flags.js?v=20260716h"></script>
+<script src="assets/js/shared/fw-busy.js?v=20260720a" defer></script>
+<script src="assets/js/shared/fw-errors.js?v=20260720a" defer></script>
+  <script src="assets/js/shared/events.js?v=20260716h" defer></script>
 </head>
 <body>
   <canvas id="fw-data-field" aria-hidden="true"></canvas>
@@ -62,13 +64,14 @@
 
           <article class="fw-pricing-card">
             <h3>Free</h3>
-            <p class="desc">Enough to prove the engine before you pay a cent.</p>
+            <p class="desc">The whole matching engine, free forever — not a trial.</p>
             <div class="fw-price"><span class="amount">$0</span><span class="cadence">forever</span></div>
             <ul class="fw-pricing-features">
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Career quiz + O*NET hub</li>
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>One full deep dive + one roadmap</li>
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>2-minute simulation looks</li>
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Dimension viewer with confidence tiers</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Career quiz + the full O*NET career hub</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Every career deep dive, compare and pivot breakdown</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>2-minute looks and 10-minute test flights</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>One AI roadmap — yours to track for good</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>5 Marco messages a day</li>
             </ul>
             <a href="quiz.html" class="fw-btn fw-btn-secondary fw-btn-md" style="width:100%">Start free</a>
           </article>
@@ -82,11 +85,11 @@
               <span class="cadence" data-cadence-monthly="/ month" data-cadence-annual="/ year">/ month</span>
             </div>
             <ul class="fw-pricing-features">
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Unlimited simulations + deep dives</li>
               <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Weekly Flight Plan + accountability nudges</li>
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Interview prep + O*NET resume builder</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Unlimited Marco, roadmap rebuilds and plan edits</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Mock interviews, resume builder + Opportunity Finder</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>25-minute deep dives + Crossroads replay</li>
               <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Receipts history — see your coordinates move</li>
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Full roadmap branches + priority AI</li>
             </ul>
             <button type="button" class="fw-btn fw-btn-primary fw-btn-md fw-intent-cta" style="width:100%"
               data-tier="monthly" data-source="pricing_flightplan">Start free trial</button>
@@ -116,6 +119,8 @@
           <button type="button" class="fw-btn fw-btn-primary fw-btn-md fw-intent-cta"
             data-tier="sprint" data-source="pricing_sprint">Start the sprint</button>
         </div>
+
+        <p class="fw-legal-note" id="fw-checkout-note" hidden role="status"></p>
 
         <p class="fw-legal-note">
           Pricing is in testing and may change. The AI-proof and fit scores are self-assessments
@@ -148,13 +153,16 @@
     </div>
   </footer>
 
-  <script src="assets/js/shared/brand.js?v=20260703p" defer></script>
+  <script src="assets/js/shared/brand.js?v=20260717g" defer></script>
   <script src="assets/js/shared/theme.js?v=20260703p" defer></script>
   <script src="assets/js/shared/data-field.js?v=20260703p" defer></script>
+  <script src="assets/js/shared/billing.js?v=20260720c" defer></script>
   <script>
     (function () {
       function log(type, data) { try { if (window.FWEvents) FWEvents.log(type, data); } catch (_) {} }
-      log('pricing_view', { page: 'pricing.html' });
+      document.addEventListener('DOMContentLoaded', function () {
+        log('pricing_view', { page: 'pricing.html' });
+      });
 
       // billing period toggle
       var period = 'monthly';
@@ -195,6 +203,41 @@
       function openModal() { if (modal) { modal.hidden = false; if (doneEl) doneEl.hidden = true; if (emailEl) emailEl.value = ''; } }
       function closeModal() { if (modal) modal.hidden = true; }
 
+      // Real checkout where Stripe is wired, fake door everywhere else. The
+      // pricing_intents capture runs either way — CTA clicks vs. completed
+      // purchases is still the funnel number worth having (§3).
+      var noteEl = document.getElementById('fw-checkout-note');
+      function note(text) {
+        if (!noteEl) return;
+        noteEl.textContent = text || '';
+        noteEl.hidden = !text;
+      }
+      // billing.js is deferred, so it has NOT run yet when this inline script
+      // does — resolve FWBilling at DOMContentLoaded, not at parse time, or
+      // every CTA silently falls back to the fake door.
+      var billingReady = new Promise(function (resolve) {
+        function settle() {
+          resolve((window.FWBilling && typeof FWBilling.available === 'function')
+            ? FWBilling.available() : false);
+        }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', settle);
+        else settle();
+      });
+      fetch('/config').then(function (r) { return r.json(); }).then(function (cfg) {
+        if (cfg && cfg.stripeEnabled && cfg.stripeTestMode) {
+          note('Checkout is in Stripe test mode on this preview — no real card is charged.');
+        }
+      }).catch(function () {});
+
+      function startCheckout(tier, cta) {
+        if (cta) cta.disabled = true;
+        return FWBilling.checkout(tier).catch(function (err) {
+          if (cta) cta.disabled = false;
+          note((err && err.message) || 'Checkout is unavailable right now.');
+          log('pricing_checkout_error', { tier: tier, status: (err && err.status) || 0 });
+        });
+      }
+
       document.querySelectorAll('.fw-intent-cta').forEach(function (cta) {
         cta.addEventListener('click', function () {
           current.tier = cta.getAttribute('data-tier') || 'monthly';
@@ -202,10 +245,26 @@
           // capture the click-through immediately (this is the CTR metric)
           log('pricing_click', { tier: current.tier, source: current.source });
           post({ tier: current.tier, source: current.source });
-          if (tierLabelEl) tierLabelEl.textContent = TIER_NAME[current.tier] || 'Flight Plan';
-          openModal();
+          var tier = current.tier;
+          billingReady.then(function (ready) {
+            if (ready) { startCheckout(tier, cta); return; }
+            if (tierLabelEl) tierLabelEl.textContent = TIER_NAME[tier] || 'Flight Plan';
+            openModal();
+          });
         });
       });
+
+      // Resume after a sign-in detour: /stripe/checkout is session-gated, so an
+      // anonymous click lands on auth.html and comes back as ?tier=…
+      try {
+        var resumeTier = new URLSearchParams(location.search).get('tier');
+        if (resumeTier && TIER_NAME[resumeTier]) {
+          billingReady.then(function (ready) { if (ready) startCheckout(resumeTier, null); });
+        }
+        if (new URLSearchParams(location.search).get('checkout') === 'cancelled') {
+          note('Checkout cancelled — nothing was charged.');
+        }
+      } catch (_) {}
 
       if (form) form.addEventListener('submit', function (e) {
         e.preventDefault();

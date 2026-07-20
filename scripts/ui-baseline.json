@@ -6,26 +6,38 @@
     "fontSizePx": 0
   },
   "flightway-2.css": {
-    "hex": 31,
+    "hex": 37,
     "important": 0,
     "vh100": 0,
-    "fontSizePx": 73
+    "fontSizePx": 0
   },
   "flightway-pages.css": {
-    "hex": 169,
+    "hex": 164,
     "important": 33,
     "vh100": 0,
-    "fontSizePx": 132
+    "fontSizePx": 0
   },
   "flightway-theme.css": {
     "hex": 0,
-    "important": 289,
+    "important": 288,
+    "vh100": 0,
+    "fontSizePx": 0
+  },
+  "good-fit-jobs.css": {
+    "hex": 0,
+    "important": 0,
     "vh100": 0,
     "fontSizePx": 0
   },
   "hub-dashboard.css": {
-    "hex": 40,
-    "important": 50,
+    "hex": 37,
+    "important": 45,
+    "vh100": 0,
+    "fontSizePx": 0
+  },
+  "opportunity-finder.css": {
+    "hex": 0,
+    "important": 0,
     "vh100": 0,
     "fontSizePx": 0
   },
@@ -39,10 +51,10 @@
     "hex": 2,
     "important": 1,
     "vh100": 0,
-    "fontSizePx": 3
+    "fontSizePx": 0
   },
   "skill-gap-tracker.css": {
-    "hex": 2,
+    "hex": 14,
     "important": 4,
     "vh100": 0,
     "fontSizePx": 0

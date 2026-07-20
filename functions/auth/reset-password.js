@@ -11,12 +11,12 @@ import {
 } from '../_lib/auth.js';
 
 export async function onRequestOptions(context) {
-  return authPreflight(originFromEnv(context.env));
+  return authPreflight(originFromEnv(context.env, context.request));
 }
 
 export async function onRequestPost(context) {
   const { request, env } = context;
-  const origin = originFromEnv(env);
+  const origin = originFromEnv(env, request);
 
   let payload;
   try {

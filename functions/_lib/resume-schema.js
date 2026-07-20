@@ -7,7 +7,7 @@
 
 export const RESUME_JSON_MAX_BYTES = 40 * 1024;
 
-export const BULLET_SRC = ['manual', 'dossier', 'resume', 'artifact', 'sim_trial'];
+export const BULLET_SRC = ['manual', 'dossier', 'resume', 'artifact', 'sim_trial', 'experience'];
 
 // kind → fixed ATS-standard heading. Unknown kinds are rejected.
 export const SECTION_HEADINGS = {
@@ -33,6 +33,7 @@ const LIMITS = {
   skillsFlat: 60,
   skillText: 80,
   itemField: 140,
+  template: 40,
 };
 
 function str(v, max) {
@@ -165,6 +166,11 @@ export function validateResume(input) {
     summary: str(input.summary, LIMITS.summary),
     sections,
   };
+  // Optional client-chosen template/variant id (e.g. "project-forward",
+  // "latex-onepager"). Omitted entirely when absent so a resume saved
+  // before this field existed still round-trips unchanged.
+  const template = str(input.template, LIMITS.template);
+  if (template) resume.template = template;
 
   const bytes = new TextEncoder().encode(JSON.stringify(resume)).length;
   if (bytes > RESUME_JSON_MAX_BYTES) {

@@ -9,6 +9,12 @@
   var rankedOnetCache = null;
   var rankedOnetPromise = null;
   var rankedOnetCacheVersion = 0;
+  var rankedFeaturedPromise = null;
+  // After a failed rank build (vector endpoint down), don't retry for a
+  // window — every portal render re-requests the rank, and without this a
+  // backend outage turns each open tab into an unbounded fetch loop.
+  var rankBuildFailedAt = 0;
+  var RANK_FAIL_COOLDOWN_MS = 30000;
   var vectorImportanceCache = {};
   var dimensionRegistryCache = null;
   var dimensionRegistryPromise = null;
@@ -285,7 +291,16 @@
     });
   }
 
-  function userVsCareerDimensions(soc, personalityValues, objectiveValues) {
+  // Confidence provenance → the 3 display tiers the viewer/why-drawer render.
+  // Mirrors FWOnetDimensionViewer's normalization so chips agree across surfaces.
+  function displayTierFor(conf) {
+    var s = String(conf || '').toLowerCase();
+    if (s === 'quiz-anchored' || s === 'anchored' || s === 'quiz') return 'anchored';
+    if (s === '' || s === 'estimated' || s === 'quiz-seed' || s === 'empty') return 'estimated';
+    return 'inferred';
+  }
+
+  function userVsCareerDimensions(soc, personalityValues, objectiveValues, confidence) {
     if (!personalityValues || !personalityValues.length) return Promise.resolve(null);
     return careerVectorData(soc).then(function (data) {
       if (!data) return null;
@@ -303,6 +318,7 @@
           domain: d.domain,
           user: userPct,
           target: targetPct,
+          tier: confidence && confidence.length ? displayTierFor(confidence[idx]) : null,
           gap: Math.max(0, Math.round(targetPct - userPct)),
           strength: Math.max(0, Math.round(userPct - targetPct)),
         });
@@ -459,13 +475,12 @@
     return zoneCentroidsPromise;
   }
 
+  // Storage access goes through FWUser's v1-shaped blob view (user.js loads
+  // first on every page that loads this file) so the Phase 4 storage flip
+  // happens inside the facade, not here.
   function readLocalQuizBlob() {
-    try {
-      var raw = localStorage.getItem('fw_hub_quiz_v1');
-      return raw ? JSON.parse(raw) : null;
-    } catch (_) {
-      return null;
-    }
+    if (!window.FWUser || typeof FWUser.getBlob !== 'function') return null;
+    return FWUser.getBlob();
   }
 
   function emptyObjectiveVec() {
@@ -535,11 +550,55 @@
     return true;
   }
 
+  // A real O*NET personality profile always has spread. A stored vector with no
+  // spread (all identical) or pinned near the ceiling across most dimensions is
+  // corrupt legacy data — not something the quiz ever produces.
+  function personalityLooksCorrupt(values) {
+    if (!Array.isArray(values) || !values.length) return true;
+    var min = Infinity, max = -Infinity, saturated = 0;
+    for (var i = 0; i < values.length; i++) {
+      var n = Number(values[i]) || 0;
+      if (n < min) min = n;
+      if (n > max) max = n;
+      if (n >= 99.5) saturated++;
+    }
+    return (max - min) < 1 || saturated >= values.length * 0.5;
+  }
+
+  // Legacy-account hydration guard. Older saved profiles predate keys and vector
+  // schemas that current features assume. Patch missing structures, and drop any
+  // vector that is structurally incompatible (wrong dimension count), from an old
+  // schema, or corrupt — so the rebuild below reseeds it from the quiz scores
+  // instead of crashing on a cosine over mismatched dims or showing junk values.
+  function migrateLegacyQuizSchema(quiz) {
+    if (!quiz || typeof quiz !== 'object') return quiz;
+    try {
+      if (!Array.isArray(quiz.careerFocusHistory)) quiz.careerFocusHistory = [];
+      if (!quiz.academics || typeof quiz.academics !== 'object') quiz.academics = {};
+      if (!quiz.profile || typeof quiz.profile !== 'object') quiz.profile = {};
+      if (quiz.refine && typeof quiz.refine !== 'object') delete quiz.refine;
+
+      ['personalityVector', 'objectiveVector'].forEach(function (key) {
+        var v = quiz[key];
+        if (!v) return;
+        var badShape = !Array.isArray(v.values) || v.values.length !== DIM;
+        var badSchema = v.schemaId && v.schemaId !== SCHEMA;
+        // Only reseed a corrupt personality when there are scores to reseed FROM;
+        // objective is always rebuilt from inputs so its stale values don't matter.
+        var corrupt = key === 'personalityVector' && quiz.scores
+          && personalityLooksCorrupt(v.values);
+        if (badShape || badSchema || corrupt) delete quiz[key];
+      });
+    } catch (_) { /* migration must never throw during hydration */ }
+    return quiz;
+  }
+
   function hydrateQuizVectors(quiz, opts) {
     opts = opts || {};
     if (!quiz || typeof quiz !== 'object') return quiz;
     var zoneCentroids = opts.zoneCentroids || zoneCentroidsCache;
 
+    migrateLegacyQuizSchema(quiz);
     quiz.vectorSchemaId = SCHEMA;
 
     var personality = basePersonalityFromQuiz(quiz, zoneCentroids);
@@ -606,10 +665,9 @@
     var vectorsChanged = !hydrated
       || hydrated.personalityVector !== prevPersonality
       || hydrated.objectiveVector !== prevObjective;
-    try {
-      localStorage.setItem('fw_hub_quiz_v1', JSON.stringify(hydrated));
-    } catch (err) {
-      console.warn('[FWOnetVectors] persistQuizVectors failed', err);
+    var wrote = window.FWUser && typeof FWUser.putBlob === 'function' && FWUser.putBlob(hydrated);
+    if (!wrote) {
+      console.warn('[FWOnetVectors] persistQuizVectors failed');
       return hydrated;
     }
     if (vectorsChanged) clearRankedCache();
@@ -910,8 +968,15 @@
     opts = opts || {};
     var limit = opts.limit || 12;
     invalidateRankedCacheIfNeeded();
-
-    return resolvePersonality(opts).then(function (personality) {
+    if (rankedFeaturedPromise) {
+      return rankedFeaturedPromise.then(function (ranked) {
+        return ranked ? ranked.slice(0, limit) : null;
+      });
+    }
+    if (rankBuildFailedAt && Date.now() - rankBuildFailedAt < RANK_FAIL_COOLDOWN_MS) {
+      return Promise.resolve(null);
+    }
+    rankedFeaturedPromise = resolvePersonality(opts).then(function (personality) {
       if (!personality || !personality.values) return null;
       return loadHubMap().then(function (map) {
         if (!map || !map.careers) return null;
@@ -957,10 +1022,19 @@
             item.percentile = percentileRank(idx, ranked.length);
           });
           rankedCache = ranked;
-          return ranked.slice(0, limit);
+          rankBuildFailedAt = 0;
+          return ranked;
         });
       });
-    }).catch(function () { return null; });
+    }).catch(function () {
+      rankBuildFailedAt = Date.now();
+      return null;
+    }).finally(function () {
+      rankedFeaturedPromise = null;
+    });
+    return rankedFeaturedPromise.then(function (ranked) {
+      return ranked ? ranked.slice(0, limit) : null;
+    });
   }
 
   function getCachedFeaturedRank(limit) {
@@ -980,6 +1054,9 @@
         return ranked ? ranked.slice(0, limit) : null;
       });
     }
+    if (rankBuildFailedAt && Date.now() - rankBuildFailedAt < RANK_FAIL_COOLDOWN_MS) {
+      return Promise.resolve(null);
+    }
     rankedOnetPromise = resolvePersonality(opts).then(function (personality) {
       if (!personality || !personality.values) return null;
       return loadOnetCareers().then(function (rows) {
@@ -990,21 +1067,38 @@
           var objective = quizVecs.objective;
           var objValues = objective && objective.values ? objective.values : null;
           var objActive = objValues && vectorMagnitude(objValues) > 0.01;
+          // Stated-interest bonus: the career the user named in the quiz's
+          // leaning question gets a flat rank bonus. Recomputed fresh from the
+          // persisted quiz on every rank build (never accumulated), so it's
+          // idempotent and survives hydration like the resume/enrich boosts.
+          var leaningSoc = null;
+          try {
+            var quizRaw = readLocalQuizBlob();
+            leaningSoc = quizRaw && quizRaw.careerLeaningSoc ? String(quizRaw.careerLeaningSoc) : null;
+          } catch (_) { /* no leaning */ }
           var ranked = [];
           rows.forEach(function (row) {
             var vec = vectors[row.soc];
             if (!vec) return;
             var components = {};
             var score = scoreCareerVector(personality, objValues, objActive, vec, components);
+            if (leaningSoc && row.soc === leaningSoc) {
+              score += 8;
+              components.statedInterest = true;
+            }
             ranked.push(buildOnetRankEntry(row, score, components));
           });
           ranked.sort(function (a, b) { return b.score - a.score; });
           rankedOnetCache = ranked;
           rankedOnetCacheVersion += 1;
+          rankBuildFailedAt = 0;
           return ranked.slice(0, limit);
         });
       });
-    }).catch(function () { return null; }).finally(function () {
+    }).catch(function () {
+      rankBuildFailedAt = Date.now();
+      return null;
+    }).finally(function () {
       rankedOnetPromise = null;
     });
     return rankedOnetPromise;
@@ -1021,12 +1115,12 @@
   // career would not appear in today's personality-dominated top ranks. Only
   // active when the objective vector is active (magnitude > 0.01).
   //
-  // Criteria (as shipped): objectiveFit >= 72 AND objectiveFit >= personalityFit
+  // Criteria (mean-centered scale): objectiveFit >= 52 AND objectiveFit >= personalityFit
   // + 12 AND the entry is NOT in the top 12 by overall score. Returns up to
   // opts.limit (default 3), best objectiveFit first. Each candidate carries its
   // top 3 contributing dimensions (drivers) — dims where min(user objective
   // value, career value) is highest.
-  var STRETCH_MIN_OBJECTIVE = 72;
+  var STRETCH_MIN_OBJECTIVE = 52;
   var STRETCH_MIN_GAP = 12;
   var STRETCH_TOP_EXCLUDE = 12;
 

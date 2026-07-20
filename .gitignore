@@ -4,6 +4,14 @@ node_modules/
 *.log
 .fuse_hidden*
 *.lock
-
 .wrangler/
 .claude/
+.onet-cache/
+netlify.toml
+Netlify/
+scripts/playwright-smoke/
+.Rhistory
+.screenshots/
+igor_work_2_repo/
+FLIGHTWAY_UI_POLISH_AND_AUDIT_BRIEF.md
+FLIGHTWAY_LAUNCH_REVIEW_BRIEF.md

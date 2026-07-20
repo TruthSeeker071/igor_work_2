@@ -65,7 +65,7 @@
         + '</li>';
     }).join('');
     return lead + '<ul class="fw-why-list">' + items + '</ul>'
-      + '<p class="fw-why-note">Estimated from your quiz &amp; profile vectors — a self-assessment, not a prediction.</p>';
+      + '<p class="fw-why-note">Estimated from your quiz &amp; profile — a self-assessment, not a prediction.</p>';
   }
 
   /**
@@ -82,8 +82,29 @@
 
     var block = document.createElement('div');
     block.className = 'fw-why-block';
+
     var bodyId = 'fw-why-body-' + Math.random().toString(36).slice(2, 8);
     var label = pct != null ? 'Why ' + Math.round(pct) + '%?' : 'Why this match?';
+
+    // Free/paid merge §1: the dimension-by-dimension explainer is Flight Plan.
+    // The free tier keeps the match itself and the headline number — this is the
+    // phase5-free-tier-framing teaser, now backed by real gating instead of IA.
+    if (global.FWEnt && typeof FWEnt.has === 'function' && !FWEnt.has('premium')) {
+      block.className = 'fw-why-locked';
+      block.setAttribute('data-fw-gated', 'why-this-match');
+      block.innerHTML =
+        '<div class="fw-why-locked-head">'
+        + '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">'
+        + '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>'
+        + '<span>' + esc(label) + '</span></div>'
+        + '<p>Flight Plan shows the exact work-style and skill factors behind this match \u2014 '
+        + 'so you can check the reasoning, not just trust a number.</p>'
+        + '<a class="fw-why-locked-cta" href="pricing.html">See Flight Plan \u2192</a>';
+      if (opts.prepend && container.firstChild) container.insertBefore(block, container.firstChild);
+      else container.appendChild(block);
+      return block;
+    }
+
     block.innerHTML =
       '<button type="button" class="fw-why-toggle" aria-expanded="false" aria-controls="' + bodyId + '">'
       + '<span>' + esc(label) + '</span><span class="fw-why-caret" aria-hidden="true">&rsaquo;</span>'
@@ -92,28 +113,18 @@
 
     var toggle = block.querySelector('.fw-why-toggle');
     var body = block.querySelector('.fw-why-body');
-    function setOpen(open, log) {
+    toggle.addEventListener('click', function () {
+      var open = body.hidden;
       body.hidden = !open;
       toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
       block.classList.toggle('is-open', open);
-      if (open && log && global.FWEvents) FWEvents.log('why_match_open', { n: contribs.length });
-    }
-    toggle.addEventListener('click', function () {
-      var open = body.hidden;
-      setOpen(open, true);
-      try { localStorage.setItem(OPEN_KEY, open ? '1' : '0'); } catch (_) { /* ignore */ }
+      if (open && global.FWEvents) FWEvents.log('why_match_open', { n: contribs.length });
     });
-    // Wireframe 1e-2: expanded by default on first visit, then remembered.
-    var saved = null;
-    try { saved = localStorage.getItem(OPEN_KEY); } catch (_) { /* ignore */ }
-    if (saved !== '0') setOpen(true, false);
 
     if (opts.prepend && container.firstChild) container.insertBefore(block, container.firstChild);
     else container.appendChild(block);
     return block;
   }
-
-  var OPEN_KEY = 'fw_why_match_open_v1';
 
   global.FWWhyMatch = {
     fromComparisons: fromComparisons,

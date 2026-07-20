@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Public, logged-out-reachable pages only. Update the host when a custom
+     domain replaces pages.dev. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://flightwayjacobprototype.pages.dev/</loc></url>
+  <url><loc>https://flightwayjacobprototype.pages.dev/quiz.html</loc></url>
+  <url><loc>https://flightwayjacobprototype.pages.dev/dashboard.html</loc></url>
+</urlset>

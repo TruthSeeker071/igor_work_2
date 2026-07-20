@@ -1,5 +1,6 @@
 import { callGeminiJson } from '../gemini-json.js';
-import { checkRateLimit, loadQuizProfile, saveQuizProfile } from '../auth.js';
+import { checkRateLimit } from '../auth.js';
+import { loadUser, saveUser, normalizeUser, denormalizeUser } from '../user.js';
 import { loadDossier } from '../../_lib.js';
 import { DIM_COUNT, GEMINI_CAREER_BATCH_DISABLED, SCHEMA_ID } from './constants.js';
 import { clamp100, vectorVariance } from './math.js';
@@ -232,8 +233,10 @@ export async function maybePatchPersonalityForUser(env, email, { source, context
     return { skipped: true, reason: 'rate_limit' };
   }
 
-  const quiz = await loadQuizProfile(env, email);
-  if (!quiz) return { skipped: true, reason: 'no_profile' };
+  const user = await loadUser(env, email);
+  if (!user) return { skipped: true, reason: 'no_profile' };
+  // Transformer keeps the v1 working shape; storage speaks the user model.
+  const quiz = denormalizeUser(user);
 
   const dossier = await loadDossier(env, email).catch(() => '');
   const result = await patchPersonalityFromLearning(env, baseUrl, {
@@ -244,7 +247,7 @@ export async function maybePatchPersonalityForUser(env, email, { source, context
   });
 
   if (result.changed) {
-    await saveQuizProfile(env, email, result.quiz);
+    await saveUser(env, email, normalizeUser(result.quiz));
     await maybeSmallAlignAfterSectorPatch(env, email, result.quiz.sectorFitSheet).catch(() => {});
   }
 

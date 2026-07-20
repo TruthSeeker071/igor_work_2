@@ -18,11 +18,28 @@ export function isObjectiveVectorActive(values, threshold = 0.01) {
   return magnitude(values) > threshold;
 }
 
+function vecMean(vec, len = DIM_COUNT) {
+  let s = 0;
+  for (let i = 0; i < len; i++) s += (vec[i] || 0);
+  return s / len;
+}
+
+// Mean-centered cosine (Pearson correlation) — strips the shared "generic
+// occupation" common-mode baseline of O*NET vectors so fit scores actually
+// spread out instead of clustering at ~0.70-0.85. Returns [-1,1]; cosinePercent
+// clamps <0 to 0. MUST stay identical to assets/js/shared/onet-math.js cosine
+// (explicit client/server parity invariant).
 export function cosine(a, b, len = DIM_COUNT) {
-  const ma = magnitude(a, len);
-  const mb = magnitude(b, len);
-  if (ma === 0 || mb === 0) return 0;
-  return dot(a, b, len) / (ma * mb);
+  const ma = vecMean(a, len);
+  const mb = vecMean(b, len);
+  let dab = 0, na = 0, nb = 0;
+  for (let i = 0; i < len; i++) {
+    const da = (a[i] || 0) - ma;
+    const db = (b[i] || 0) - mb;
+    dab += da * db; na += da * da; nb += db * db;
+  }
+  if (na <= 0 || nb <= 0) return 0;
+  return dab / Math.sqrt(na * nb);
 }
 
 export function normalizeVector(vec, len = DIM_COUNT) {

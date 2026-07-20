@@ -42,10 +42,10 @@
     }).join('') + '</ul>';
   }
 
-  function sectionHtml(ex) {
-    var score = Math.max(0, Math.min(100, Math.round(ex.score)));
+  function sectionHtml(ex, score) {
     var band = ex.band || 'moderate';
-    return '<div class="fw-ax-head">'
+    return '<div class="fw-ax-card">'
+      + '<div class="fw-ax-head">'
       + '<h2>How AI hits this career</h2>'
       + '<span class="fw-ax-badge">AI estimate · self-assessment</span>'
       + '</div>'
@@ -61,26 +61,33 @@
       + '</div>'
       + '<p class="fw-ax-method">Estimated from this career’s O*NET work activities — a way to plan, not a prediction of your job. '
       + '<a href="docs/AI_EXPOSURE_METHOD.md" target="_blank" rel="noopener">How we estimate this</a>.</p>'
-      + '<a class="fw-ax-cta" href="roadmap.html?aiproof=1">AI-proof my plan — build toward the durable skills &rarr;</a>';
+      + '<a class="cta-btn cta-btn-outline fw-ax-cta" href="roadmap.html?aiproof=1">AI-proof my plan — build toward the durable skills &rarr;</a>'
+      + '</div>';
   }
 
-  /** Inject the exposure section for `soc`, after `anchorEl` (or into main). Idempotent. */
+  /**
+   * Inject the exposure section for `soc`, after `anchorEl` (or into main). Idempotent.
+   * Resolves with the rounded 0-100 score (or null) so callers can keep the
+   * "AI Exposure" metric tile in sync with this section's number.
+   */
   function inject(soc, anchorEl) {
-    if (!soc) return;
-    load().then(function (data) {
+    if (!soc) return Promise.resolve(null);
+    return load().then(function (data) {
       if (data) cache.__resolved = data;
       var ex = getExposure(soc, data);
-      if (!ex) return;
+      if (!ex) return null;
+      var score = Math.max(0, Math.min(100, Math.round(ex.score)));
       var existing = document.getElementById('career-ai-exposure');
       if (existing) existing.remove();
       var sec = document.createElement('section');
       sec.id = 'career-ai-exposure';
       sec.className = 'fw-ax-section';
-      sec.innerHTML = sectionHtml(ex);
+      sec.innerHTML = sectionHtml(ex, score);
       var anchor = anchorEl && anchorEl.parentNode ? anchorEl : null;
       if (anchor) anchor.parentNode.insertBefore(sec, anchor.nextSibling);
       else (document.querySelector('main') || document.body).appendChild(sec);
       try { if (global.FWEvents) FWEvents.log('ai_exposure_view', { soc: soc, score: ex.score, band: ex.band }); } catch (_) {}
+      return score;
     });
   }
 

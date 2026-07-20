@@ -1,12 +1,11 @@
 import { loadDossier } from '../_lib.js';
 import {
-  loadQuizProfile,
-  saveQuizProfile,
   loadRoadmap,
   saveRoadmap,
   checkRateLimit,
   RATE_LIMIT_SYNC_MAX,
 } from './auth.js';
+import { loadUserBlob, saveUserBlob } from './user.js';
 import { computeInputsHash } from './portal-snapshot.js';
 import { normalizeProfileAnswers, appendCareerSwitchToDossier } from './dossier-enrich.js';
 import {
@@ -17,6 +16,7 @@ import {
 import { executeGenerateRoadmap } from './roadmap-generate.js';
 import { runAlignmentCheck } from './profile-alignment.js';
 import { validateOnetCareer, searchOnetCareersByTitle } from './onet/career-lookup.js';
+import { computePivotAnalysis, pivotSummaryLine } from './onet/pivot-analysis.js';
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -26,7 +26,7 @@ const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const STRICT_CATALOG_SOURCES = new Set(['coach_pivot', 'deep_dive_pivot']);
 
 async function resolveCatalogFocus(env, { slug, name, soc }) {
-  const baseUrl = env?.SITE_URL || 'https://flightway.pages.dev';
+  const baseUrl = env?.SITE_URL || 'https://flightwayjacobprototype.pages.dev';
   try {
     if (soc) {
       const bySoc = await validateOnetCareer(env, baseUrl, { soc });
@@ -131,6 +131,7 @@ export function resolveCareerFocus(quiz, roadmap) {
       slug: focus.slug.toLowerCase(),
       name: String(focus.name).slice(0, 120),
       source: focus.source || 'careerFocus',
+      soc: focus.soc || null,
     };
   }
 
@@ -139,6 +140,7 @@ export function resolveCareerFocus(quiz, roadmap) {
       slug: roadmap.targetCareerSlug,
       name: roadmap.targetCareerName,
       source: 'roadmap',
+      soc: roadmap.fitContext?.targetSoc || null,
     };
   }
 
@@ -181,7 +183,7 @@ export async function recordCareerFocus(env, email, { slug, name, source, soc })
   }
 
   const [quizRaw, roadmap] = await Promise.all([
-    loadQuizProfile(env, email),
+    loadUserBlob(env, email),
     loadRoadmap(env, email).catch(() => null),
   ]);
   const quiz = quizRaw || {};
@@ -195,6 +197,35 @@ export async function recordCareerFocus(env, email, { slug, name, source, soc })
   const slugChanged = cleanSlug !== priorSlug;
   let switchLogged = false;
   const now = new Date().toISOString();
+
+  // Quantified pivot analysis — shared by every pivot entry point (explicit
+  // picker via /career-focus and chat-confirmed switches both land here).
+  // Best-effort: a vector-store hiccup must never block the switch itself.
+  // priorResolved.soc is often missing on focus records written before SOC
+  // backfilling existed (or via the portal_pick_bootstrap path, which never
+  // carries one) — resolve it from the catalog the same way a missing SOC on
+  // the NEW focus already gets backfilled below, so pivots aren't silently
+  // skipped just because the OLD focus predates this feature.
+  let pivot = null;
+  if (slugChanged && priorResolved && cleanSoc) {
+    let priorSoc = priorResolved.soc || null;
+    if (!priorSoc) {
+      try {
+        const backfilled = await resolveCatalogFocus(env, { slug: priorResolved.slug, name: priorResolved.name, soc: null });
+        priorSoc = backfilled?.soc || null;
+      } catch (err) {
+        console.warn('recordCareerFocus prior-soc backfill failed', err?.message || err);
+      }
+    }
+    if (priorSoc && priorSoc !== cleanSoc) {
+      try {
+        const baseUrl = env?.SITE_URL || 'https://flightwayjacobprototype.pages.dev';
+        pivot = await computePivotAnalysis(env, baseUrl, quiz, priorSoc, cleanSoc);
+      } catch (err) {
+        console.warn('recordCareerFocus pivot analysis failed', err?.message || err);
+      }
+    }
+  }
 
   if (shouldReplace || weight >= RETARGET_WEIGHT_MIN || !current) {
     quiz.careerFocus = {
@@ -221,6 +252,7 @@ export async function recordCareerFocus(env, email, { slug, name, source, soc })
           toName: cleanName,
           source: source || 'unknown',
           at: now,
+          pivotLine: pivot ? pivotSummaryLine(pivot, priorResolved?.name, cleanName) : '',
         });
         switchLogged = true;
       } catch (err) {
@@ -228,7 +260,7 @@ export async function recordCareerFocus(env, email, { slug, name, source, soc })
       }
     }
 
-    await saveQuizProfile(env, email, quiz);
+    await saveUserBlob(env, email, quiz);
   }
 
   let alignment = null;
@@ -246,6 +278,7 @@ export async function recordCareerFocus(env, email, { slug, name, source, soc })
 
   return {
     focus: quiz.careerFocus,
+    pivot,
     retarget: weight >= RETARGET_WEIGHT_MIN && slugChanged,
     careerFocusHistory: quiz.careerFocusHistory || [],
     switchCount: countRecentCareerSwitches(quiz),
@@ -280,7 +313,7 @@ export async function maybeSyncRoadmap(env, email, opts = {}) {
   const reason = String(opts.reason || 'sync').slice(0, 64);
 
   const [quiz, dossierRaw, roadmap] = await Promise.all([
-    opts.quiz !== undefined ? Promise.resolve(opts.quiz) : loadQuizProfile(env, email).catch(() => null),
+    opts.quiz !== undefined ? Promise.resolve(opts.quiz) : loadUserBlob(env, email).catch(() => null),
     opts.dossier !== undefined ? Promise.resolve(opts.dossier) : loadDossier(env, email).catch(() => ''),
     opts.roadmap !== undefined ? Promise.resolve(opts.roadmap) : loadRoadmap(env, email).catch(() => null),
   ]);
@@ -363,7 +396,7 @@ export async function enrichRoadmapFocusKeywords(env, roadmap) {
 export async function attachMetaFromProfile(env, email, roadmap, opts = {}) {
   if (!roadmap) return roadmap;
   const [quiz, dossierRaw] = await Promise.all([
-    opts.quiz !== undefined ? Promise.resolve(opts.quiz) : loadQuizProfile(env, email).catch(() => null),
+    opts.quiz !== undefined ? Promise.resolve(opts.quiz) : loadUserBlob(env, email).catch(() => null),
     opts.dossier !== undefined ? Promise.resolve(opts.dossier) : loadDossier(env, email).catch(() => ''),
   ]);
   const focus = resolveCareerFocus(quiz, roadmap);

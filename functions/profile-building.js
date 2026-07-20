@@ -7,8 +7,6 @@ import {
   authPreflight,
   authJsonResponse,
   optionalSession,
-  loadQuizProfile,
-  saveQuizProfile,
 } from './_lib/auth.js';
 import {
   normalizeProfileAnswers,
@@ -17,6 +15,7 @@ import {
   synthesizeIdentityAnalysis,
 } from './_lib/dossier-enrich.js';
 import { topIndustryKeys } from './_lib/portal-snapshot.js';
+import { loadUserBlob, saveUserBlob } from './_lib/user.js';
 import { maybeSyncRoadmap } from './_lib/roadmap-sync.js';
 import { maybePatchSectorFitForUser } from './_lib/sector-fit-sheet.js';
 
@@ -36,12 +35,12 @@ function industryNamesFromScores(scores) {
 }
 
 export async function onRequestOptions(context) {
-  return authPreflight(originFromEnv(context.env));
+  return authPreflight(originFromEnv(context.env, context.request));
 }
 
 export async function onRequest(context) {
   const { request, env } = context;
-  const origin = originFromEnv(env);
+  const origin = originFromEnv(env, request);
 
   if (request.method === 'OPTIONS') return authPreflight(origin);
   if (request.method !== 'POST') return authJsonResponse(405, { error: 'Method not allowed' }, origin);
@@ -75,7 +74,7 @@ export async function onRequest(context) {
     if (dossierResult) dossierUpdated = true;
 
     try {
-      const quiz = (await loadQuizProfile(env, email)) || {};
+      const quiz = (await loadUserBlob(env, email)) || {};
       const identityContext = {
         userName: quiz.name || payload.userName || 'Student',
         archetype: quiz.archetype || '',
@@ -88,7 +87,7 @@ export async function onRequest(context) {
       quiz.profileBuilding.answers = answers;
       quiz.profileBuilding.completedAt = new Date().toISOString();
       if (characterSummary) quiz.characterSummary = characterSummary;
-      await saveQuizProfile(env, email, quiz);
+      await saveUserBlob(env, email, quiz);
     } catch (err) {
       console.warn('profile-building quiz patch failed', err);
     }

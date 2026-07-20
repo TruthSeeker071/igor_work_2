@@ -10,7 +10,9 @@
   'use strict';
 
   var RANK = { free: 0, premium: 1, lifetime: 2 };
-  var state = { plan: 'free', paywall: false, loaded: false };
+  // remaining: per-feature allowance left today. null = unlimited on this plan,
+  // undefined (absent key) = not known yet. Free/paid merge §2.
+  var state = { plan: 'free', paywall: false, loaded: false, dev: false, remaining: {} };
   var bootPromise = null;
 
   function rank(p) { return RANK[String(p == null ? 'free' : p).toLowerCase()] || 0; }
@@ -20,16 +22,27 @@
     return fetch(url, { method: 'GET', credentials: 'include' });
   }
 
+  /** Pull plan + feature counters from /auth/me. Never rejects. */
+  function pullMe() {
+    return afetch('/auth/me').then(function (r) { return r.ok ? r.json() : null; }).then(function (me) {
+      if (me) {
+        state.plan = me.plan || 'free';
+        state.dev = !!me.dev;
+        if (me.remaining && typeof me.remaining === 'object') state.remaining = me.remaining;
+      } else if (!state.loaded) {
+        state.plan = 'free';
+      }
+      state.loaded = true;
+      return state;
+    }).catch(function () { state.loaded = true; return state; });
+  }
+
   function boot() {
     if (bootPromise) return bootPromise;
     bootPromise = fetch('/config').then(function (r) { return r.json(); }).then(function (cfg) {
       state.paywall = !!(cfg && cfg.paywallEnabled);
       if (!state.paywall) { state.plan = 'premium'; state.loaded = true; return state; }
-      return afetch('/auth/me').then(function (r) { return r.ok ? r.json() : null; }).then(function (me) {
-        state.plan = (me && me.plan) || 'free';
-        state.loaded = true;
-        return state;
-      }).catch(function () { state.loaded = true; return state; });
+      return pullMe().then(function () { return state; });
     }).catch(function () {
       // /config unreachable → assume dark so we never wrongly lock beta users.
       state.paywall = false; state.plan = 'premium'; state.loaded = true; return state;
@@ -42,9 +55,14 @@
     return rank(state.plan) >= rank(feature || 'premium');
   }
 
-  /** Swap a locked element's content for an upgrade CTA. Returns true if it gated. */
-  function gate(el, featureKey) {
-    if (!el || has('premium')) return false;
+  /**
+   * Render the upgrade CTA into an element unconditionally. Use when the server
+   * has ALREADY refused (a 402 with upgrade:true) — the plan question is settled,
+   * so a local has() check would only race the boot fetch. One lock style for
+   * every gated surface (free/paid merge §4).
+   */
+  function lock(el, featureKey) {
+    if (!el) return false;
     el.setAttribute('data-fw-gated', featureKey || 'premium');
     el.innerHTML = '<div class="fw-ent-gate">'
       + '<p class="fw-ent-gate-title">A Flight Plan feature</p>'
@@ -54,10 +72,42 @@
     return true;
   }
 
+  /** Swap a locked element's content for an upgrade CTA. Returns true if it gated. */
+  function gate(el, featureKey) {
+    if (!el || has('premium')) return false;
+    return lock(el, featureKey);
+  }
+
+  /**
+   * Allowance left for a metered feature: a number, null when the plan has no
+   * cap, or undefined when we haven't been told yet (boot skips /auth/me while
+   * the paywall is dark — call refresh() on pages that actually show a counter).
+   */
+  function remaining(featureKey) {
+    var v = state.remaining[featureKey];
+    return v === undefined ? undefined : v;
+  }
+
+  /** Endpoints echo their post-spend counter back; feed it in so the UI updates without a refetch. */
+  function setRemaining(featureKey, n) {
+    if (!featureKey) return;
+    state.remaining[featureKey] = (n === null || typeof n === 'number') ? n : undefined;
+  }
+
+  /** Force a fresh /auth/me read (plan + counters). Resolves to the state object. */
+  function refresh() {
+    return boot().then(pullMe);
+  }
+
   global.FWEnt = {
     boot: boot,
     has: has,
     gate: gate,
+    lock: lock,
+    refresh: refresh,
+    remaining: remaining,
+    setRemaining: setRemaining,
+    isDev: function () { return !!state.dev; },
     plan: function () { return state.plan; },
     paywallEnabled: function () { return state.paywall; },
   };

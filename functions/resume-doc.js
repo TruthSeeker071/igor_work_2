@@ -28,12 +28,12 @@ function parseLatest(row) {
 }
 
 export async function onRequestOptions(context) {
-  return preflightResponse(originFromEnv(context.env));
+  return preflightResponse(originFromEnv(context.env, context.request));
 }
 
 export async function onRequestGet(context) {
   const { request, env } = context;
-  const origin = originFromEnv(env);
+  const origin = originFromEnv(env, request);
   const email = await getSessionEmail(request, env);
   if (!email) return jsonResponse(401, { error: 'Not signed in.' }, origin);
 
@@ -75,7 +75,7 @@ export async function onRequestGet(context) {
 
 export async function onRequestPost(context) {
   const { request, env } = context;
-  const origin = originFromEnv(env);
+  const origin = originFromEnv(env, request);
   const email = await getSessionEmail(request, env);
   if (!email) return jsonResponse(401, { error: 'Not signed in.' }, origin);
 
@@ -132,7 +132,7 @@ export async function onRequestPost(context) {
 
 export async function onRequestDelete(context) {
   const { request, env } = context;
-  const origin = originFromEnv(env);
+  const origin = originFromEnv(env, request);
   const email = await getSessionEmail(request, env);
   if (!email) return jsonResponse(401, { error: 'Not signed in.' }, origin);
 

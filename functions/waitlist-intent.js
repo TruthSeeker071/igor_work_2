@@ -5,18 +5,19 @@
 // >=5% CTR. Never stores a raw IP (peppered hash only).
 
 import { originFromEnv, jsonResponse, preflightResponse, normalizeEmail, isValidEmail } from './_lib.js';
-import { checkRateLimit, clientIp, sha256Hex, generateToken } from './_lib/auth.js';
+import { checkRateLimit, clientIp, sha256Hex, generateToken, getSessionEmail } from './_lib/auth.js';
+import { isDevTester } from './_lib/entitlements.js';
 
 const ALLOWED_TIERS = new Set(['monthly', 'annual', 'lifetime', 'sprint']);
 const RATE_LIMIT_MAX = 20; // per IP per hour
 
 export async function onRequestOptions(context) {
-  return preflightResponse(originFromEnv(context.env));
+  return preflightResponse(originFromEnv(context.env, context.request));
 }
 
 export async function onRequestPost(context) {
   const { request, env } = context;
-  const origin = originFromEnv(env);
+  const origin = originFromEnv(env, request);
 
   let body;
   try {
@@ -40,6 +41,13 @@ export async function onRequestPost(context) {
     await checkRateLimit(env, `intent:${ip}`, { max: RATE_LIMIT_MAX });
   } catch (err) {
     return jsonResponse(err.status || 429, { error: err.message || 'Too many attempts.' }, origin);
+  }
+
+  // Dev/tester traffic must not pollute the funnel (free/paid merge §3.5): a CTR
+  // reading is only worth having if the clicks came from real prospects.
+  const sessionEmail = await getSessionEmail(request, env).catch(() => '');
+  if (isDevTester(env, email) || isDevTester(env, sessionEmail)) {
+    return jsonResponse(200, { ok: true, dev: true }, origin);
   }
 
   // Persist. The fake door must never hard-fail the UX, so DB errors degrade to ok.

@@ -16,6 +16,11 @@ const state = {
   hoveredId: null, hoveredZone: null, selectedId: null,
   isDragging: false, hasDragged: false,
   dragStart: { x: 0, y: 0 }, panStart: { x: 0, y: 0 },
+  // Dot-grid backdrop offset. Follows drag-pans only — cursor-anchored zoom
+  // mutates panX/panY every tick, and a backdrop keyed to pan visibly slides
+  // during zoom. Keyed to drags alone, the backdrop stays rock-still while
+  // zooming yet still gives tactile motion feedback when the map is dragged.
+  bgOffX: 0, bgOffY: 0, bgOffStart: { x: 0, y: 0 },
   searchQuery: '',
   mouseX: 0, mouseY: 0, mouseOn: false,
   activePointerId: null,
@@ -73,7 +78,7 @@ function resolveCareerPanelSlug(career) {
 }
 
 // ── PERSONALIZATION FROM QUIZ ──
-// Quiz writes name + 24 industry scores to #r=<token> and fw_hub_quiz_v1.
+// Quiz writes name + 24 industry scores to #r=<token> and the local quiz blob.
 let userName = 'Student';
 let hubQuizScores = null;
 (function () {
@@ -114,7 +119,7 @@ function isHubLoadingVisible() {
 function startHubBootWatchdog() {
   setTimeout(function () {
     if (!isHubLoadingVisible()) return;
-    dismissHubLoadingOnce();
+    hideHubLoading();
     showHubBootError('Career map took too long to load. Try refreshing the page.');
   }, 8000);
 }
@@ -158,6 +163,10 @@ const SECTOR_ORB_SCREEN_R = 5.6;
 const SECTOR_ORB_HOVER_R = 6.75;
 let sectorLabelsPending = null;
 let needsRedraw = true;
+// CAM4 — fly-to-match arrival halo. Declared here (not near its trigger) so
+// loop(), which reads it and is reachable from top-level boot, never hits the
+// hub TDZ trap. { career, start, ms } while a beacon is pulsing, else null.
+let matchHalo = null;
 
 function getTopbarHeight() {
   var bar = document.getElementById('topbar');
@@ -178,7 +187,15 @@ let animationPaused = false;
 let hubLoopReady = false;
 const motionOk = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+// Frames render (and dismiss fires) from the moment the loop starts, but the
+// map is only legacy fallback content until the O*NET init lands — keep the
+// loading screen up until the real map (or a definitive fallback/error) is
+// ready, so the user never sees the placeholder map swap under them.
+// Failsafes (boot watchdog, boot errors) bypass via hideHubLoading directly.
+let hubContentReady = false;
+
 function dismissHubLoadingOnce() {
+  if (!hubContentReady) return;
   hideHubLoading();
 }
 
@@ -243,7 +260,17 @@ function resize() {
   if (onetHubActive && window.FWOnetHub && typeof FWOnetHub.invalidateViewport === 'function') {
     FWOnetHub.invalidateViewport();
   }
-  if (onetHubActive) clampHubPan();
+  if (onetHubActive) {
+    // Re-fit the camera when the viewport changes: a page that booted with a
+    // degenerate (hidden/zero-size) viewport otherwise keeps a collapsed zoom
+    // forever — the map renders as a blank corner smudge with no error.
+    var minZ = hubMinZoom();
+    var maxZ = hubMaxZoom();
+    if (Number.isFinite(minZ) && Number.isFinite(maxZ) && (state.zoom < minZ || state.zoom > maxZ)) {
+      state.zoom = Math.max(minZ, Math.min(maxZ, state.zoom));
+    }
+    clampHubPan();
+  }
   invalidateSectorLabelCache();
   requestHubRedraw();
   syncMapHud();
@@ -257,12 +284,15 @@ if (!canvas || !ctx) {
 } else {
   hubBootOk = true;
   resize();
-  window.addEventListener('resize', resize);
   let hubVvTimer = null;
   function onHubVisualViewportResize() {
     if (hubVvTimer) clearTimeout(hubVvTimer);
     hubVvTimer = setTimeout(resize, 80);
   }
+  // Debounce window resize through the same 80ms timer as visualViewport so a
+  // desktop window-drag doesn't re-run canvas realloc + overviewLayer
+  // invalidation on every intermediate event.
+  window.addEventListener('resize', onHubVisualViewportResize);
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', onHubVisualViewportResize);
   }
@@ -317,6 +347,7 @@ function bindHubCanvasRender() {
     set sectorLabelsPending(v) { sectorLabelsPending = v; },
     get needsRedraw() { return needsRedraw; },
     set needsRedraw(v) { needsRedraw = v; },
+    get matchHalo() { return matchHalo; },
     hubWorldW: hubWorldW,
     hubWorldH: hubWorldH,
     zoneLabelCanvasY: zoneLabelCanvasY,
@@ -392,6 +423,16 @@ function syncMapHud() {
   var inSector = onetHubActive && window.FWOnetHub && FWOnetHub.getHubMode() === 'sector';
   var zoneId = inSector && FWOnetHub.getActiveZone ? FWOnetHub.getActiveZone() : null;
   if (backBtn) backBtn.hidden = !inSector;
+  var lensBtn = document.getElementById('hub-lens-toggle');
+  if (lensBtn) {
+    var lensAvail = inSector && typeof FWOnetHub.lensAvailable === 'function' && FWOnetHub.lensAvailable();
+    lensBtn.hidden = !lensAvail;
+    if (lensAvail) {
+      var lensOn = FWOnetHub.isLensOn();
+      lensBtn.textContent = lensOn ? 'Showing top matches' : 'Showing all careers';
+      lensBtn.setAttribute('aria-pressed', lensOn ? 'true' : 'false');
+    }
+  }
   if (searchHud) {
     if (!inSector && state.searchQuery && onetHubActive && window.FWOnetHub) {
       var matches = FWOnetHub.searchAll(state.searchQuery, 999).length;
@@ -534,6 +575,21 @@ function upgradeStretchExplanations(candidates, token) {
         var why = row && row.querySelector('.hub-stretch-why');
         if (why) why.textContent = text;
       });
+      // Minimal provenance note (fix plan 2.5): explanations may lean on a
+      // current-outlook web brief — show its "as of" date when present.
+      var asOf = data.grounding && data.grounding.fetchedAt ? String(data.grounding.fetchedAt).slice(0, 10) : '';
+      var note = document.getElementById('hub-stretch-asof');
+      if (asOf) {
+        if (!note) {
+          note = document.createElement('p');
+          note.id = 'hub-stretch-asof';
+          note.className = 'hub-stretch-asof';
+          list.parentNode.appendChild(note);
+        }
+        note.textContent = 'Outlook notes current as of ' + asOf;
+      } else if (note) {
+        note.remove();
+      }
     })
     .catch(function () { /* keep fallback text */ });
 }
@@ -560,8 +616,36 @@ function refreshStretchFits() {
   });
 })();
 
+// Fast, locked flights both ways — clicking into or out of a cluster is a
+// deliberate shortcut past manual pan/zoom, so it should always beat manually
+// scrolling there. Manual pan/zoom (unlocked, interruptible) is unaffected —
+// this only governs the click-triggered teleport tween.
+// Asymmetric by design (CAM2): entering a sector should feel like arriving
+// somewhere (weightier), leaving should feel effortless (quicker). The sub-area
+// backdrop font scales with zoom, so it grows into place across the same flight
+// — arrival and backdrop land together with no extra fade timer. Reduced motion
+// snaps instantly (animateCameraTo short-circuits when !motionOk).
+const FLY_TO_SECTOR_MS = 360;
+const FLY_TO_OVERVIEW_MS = 240;
+
+// CAM1 establishing shot: on the first hub view per session, ease from a slight
+// zoom-in on the map center back out to the fitted overview — a one-second pull-
+// back that teaches "this is a world you can move through." Once per session,
+// skipped on reduced motion and when deep-linked to a specific career (?soc=).
+const HUB_ESTABLISH_KEY = 'fw_hub_established';
+const HUB_ESTABLISH_MS = 650;
+const HUB_ESTABLISH_ZOOM = 1.12;
+
+// CAM3 dossier push-in: clicking a career's "deep dive" pushes the camera into
+// that orb (locked, orb-anchored) while the page fades out (M5), then navigates
+// — "I flew into this career." Nav is capped so it never feels laggy.
+const DOSSIER_PUSHIN_ZOOM = 1.3;
+const DOSSIER_PUSHIN_MS = 240;
+const DOSSIER_PUSHIN_NAV_MS = 250;
+
 function exitToOverview() {
   if (!onetHubActive || !window.FWOnetHub) return;
+  if (isCameraLocked()) return;
   var exitCam = FWOnetHub.exitSectorMode(viewW, viewH);
   invalidateSectorLabelCache();
   lastSectorLabelZoomBucket = null;
@@ -569,7 +653,7 @@ function exitToOverview() {
   rebuildCareersById();
   closePanel();
   syncMapHud();
-  animateCameraTo(exitCam, 320);
+  animateCameraTo(exitCam, FLY_TO_OVERVIEW_MS, null, { locked: true });
 }
 
 // ── COORDINATE HELPERS ──
@@ -605,37 +689,72 @@ function hubMaxZoom() {
   return (onetHubActive && window.FWOnetHub && FWOnetHub.MAX_ZOOM) ? FWOnetHub.MAX_ZOOM : 4;
 }
 
-const ZOOM_SENSITIVITY = 0.0008;
-const ZOOM_STEP_CAP = 0.04;
+// Wheel zoom: legacy-parity sensitivity with a short glide. Each wheel event
+// banks log-zoom into an accumulator; the animation loop drains a fixed
+// fraction of the bank per frame, so a hard spin lands almost instantly while
+// single notches ease in smoothly. (The old per-event 4% cap made the map
+// feel stuck compared to the legacy hub's 10%-per-notch response.)
+const ZOOM_SENSITIVITY = 0.0022;
+const ZOOM_PENDING_CAP = 2.0;   // max banked |log-zoom| so wild spins can't queue forever
+const ZOOM_GLIDE = 0.38;        // fraction of the bank consumed per frame
+let pendingZoomLog = 0;
+const zoomAnchor = { x: 0, y: 0 };
 
-function applyHubWheelZoom(deltaY, mx, my) {
+function accumulateWheelZoom(deltaY, mx, my) {
+  if (isCameraLocked()) return; // locked fly-in/out ignores wheel entirely
   if (camAnim) cancelCameraAnim();
   lastZoomInputAt = performance.now();
+  pendingZoomLog = Math.max(-ZOOM_PENDING_CAP, Math.min(ZOOM_PENDING_CAP,
+    pendingZoomLog - deltaY * ZOOM_SENSITIVITY));
+  zoomAnchor.x = mx;
+  zoomAnchor.y = my;
+  if (!motionOk) {
+    stepWheelZoom(true);
+    return;
+  }
+  requestHubRedraw();
+}
+
+// Drains the wheel-zoom bank one frame at a time. Returns true while zoom
+// motion is still pending so the loop keeps running.
+function stepWheelZoom(consumeAll) {
+  if (!pendingZoomLog) return false;
+  var step = consumeAll ? pendingZoomLog : pendingZoomLog * ZOOM_GLIDE;
+  if (Math.abs(pendingZoomLog - step) < 0.002) step = pendingZoomLog;
+  pendingZoomLog -= step;
+  lastZoomInputAt = performance.now(); // hold sector-label relayout until the glide settles
+  var modeChanged = applyZoomFactorAt(Math.exp(step), zoomAnchor.x, zoomAnchor.y);
+  if (modeChanged) pendingZoomLog = 0; // never glide across a mode transition
+  return pendingZoomLog !== 0;
+}
+
+// Applies one multiplicative zoom step anchored at (mx,my). Returns true when
+// the step drove a mode transition (sector enter/exit).
+function applyZoomFactorAt(factor, mx, my) {
   if (!onetHubActive || !window.FWOnetHub) {
-    const factor = deltaY < 0 ? 1.03 : 0.97;
     const newZoom = Math.min(hubMaxZoom(), Math.max(hubMinZoom(), state.zoom * factor));
     state.panX = mx - (mx - state.panX) * (newZoom / state.zoom);
     state.panY = my - (my - state.panY) * (newZoom / state.zoom);
     state.zoom = newZoom;
-    return;
+    return false;
   }
 
   FWOnetHub._syncPan(state.panX, state.panY);
+  var modeChanged = false;
 
   if (FWOnetHub.getHubMode() === 'sector') {
-    var rawFactor = Math.exp(-deltaY * ZOOM_SENSITIVITY);
-    var capped = Math.max(1 - ZOOM_STEP_CAP, Math.min(1 + ZOOM_STEP_CAP, rawFactor));
-    var result = FWOnetHub.applySectorZoomDelta(capped, viewW, viewH, mx, my, state.panX, state.panY);
+    // Pass the live world zoom so the sector layer can reconcile its own
+    // sectorZoom to it first — a zoom landing mid entry-tween then takes over
+    // smoothly instead of snapping to the sector frame.
+    var result = FWOnetHub.applySectorZoomDelta(factor, viewW, viewH, mx, my, state.panX, state.panY, state.zoom);
     state.zoom = result.zoom;
     state.panX = result.panX;
     state.panY = result.panY;
     if (FWOnetHub.getSectorZoom() <= FWOnetHub.SECTOR_ZOOM_MIN + 0.001) {
       exitToOverview();
-      return;
+      return true;
     }
   } else {
-    var raw = Math.exp(-deltaY * ZOOM_SENSITIVITY);
-    var factor = Math.max(1 - ZOOM_STEP_CAP, Math.min(1 + ZOOM_STEP_CAP, raw));
     var newZoom = Math.min(hubMaxZoom(), Math.max(hubMinZoom(), state.zoom * factor));
     state.panX = mx - (mx - state.panX) * (newZoom / state.zoom);
     state.panY = my - (my - state.panY) * (newZoom / state.zoom);
@@ -643,18 +762,20 @@ function applyHubWheelZoom(deltaY, mx, my) {
 
     var transition = FWOnetHub.evaluateModeTransition(state.zoom, state.panX, state.panY, viewW, viewH);
     if (transition.action === 'enter' && transition.camera) {
-      state.zoom = transition.camera.zoom;
-      state.panX = transition.camera.panX;
-      state.panY = transition.camera.panY;
       invalidateSectorLabelCache();
       lastSectorLabelZoomBucket = sectorZoomBucket();
       FWOnetHub.invalidateViewport();
+      // Ease into the sector camera instead of teleporting — same tween the
+      // click-to-enter path uses; further wheel input cancels it and takes over.
+      animateCameraTo(transition.camera, 300, function () { invalidateSectorLabelCache(); });
+      modeChanged = true;
     }
   }
   clampHubPan();
   maybeInvalidateSectorLabelCacheOnZoom();
   requestHubRedraw();
   syncMapHud();
+  return modeChanged;
 }
 
 function lerp(a, b, t) { return a + (b - a) * t; }
@@ -680,16 +801,28 @@ window.addEventListener('pageshow', forceHubRepaint);
 // ── CAMERA ANIMATION ──
 // Sector enter/exit and fly-to used to teleport the camera in one frame —
 // the single biggest source of perceived zoom jank. Short eased tween;
-// any user input (wheel/drag) cancels it and takes over.
+// any user input (wheel/drag) cancels it and takes over — EXCEPT a locked
+// flight (macro-hub click-to-fly, post-ship redesign): the whole point of
+// clicking a cluster is a fast, uninterruptible trip there, deliberately
+// quicker than scrolling would get you there manually. cancelCameraAnim()
+// is a no-op while a locked animation is in flight; every input handler
+// that would otherwise cancel or divert the camera checks isCameraLocked()
+// first and no-ops entirely instead.
 let camAnim = null;
 
+function isCameraLocked() {
+  return !!(camAnim && camAnim.locked);
+}
+
 function cancelCameraAnim() {
+  if (isCameraLocked()) return;
   if (camAnim && typeof camAnim.onDone === 'function') camAnim.onDone();
   camAnim = null;
 }
 
-function animateCameraTo(target, ms, onDone) {
+function animateCameraTo(target, ms, onDone, opts) {
   if (!target) return;
+  const locked = !!(opts && opts.locked);
   if (!motionOk) {
     state.zoom = target.zoom;
     state.panX = target.panX;
@@ -704,6 +837,7 @@ function animateCameraTo(target, ms, onDone) {
     start: performance.now(),
     ms: ms || 320,
     onDone: onDone || null,
+    locked: locked,
   };
   requestHubRedraw();
 }
@@ -730,14 +864,34 @@ function stepCameraAnim(now) {
   return true;
 }
 
+// CAM4 — fire a one-shot ~900ms beacon pulse on a career orb after a fly-to
+// arrival (search pick / portal "view on map" deep-link). Drawn every frame in
+// hub-canvas's dynamic pass so the overview layer cache is never touched.
+// Reduced motion: no-op (the beacon is skipped outright).
+function startMatchHalo(career) {
+  if (!motionOk || !career) return;
+  matchHalo = { career: career, start: performance.now(), ms: 900 };
+  requestHubRedraw();
+}
+
 function loop() {
   if (animationPaused || !hubBootOk) {
     rafId = null;
     dismissHubLoadingOnce();
     return;
   }
+  // Sentinel: requestHubRedraw() invokes loop() synchronously when rafId is
+  // null, and frame steps (wheel-zoom glide) call requestHubRedraw — keep
+  // rafId truthy for the duration of the frame so it can't recurse.
+  rafId = -1;
   const camAnimating = stepCameraAnim(performance.now());
   if (camAnimating) needsRedraw = true;
+  if (stepWheelZoom(false)) needsRedraw = true;
+  // CAM4 halo: expire when its window elapses; while live, force a redraw so
+  // the beacon animates even in the otherwise-idle overview (render() resets
+  // needsRedraw before the RAF-gate below, so matchHalo is also its own term).
+  if (matchHalo && performance.now() - matchHalo.start >= matchHalo.ms) matchHalo = null;
+  if (matchHalo) needsRedraw = true;
   const onetHub = onetHubActive && window.FWOnetHub;
   const inSector = onetHub && FWOnetHub.getHubMode() === 'sector';
   let sectorAnimating = false;
@@ -752,7 +906,12 @@ function loop() {
       state.zoneHoverAlpha = hoverTarget;
     }
   }
-  if (onetHub && !needsRedraw && !inSector && !overviewAnimating) {
+  // Idle motion in the macro view (twinkle/mote overlay in hub-canvas) needs
+  // the loop alive; the per-frame cost is a cached-layer blit + ~160 dots.
+  // Under prefers-reduced-motion the loop parks exactly as before.
+  const overviewIdle = onetHub && !inSector && motionOk
+    && FWOnetHub.getHubMode() === 'overview';
+  if (onetHub && !needsRedraw && !inSector && !overviewAnimating && !overviewIdle) {
     rafId = null;
     dismissHubLoadingOnce();
     return;
@@ -800,7 +959,15 @@ function loop() {
     dismissHubLoadingOnce();
   }
   if (onetHub) {
-    rafId = (needsRedraw || inSector || overviewAnimating || camAnim)
+    // F2: sector mode used to keep the loop alive unconditionally (bare
+    // inSector), burning a full 60fps repaint while idle. Park it unless
+    // something is actually animating: hover-radius springs, gold-orb shimmer,
+    // a satellite bloom mid-spring, or the pointer over the canvas (proximity
+    // glow + blooms are cursor-coupled). Every discrete change re-arms via
+    // requestHubRedraw, and pointerleave fires one so re-entry re-arms.
+    const sectorLive = inSector && (sectorAnimating || isGoldShimmerActive()
+      || (window.FWHubCanvasRender && FWHubCanvasRender.satBloomActive) || state.mouseOn);
+    rafId = (needsRedraw || sectorLive || overviewAnimating || overviewIdle || camAnim || pendingZoomLog || matchHalo)
       ? requestAnimationFrame(loop) : null;
   } else {
     rafId = requestAnimationFrame(loop);
@@ -881,8 +1048,6 @@ function hideTooltip() {
 const panel = document.getElementById('detail-panel');
 
 function openPanel(career) {
-  if (window.FWHubRefine && typeof FWHubRefine.close === 'function') FWHubRefine.close();
-  if (window.FWHubAcademics && typeof FWHubAcademics.close === 'function') FWHubAcademics.close();
   recordRecentCareer(career.id);
   state.selectedId = career.id;
   const inSector = onetHubActive && window.FWOnetHub && FWOnetHub.getHubMode() === 'sector';
@@ -905,6 +1070,22 @@ function openPanel(career) {
     }
   }
 
+  // Depth signal: how many AI-mapped specializations branch off this career.
+  const subTag = document.getElementById('panel-subpaths');
+  if (subTag) {
+    var subCount = 0;
+    if (!career.aiDerived && career.soc && onetHubActive && window.FWOnetHub
+      && typeof FWOnetHub.getFragmentCount === 'function') {
+      // Same index the canvas badge and satellite layout read — one source.
+      subCount = FWOnetHub.getFragmentCount(career.soc);
+    }
+    subTag.hidden = !subCount;
+    if (subCount) {
+      subTag.textContent = subCount + ' specialization' + (subCount === 1 ? '' : 's')
+        + ' branch off this career — look for the smaller orbs around it';
+    }
+  }
+
   const pEl = document.getElementById('panel-personality-fit');
   const oEl = document.getElementById('panel-objective-fit');
   const overallEl = document.getElementById('panel-overall-fit');
@@ -924,7 +1105,7 @@ function openPanel(career) {
     if (pBar) {
       pBar.style.width = (career.personalityFit || 0) + '%';
       pBar.style.background = zoneHex || rar.base;
-      const highFit = career.fitScore != null && career.fitScore >= 70;
+      const highFit = career.fitScore != null && career.fitScore >= 56;
       pBar.classList.toggle('panel-fit-bar-fill--glow', highFit);
       if (highFit) {
         pBar.style.boxShadow = '0 0 14px rgba(' + (rar.glow || '255,205,70') + ',0.55)';
@@ -966,9 +1147,10 @@ function openPanel(career) {
     if (dual) dual.hidden = true;
     if (tradeEl) tradeEl.hidden = true;
   }
+  renderPanelWhy(career);
   const skillsWrap = document.getElementById('panel-skills');
   if (career.skills && career.skills.length) {
-    skillsWrap.innerHTML = career.skills.map(s => `<span class="skill-pill">${titleCaseSkill(s)}</span>`).join('');
+    skillsWrap.innerHTML = career.skills.map(s => `<span class="skill-pill">${escHtml(titleCaseSkill(s))}</span>`).join('');
   } else if (onetHubActive && career.vectorLoaded) {
     skillsWrap.innerHTML = '<span class="panel-skills-empty">Skills unavailable</span>';
   } else {
@@ -988,6 +1170,14 @@ function openPanel(career) {
           window.location.href = 'simulation.html?slug=' + encodeURIComponent(dlSlug)
             + '&name=' + encodeURIComponent(career.name || career.title || '');
         }
+      : null;
+  }
+  const compareBtn = document.getElementById('panel-compare');
+  if (compareBtn) {
+    const canCompare = !!(career.soc && window.FWCareerCompare);
+    compareBtn.hidden = !canCompare;
+    compareBtn.onclick = canCompare
+      ? function () { FWCareerCompare.open({ soc: career.soc, name: career.name || career.title || '' }); }
       : null;
   }
   const deepBtn = document.getElementById('panel-deep-dive');
@@ -1031,6 +1221,33 @@ function openPanel(career) {
       }
     }
   }
+}
+
+// FW trust pass — compact "why this match" in the hub detail panel, so the
+// explanation exists at the point a user decides whether to open the deep
+// dive, not only after. Same rows/drawer career.html renders. Async + additive:
+// stale content is cleared synchronously so a fast career switch never shows
+// the previous career's drivers.
+let panelWhyToken = 0;
+function renderPanelWhy(career) {
+  const mount = document.getElementById('panel-why');
+  if (!mount) return;
+  mount.innerHTML = '';
+  const token = ++panelWhyToken;
+  if (!career || !career.soc || !window.FWWhyMatch || !window.FWOnetVectors
+    || typeof FWOnetVectors.userVsCareerDimensions !== 'function'
+    || typeof FWOnetVectors.readQuizVectors !== 'function') return;
+  let vecs = null;
+  try { vecs = FWOnetVectors.readQuizVectors(); } catch (_) { return; }
+  const personality = vecs && vecs.personality && vecs.personality.values;
+  if (!personality || !personality.length) return;
+  const objective = vecs.objective && vecs.objective.values;
+  const confidence = vecs.personality.confidence;
+  FWOnetVectors.userVsCareerDimensions(career.soc, personality, objective, confidence).then(match => {
+    if (token !== panelWhyToken) return;
+    if (!match || !match.comparisons || !match.comparisons.length) return;
+    FWWhyMatch.inject(mount, match.comparisons, null, { k: 3 });
+  }).catch(() => {});
 }
 
 function renderPanelRelatedCareers(career) {
@@ -1138,8 +1355,55 @@ function closePanel() {
 
 window.FWHubDashboard = { closePanel: closePanel };
 
+// CAM3 — "fly into this career": push the camera into the selected orb (locked,
+// orb-anchored) while the page fades out (M5 body.fw-departing), then navigate.
+// Reduced motion, no live map, or an unresolved orb → navigate immediately.
+// A locked animateCameraTo only interpolates (never triggers evaluateModeTransition),
+// and we leave the page at DOSSIER_PUSHIN_NAV_MS, so no mode-boundary glide.
+function flyIntoCareerThenNav(career, href) {
+  if (!href || href === '#') return;
+  if (!motionOk || !onetHubActive || !window.FWOnetHub || !career) {
+    window.location.href = href;
+    return;
+  }
+  try { document.body.classList.add('fw-departing'); } catch (_) {}
+  var wpos = careerWorldXY(career);
+  var spos = (wpos && typeof worldToScreen === 'function') ? worldToScreen(wpos.x, wpos.y) : null;
+  if (spos && Number.isFinite(spos.x) && Number.isFinite(spos.y) && state.zoom > 0) {
+    var pushZoom = state.zoom * DOSSIER_PUSHIN_ZOOM;
+    var maxZ = hubMaxZoom();
+    if (Number.isFinite(maxZ)) pushZoom = Math.min(pushZoom, maxZ);
+    animateCameraTo({
+      zoom: pushZoom,
+      panX: spos.x - (spos.x - state.panX) * (pushZoom / state.zoom),
+      panY: spos.y - (spos.y - state.panY) * (pushZoom / state.zoom),
+    }, DOSSIER_PUSHIN_MS, null, { locked: true });
+  }
+  setTimeout(function () { window.location.href = href; }, DOSSIER_PUSHIN_NAV_MS);
+}
+
 document.getElementById('panel-close')?.addEventListener('click', closePanel);
+document.getElementById('panel-deep-dive')?.addEventListener('click', function (e) {
+  var href = this.getAttribute('href');
+  if (!href || href === '#') return;      // no target set — let the default <a> handle it
+  var c = state.selectedId ? careerById(state.selectedId) : null;
+  if (!c) return;                          // can't resolve the orb — default nav
+  e.preventDefault();
+  flyIntoCareerThenNav(c, href);
+});
+// Esc closes the career panel — every other drawer in the app closes on
+// Escape; the hub's main panel was mouse-only.
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && panel && panel.classList.contains('open')) closePanel();
+});
 document.getElementById('hub-sector-back')?.addEventListener('click', exitToOverview);
+document.getElementById('hub-lens-toggle')?.addEventListener('click', () => {
+  if (!window.FWOnetHub || typeof FWOnetHub.setLensOn !== 'function') return;
+  FWOnetHub.setLensOn(!FWOnetHub.isLensOn());
+  invalidateSectorLabelCache();
+  syncMapHud();
+  requestHubRedraw();
+});
 
 // ── FIT EXPLAINER ──
 const fitExplainerEl = document.getElementById('hub-fit-explainer');
@@ -1162,6 +1426,7 @@ fitExplainerEl?.addEventListener('click', function (e) {
 if (hubBootOk) {
 function hubPointerMove(e) {
   if (state.activePointerId != null && e.pointerId !== state.activePointerId) return;
+  if (isCameraLocked()) return; // camera is flying on its own — no hover/drag mid-flight
   const pt = pointerOnCanvas(e);
   const mx = pt.x, my = pt.y;
   state.mouseX = mx; state.mouseY = my; state.mouseOn = true;
@@ -1171,6 +1436,8 @@ function hubPointerMove(e) {
     if (Math.abs(dx) > 2 || Math.abs(dy) > 2) state.hasDragged = true;
     state.panX = state.panStart.x + dx;
     state.panY = state.panStart.y + dy;
+    state.bgOffX = state.bgOffStart.x + dx;
+    state.bgOffY = state.bgOffStart.y + dy;
     clampHubPan();
     canvas.style.cursor = 'grabbing';
     requestHubRedraw();
@@ -1199,15 +1466,17 @@ function hubPointerMove(e) {
   }
   if (prevHover !== state.hoveredId || prevZone !== state.hoveredZone) {
     requestHubRedraw();
-  } else if (state.mouseOn && motionOk && !isHubLightTheme()) {
-    // Dark-mode cursor spotlight tracks the pointer — needs a redraw per move
-    // (sector mode already renders continuously; overview renders are cheap).
+  } else if (state.mouseOn && motionOk) {
+    // Cursor spotlight tracks the pointer — needs a redraw per move (sector
+    // mode already renders continuously; overview renders are cheap). Always
+    // on: the hub canvas is forced dark in both themes.
     requestHubRedraw();
   }
 }
 
 function hubPointerUp(e) {
   if (state.activePointerId != null && e.pointerId !== state.activePointerId) return;
+  if (isCameraLocked()) return; // no click-to-select-elsewhere while a flight is in progress
   state.activePointerId = null;
   if (!state.isDragging) return;
   state.isDragging = false;
@@ -1226,17 +1495,19 @@ function hubPointerUp(e) {
         const cam = FWOnetHub.enterSectorByZone(zone, viewW, viewH);
         if (cam) {
           // Mode flips now; the camera glides to the sector frame instead of
-          // teleporting, so the orbs slide into place.
+          // teleporting, so the orbs slide into place. Locked + fast: clicking
+          // a cluster is a shortcut past manual pan/zoom, not a starting point
+          // for one — no redirect if another cluster is clicked mid-flight.
           invalidateSectorLabelCache();
           lastSectorLabelZoomBucket = sectorZoomBucket();
           careers = FWOnetHub.updateViewport(state.panX, state.panY, state.zoom, viewW, viewH);
           rebuildCareersById();
           closePanel();
           syncMapHud();
-          animateCameraTo(cam, 360, function () {
+          animateCameraTo(cam, FLY_TO_SECTOR_MS, function () {
             clampHubPan();
             invalidateSectorLabelCache();
-          });
+          }, { locked: true });
         }
       } else {
         closePanel();
@@ -1249,6 +1520,7 @@ function hubPointerUp(e) {
 }
 
 canvas.addEventListener('pointerdown', e => {
+  if (isCameraLocked()) return; // locked fly-in/out: input ignored entirely, not just non-canceling
   if (camAnim) cancelCameraAnim();
   state.activePointerId = e.pointerId;
   const pt = pointerOnCanvas(e);
@@ -1256,6 +1528,7 @@ canvas.addEventListener('pointerdown', e => {
   state.hasDragged = false;
   state.dragStart = { x: pt.x, y: pt.y };
   state.panStart = { x: state.panX, y: state.panY };
+  state.bgOffStart = { x: state.bgOffX, y: state.bgOffY };
   canvas.style.cursor = 'grabbing';
   try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
 });
@@ -1281,7 +1554,7 @@ canvas.addEventListener('pointerleave', () => {
 canvas.addEventListener('wheel', e => {
   e.preventDefault();
   const pt = pointerOnCanvas(e);
-  applyHubWheelZoom(e.deltaY, pt.x, pt.y);
+  accumulateWheelZoom(e.deltaY, pt.x, pt.y);
 }, { passive: false });
 }
 
@@ -1349,9 +1622,9 @@ function renderSuggest(query) {
   const label = { recent: 'Recently viewed', suggested: 'Try', match: '' };
   suggestEl.innerHTML = items.map(it => {
     const tag = it.kind !== 'match' ? `<span class="ss-tag">${label[it.kind]}</span>` : '';
-    return `<button type="button" class="ss-item" role="option" data-id="${it.career.id}">`
-      + `<span class="ss-name">${it.career.name}</span>`
-      + `<span class="ss-industry">${it.career.industry}</span>${tag}</button>`;
+    return `<button type="button" class="ss-item" role="option" data-id="${escAttr(String(it.career.id))}">`
+      + `<span class="ss-name">${escHtml(it.career.name)}</span>`
+      + `<span class="ss-industry">${escHtml(it.career.industry)}</span>${tag}</button>`;
   }).join('');
   suggestEl.hidden = false;
   searchInput.setAttribute('aria-expanded', 'true');
@@ -1399,7 +1672,7 @@ suggestEl.addEventListener('mousedown', e => {
       FWOnetHub.flyToCareer(c, state);
       const target = { zoom: state.zoom, panX: state.panX, panY: state.panY };
       state.zoom = pre.zoom; state.panX = pre.panX; state.panY = pre.panY;
-      animateCameraTo(target, 380, function () { invalidateSectorLabelCache(); });
+      animateCameraTo(target, 380, function () { invalidateSectorLabelCache(); startMatchHalo(c); });
     }
     invalidateSectorLabelCache();
     requestHubRedraw();
@@ -1418,12 +1691,9 @@ function openCareerAdvisor() {
   try {
     const quizState = FWHubCareers.readQuizStateFromUrl();
     if (quizState && quizState.scores) {
-      localStorage.setItem(FWHubCareers.HUB_QUIZ_KEY, JSON.stringify({
-        name: userName,
-        scores: quizState.scores
-      }));
+      FWUser.putBlob({ name: userName, scores: quizState.scores });
     } else if (hubQuizScores) {
-      localStorage.setItem(FWHubCareers.HUB_QUIZ_KEY, JSON.stringify({ name: userName, scores: hubQuizScores }));
+      FWUser.putBlob({ name: userName, scores: hubQuizScores });
     }
   } catch (_) {}
   window.location.replace('coach.html');
@@ -1451,6 +1721,7 @@ if (hubAdvisorLink) {
 window.addEventListener('flightway-theme-change', () => { requestHubRedraw(); syncMapHud(); });
 
 function finishHubBootFromInit(ok) {
+  hubContentReady = true;
   dismissHubLoadingOnce();
   if (!ok) {
     showHubBootError('Career map data failed to load.');
@@ -1473,6 +1744,25 @@ function finishHubBootFromInit(ok) {
     state.panX = cam.panX;
     state.panY = cam.panY;
     clampHubPan();
+    // CAM1 — establishing shot. Runs once per session, not when deep-linked
+    // (?soc= flies to a career below instead), and never under reduced motion.
+    var hubDeepLinked = !!new URLSearchParams(window.location.search).get('soc');
+    var hubEstablished = false;
+    try { hubEstablished = sessionStorage.getItem(HUB_ESTABLISH_KEY) === '1'; } catch (_) {}
+    if (motionOk && !hubDeepLinked && !hubEstablished) {
+      try { sessionStorage.setItem(HUB_ESTABLISH_KEY, '1'); } catch (_) {}
+      var fitCam = { zoom: state.zoom, panX: state.panX, panY: state.panY };
+      var maxZ = hubMaxZoom();
+      var startZoom = fitCam.zoom * HUB_ESTABLISH_ZOOM;
+      if (Number.isFinite(maxZ)) startZoom = Math.min(startZoom, maxZ);
+      var ecx = viewW / 2, ecy = viewH / 2;
+      // Zoom around the viewport center (cursor-anchor identity, mx=ecx).
+      state.zoom = startZoom;
+      state.panX = ecx - (ecx - fitCam.panX) * (startZoom / fitCam.zoom);
+      state.panY = ecy - (ecy - fitCam.panY) * (startZoom / fitCam.zoom);
+      clampHubPan();
+      animateCameraTo(fitCam, HUB_ESTABLISH_MS, function () { invalidateSectorLabelCache(); }, { locked: true });
+    }
   }
   careers = FWOnetHub.updateViewport(state.panX, state.panY, state.zoom, viewW, viewH);
   syncHoverRadii();
@@ -1495,6 +1785,7 @@ function finishHubBootFromInit(ok) {
       rebuildCareersById();
       openPanel(bootCareer);
       requestHubRedraw();
+      startMatchHalo(bootCareer);
     }
   }
   warmHubFragments();
@@ -1574,4 +1865,9 @@ if (window.FWOnetHub) {
     console.error('[Career Hub] FWOnetHub.init rejected', err);
     finishHubBootFromInit(false);
   });
+} else {
+  // No O*NET module at all — the legacy map IS the final content; release the
+  // loading screen on the next frame rather than holding it to the watchdog.
+  hubContentReady = true;
+  requestHubRedraw();
 }

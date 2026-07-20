@@ -8,16 +8,20 @@ import {
   geminiTextFromResponse,
   GEMINI_SAFETY_SETTINGS,
 } from './_lib.js';
+import { loadDossierWithCoordinates } from './_lib/dossier-coordinates.js';
+import { loadUserBlob } from './_lib/user.js';
+import { groundingEnabled, researchWeb, buildEvidenceBlock, looksLikeCurrentFactQuery, GROUNDING_TTL } from './_lib/gemini-grounded.js';
 import {
   authPreflight,
   authJsonResponse,
   authErrorResponse,
   requireSession,
-  loadQuizProfile,
   loadRoadmap,
   checkRateLimit,
 } from './_lib/auth.js';
+import { checkFeatureLimit } from './_lib/plan-limits.js';
 import { isExplicitCareerPivotIntent } from './_lib/roadmap.js';
+import { pivotSummaryLine } from './_lib/onet/pivot-analysis.js';
 import { generateFragmentsForBase } from './_lib/derive-career.js';
 import {
   recordCareerFocus,
@@ -141,7 +145,7 @@ async function callGemini(env, systemInstruction, contents) {
 
 function loadQuizSafe(env, email) {
   if (!env?.DB) return Promise.resolve(null);
-  return loadQuizProfile(env, email).catch(() => null);
+  return loadUserBlob(env, email).catch(() => null);
 }
 
 function rankTopMatches(quiz, limit = 5) {
@@ -159,7 +163,7 @@ function rankTopMatches(quiz, limit = 5) {
 }
 
 async function confirmCareerSwitch(env, email, career, currentFocus) {
-  const baseUrl = env?.SITE_URL || 'https://flightway.pages.dev';
+  const baseUrl = env?.SITE_URL || 'https://flightwayjacobprototype.pages.dev';
   const validated = await validateOnetCareer(env, baseUrl, career);
   if (!validated) return null;
 
@@ -180,12 +184,12 @@ async function confirmCareerSwitch(env, email, career, currentFocus) {
 }
 
 export async function onRequestOptions(context) {
-  return authPreflight(originFromEnv(context.env));
+  return authPreflight(originFromEnv(context.env, context.request));
 }
 
 export async function onRequest(context) {
   const { request, env } = context;
-  const origin = originFromEnv(env);
+  const origin = originFromEnv(env, request);
 
   if (request.method === 'OPTIONS') return authPreflight(origin);
   if (request.method !== 'POST') return authJsonResponse(405, { error: 'Method not allowed' }, origin);
@@ -205,9 +209,21 @@ export async function onRequest(context) {
     ({ email } = await requireSession(request, env));
     await checkRateLimit(env, `career-switch-chat:${email}`);
 
+    // Same Marco allowance as /chat — the career-switch conversation is the same
+    // advisor on another surface, so it shares one 5/day free budget (§1).
+    const marcoCap = await checkFeatureLimit(env, email, 'marco-chat');
+    if (!marcoCap.ok) {
+      return authJsonResponse(429, {
+        error: marcoCap.message,
+        upgrade: !!marcoCap.upgrade,
+        remaining: 0,
+        feature: 'marco-chat',
+      }, origin);
+    }
+
     const [quiz, dossierRaw, roadmap] = await Promise.all([
       loadQuizSafe(env, email),
-      loadDossier(env, email).catch(() => ''),
+      loadDossierWithCoordinates(env, email).catch(() => ''),
       loadRoadmap(env, email).catch(() => null),
     ]);
     const dossier = dossierRaw || buildSeedDossier({});
@@ -215,7 +231,7 @@ export async function onRequest(context) {
     const switchCount = countRecentCareerSwitches(quiz || {});
     const topMatches = rankTopMatches(quiz, 5);
     const pendingProposal = normalizePendingProposal(payload.pendingProposal);
-    const baseUrl = env?.SITE_URL || 'https://flightway.pages.dev';
+    const baseUrl = env?.SITE_URL || 'https://flightwayjacobprototype.pages.dev';
 
     const systemInstruction = buildSystemPrompt({ currentFocus, topMatches, switchCount });
     const contents = toGeminiContents(payload.history, userMessage);
@@ -229,6 +245,7 @@ export async function onRequest(context) {
     let proposedAlternatives = [];
     let pendingProposalOut = null;
     let reply = '';
+    let grounding = null;
 
     if (pendingProposal && isNegativeConfirmation(userMessage)) {
       reply = 'No problem — tell me another career you are considering, or compare a few options before you switch.';
@@ -242,7 +259,12 @@ export async function onRequest(context) {
         if (switchResult?.focusUpdated) {
           focusUpdated = true;
           focusResult = switchResult.focusResult;
-          reply = `Got it — your target is now ${switchResult.career.name}. Open your roadmap when you are ready to refresh your plan.`;
+          reply = `Got it — your target is now ${switchResult.career.name}.`;
+          if (focusResult?.pivot) {
+            const line = pivotSummaryLine(focusResult.pivot, currentFocus?.name, switchResult.career.name);
+            if (line) reply += ` ${line.charAt(0).toUpperCase()}${line.slice(1)}`;
+          }
+          reply += ' Open your roadmap when you are ready to refresh your plan.';
         } else if (switchResult?.career) {
           reply = `Your target is already ${switchResult.career.name}. Want to explore a different career instead?`;
         } else {
@@ -272,8 +294,24 @@ export async function onRequest(context) {
           reply = buildProposalReply(proposal);
         }
       } else {
+        // Pillar W (Tier A): governed grounding for current-fact questions —
+        // shared cache/budgets, fenced evidence, provenance to the client.
+        // Flag off → byte-identical legacy call.
+        if (groundingEnabled(env) && looksLikeCurrentFactQuery(userMessage)) {
+          const careerCtx = currentFocus?.name || '';
+          grounding = await researchWeb(env, {
+            query: String(userMessage).replace(/\s+/g, ' ').trim().slice(0, 220)
+              + (careerCtx ? ` (asked by a student targeting: ${String(careerCtx).slice(0, 80)})` : ''),
+            freshnessTtl: GROUNDING_TTL.SEMI_STABLE,
+            timeoutMs: 8000,
+            budgetKey: email,
+          });
+        }
+        const groundedInstruction = grounding
+          ? `${systemInstruction}\n\n${buildEvidenceBlock(grounding)}\nWhen your answer uses facts from the WEB EVIDENCE, say they are current as of its date; the client will show the sources.`
+          : systemInstruction;
         try {
-          reply = await callGemini(env, systemInstruction, contents);
+          reply = await callGemini(env, groundedInstruction, contents);
         } catch (err) {
           const msg = err._userFacing ? err.message : 'The career switch advisor is busy. Try again shortly.';
           return authJsonResponse(502, { error: msg }, origin);
@@ -287,6 +325,9 @@ export async function onRequest(context) {
 
     return authJsonResponse(200, {
       reply,
+      remaining: marcoCap.remaining,
+      ...(grounding ? { grounded: true, groundedSources: grounding.sources || [], groundedAt: grounding.fetchedAt || null } : {}),
+      pivot: focusResult?.pivot || null,
       focusUpdated,
       roadmapRetargeted,
       roadmap: syncedRoadmap,

@@ -86,7 +86,12 @@ function rebuildFromPicks(base, map, picks) {
 
   if (!anyPick) return null; // no usable picks → caller falls back to base
 
-  // Preserve base section order; within a section, base item order.
+  // Preserve base section order; within a section, base item order. Any
+  // experience item silently omitted (had pickable bullets, model excluded
+  // them all) is named in .omittedRoles so the client can surface it — an
+  // extra property on the array, not a schema field, so it rides along on
+  // this return value without needing a DB migration or schema change.
+  const omittedRoles = [];
   const sections = [];
   (base.sections || []).forEach((section, si) => {
     if (section.kind === 'skills') { sections.push({ kind: 'skills', heading: section.heading, flat: section.flat || [] }); return; }
@@ -98,11 +103,14 @@ function rebuildFromPicks(base, map, picks) {
         items.push({ org: item.org, role: item.role, start: item.start, end: item.end, bullets: c.bullets });
       } else if (!baseBullets.length || section.kind === 'education') {
         items.push({ org: item.org, role: item.role, start: item.start, end: item.end, bullets: baseBullets });
+      } else {
+        // had pickable bullets, model excluded them all → item omitted by design
+        if (section.kind === 'experience') omittedRoles.push(item.role || item.org || 'Untitled role');
       }
-      // else: had pickable bullets, model excluded them all → item omitted by design
     });
     if (items.length) sections.push({ kind: section.kind, heading: section.heading, items });
   });
+  sections.omittedRoles = omittedRoles;
   return sections;
 }
 
@@ -129,14 +137,14 @@ function resumePlainLc(resume) {
 export const __test = { indexBullets, bulletLines, rebuildFromPicks, resumePlainLc };
 
 export async function onRequestOptions(context) {
-  return preflightResponse(originFromEnv(context.env));
+  return preflightResponse(originFromEnv(context.env, context.request));
 }
 
 // GET ?resumeId=… → the stored tailored versions for one of the caller's
 // resumes (newest first), so variants survive a reload. No AI, no cache.
 export async function onRequestGet(context) {
   const { request, env } = context;
-  const origin = originFromEnv(env);
+  const origin = originFromEnv(env, request);
   const email = await getSessionEmail(request, env);
   if (!email) return jsonResponse(401, { error: 'Not signed in.' }, origin);
 
@@ -165,7 +173,7 @@ export async function onRequestGet(context) {
 
 export async function onRequestPost(context) {
   const { request, env } = context;
-  const origin = originFromEnv(env);
+  const origin = originFromEnv(env, request);
 
   const email = await getSessionEmail(request, env);
   if (!email) return jsonResponse(401, { error: 'Not signed in.' }, origin);
@@ -269,7 +277,11 @@ export async function onRequestPost(context) {
     const matched = [];
     const gaps = [];
     trimmed.forEach((kw) => { (haystack.includes(kw.toLowerCase()) ? matched : gaps).push(kw); });
-    const score = { match: trimmed.length ? Math.round((matched.length / trimmed.length) * 100) : 0, matched, gaps };
+    // Surface any experience entry the model excluded entirely (rebuildFromPicks
+    // dropped it silently otherwise). Folded into `score` since score_json is
+    // already persisted per version — no extra DB column needed.
+    const omittedRoles = Array.isArray(rebuiltSections && rebuiltSections.omittedRoles) ? rebuiltSections.omittedRoles : [];
+    const score = { match: trimmed.length ? Math.round((matched.length / trimmed.length) * 100) : 0, matched, gaps, omittedRoles };
 
     const versionId = crypto.randomUUID();
     const createdAt = new Date().toISOString();

@@ -35,27 +35,36 @@ async function assertHubOverviewState(page, label) {
       ? FWOnetHub.getOverviewZones().length
       : 0;
   });
-  if (zones < 18) {
-    throw new Error('[' + label + '] expected >= 18 overview zones, got ' + zones);
+  // 10 macro-zones since the 2026-07-18 rezone (18 → 11 → 10 with the
+  // Business+Finance merge); see scripts/onet-etl/rezone-hub.mjs.
+  if (zones !== 10) {
+    throw new Error('[' + label + '] expected exactly 10 overview zones, got ' + zones);
   }
+  // Zone content check: fixed background-color thresholds broke when the
+  // rarity retune made low-fit tiles a pale wash. Instead, grid-sample the
+  // canvas and require real color variance — an unpainted canvas is a single
+  // near-uniform background, painted zones always vary (tints, dots, labels).
   const hasPaint = await page.evaluate(function () {
     var c = document.getElementById('map-canvas');
     if (!c) return false;
     var ctx = c.getContext('2d');
     var w = c.width;
     var h = c.height;
-    var samples = [
-      [0.25, 0.35],
-      [0.5, 0.45],
-      [0.72, 0.55],
-    ];
-    for (var i = 0; i < samples.length; i++) {
-      var sx = Math.floor(w * samples[i][0]);
-      var sy = Math.floor(h * samples[i][1]);
-      var d = ctx.getImageData(sx, sy, 1, 1).data;
-      if (!(d[0] > 215 && d[1] > 225 && d[2] > 245)) return true;
+    var img = ctx.getImageData(0, 0, w, h).data;
+    var grid = 20;
+    var first = null;
+    var varied = 0;
+    var total = 0;
+    for (var gy = 1; gy < grid; gy++) {
+      for (var gx = 1; gx < grid; gx++) {
+        var i = (Math.floor(h * gy / grid) * w + Math.floor(w * gx / grid)) * 4;
+        var px = [img[i], img[i + 1], img[i + 2]];
+        if (!first) first = px;
+        else if (Math.abs(px[0] - first[0]) + Math.abs(px[1] - first[1]) + Math.abs(px[2] - first[2]) > 24) varied++;
+        total++;
+      }
     }
-    return false;
+    return varied > total * 0.03;
   });
   if (!hasPaint) {
     throw new Error('[' + label + '] canvas has no painted zone content on overview boot');

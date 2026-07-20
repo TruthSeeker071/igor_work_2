@@ -77,8 +77,8 @@
 
   function renderDualFitLoadingHtml() {
     return '<div class="portal-target-dual-fit-loading" aria-busy="true">'
-      + '<div class="portal-target-dual-fit-skeleton"></div>'
-      + '<div class="portal-target-dual-fit-skeleton portal-target-dual-fit-skeleton--short"></div>'
+      + '<div class="fw-skeleton portal-target-dual-fit-skeleton"></div>'
+      + '<div class="fw-skeleton portal-target-dual-fit-skeleton portal-target-dual-fit-skeleton--short"></div>'
       + '</div>';
   }
 

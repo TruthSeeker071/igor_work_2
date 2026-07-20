@@ -3,12 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/favicon.ico?v=20260717h" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/favicon.png?v=20260717h">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=20260717h">
 <title>FlightWay — Sign in</title>
-<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260720b">
-<link rel="stylesheet" href="assets/css/auth-pages.css?v=20260703p">
-<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260720b">
+<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260720c">
+<link rel="stylesheet" href="assets/css/auth-pages.css?v=20260720c">
+<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260720c">
 <script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
-<script src="assets/js/shared/flags.js?v=20260703p"></script>
+<script src="assets/js/shared/flags.js?v=20260716h"></script>
 <script>(function(){var h=(location.hash||'').replace(/^#/,'').split('?')[0];if(['signin','register','forgot-password','reset-password'].indexOf(h)!==-1)document.documentElement.setAttribute('data-boot-page',h);})();</script>
 <style id="fw-boot-css">html[data-boot-page] .auth-page{display:none!important}html[data-boot-page="signin"] #auth-page-signin{display:block!important}html[data-boot-page="register"] #auth-page-register{display:block!important}html[data-boot-page="forgot-password"] #auth-page-forgot-password{display:block!important}html[data-boot-page="reset-password"] #auth-page-reset-password{display:block!important}</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -34,69 +37,119 @@
   </div>
 </nav>
 
-<section class="auth-page auth-page" id="auth-page-signin" role="main" aria-label="Sign in">
-  <div class="hero auth-shell">
-    <h1 class="auth-hero-title">Sign in to FlightWay</h1>
-    <p class="auth-hero-sub">Sign in with your email and password to access your Career Hub and Marco, your AI career advisor.</p>
-    <div class="auth-form-shell">
-      <input type="email" id="signin-email" class="coach-email-input auth-field" placeholder="you@example.com" autocomplete="email" onkeydown="if(event.key==='Enter')document.getElementById('signin-password').focus()">
-      <input type="password" id="signin-password" class="coach-email-input auth-field auth-field--tight" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')coachSignInFromPage()">
-      <p class="auth-link-row"><a href="#" onclick="coachOpenForgotPassword();return false">Forgot password?</a></p>
-      <div class="coach-error" id="signin-error"></div>
-      <button type="button" class="coach-primary-btn auth-btn-full" id="signin-btn" onclick="coachSignInFromPage()">Sign in →</button>
-      <p class="auth-footnote">Don&rsquo;t have an account? <a href="auth.html#register">Create one</a></p>
-      <p class="auth-footnote auth-footnote--muted"><a href="index.html">← Back to home page</a></p>
+<section class="auth-page" id="auth-page-signin">
+  <div class="auth-shell">
+    <div class="auth-card">
+      <div class="auth-card-head">
+        <a class="fw-brand auth-card-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay home"></a>
+        <h1 class="auth-card-title">Welcome back</h1>
+        <p class="auth-card-sub">Sign in to reach your Career Hub and Marco.</p>
+      </div>
+      <div class="auth-form-shell">
+        <label class="auth-label" for="signin-email">Email</label>
+        <input type="email" id="signin-email" class="coach-email-input auth-field" placeholder="you@example.com" autocomplete="email" onkeydown="if(event.key==='Enter')document.getElementById('signin-password').focus()">
+        <label class="auth-label" for="signin-password">Password</label>
+        <div class="auth-pw-wrap auth-pw-wrap--tight">
+          <input type="password" id="signin-password" class="coach-email-input auth-field" placeholder="At least 8 characters" autocomplete="current-password" onkeydown="if(event.key==='Enter')coachSignInFromPage()">
+          <button type="button" class="auth-pw-toggle" data-pw-toggle="signin-password" aria-label="Show password" aria-pressed="false">
+            <svg class="auth-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="auth-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.2A9.9 9.9 0 0 1 12 5c6.4 0 10 7 10 7a17.8 17.8 0 0 1-3.4 4.2"/><path d="M6.2 6.7A17.5 17.5 0 0 0 2 12s3.6 7 10 7a9.8 9.8 0 0 0 4.2-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+          </button>
+        </div>
+        <p class="auth-link-row"><a href="#" onclick="coachOpenForgotPassword();return false">Forgot password?</a></p>
+        <div class="auth-alert" id="signin-error" role="alert"></div>
+        <button type="button" class="coach-primary-btn auth-btn-full" id="signin-btn" onclick="coachSignInFromPage()">Sign in →</button>
+        <p class="auth-footnote">Don&rsquo;t have an account? <a href="auth.html#register">Create one</a></p>
+        <p class="auth-footnote auth-footnote--muted"><a href="index.html">← Back to home page</a></p>
+      </div>
     </div>
   </div>
 </section>
 
 <section class="auth-page" id="auth-page-register" hidden>
-  <div class="hero auth-shell">
-    <h1 style="font-family:var(--font-display);font-size:clamp(2rem,5vw,2.75rem);margin-bottom:12px">Create your account</h1>
-    <p style="color:var(--text-secondary);max-width:420px;margin:0 auto 32px;font-size:1.05rem">Register with your email and password to save your results and unlock your Career Hub.</p>
-    <div style="max-width:400px;margin:0 auto;text-align:left">
-      <input type="email" id="register-email" class="coach-email-input" placeholder="you@example.com" autocomplete="email" style="width:100%;margin-bottom:12px">
-      <input type="password" id="register-password" class="coach-email-input" placeholder="Password (8+ characters)" autocomplete="new-password" style="width:100%;margin-bottom:12px">
-      <input type="password" id="register-password-confirm" class="coach-email-input" placeholder="Confirm password" autocomplete="new-password" style="width:100%;margin-bottom:8px" onkeydown="if(event.key==='Enter')coachRegisterFromPage()">
-      <div class="coach-error" id="register-error"></div>
-      <button type="button" class="coach-primary-btn" id="register-btn" style="width:100%" onclick="coachRegisterFromPage()">Create account →</button>
-      <p style="text-align:center;margin-top:16px;font-size:0.88rem;color:var(--text-secondary)">Already have an account? <a href="auth.html#signin" style="color:rgb(var(--primary));font-weight:600;text-decoration:none">Sign in</a></p>
+  <div class="auth-shell">
+    <div class="auth-card">
+      <div class="auth-card-head">
+        <a class="fw-brand auth-card-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay home"></a>
+        <h1 class="auth-card-title">Create your account</h1>
+        <p class="auth-card-sub">Save your results and unlock your Career Hub.</p>
+      </div>
+      <div class="auth-form-shell">
+        <label class="auth-label" for="register-email">Email</label>
+        <input type="email" id="register-email" class="coach-email-input auth-field" placeholder="you@example.com" autocomplete="email">
+        <label class="auth-label" for="register-password">Password</label>
+        <div class="auth-pw-wrap">
+          <input type="password" id="register-password" class="coach-email-input auth-field" placeholder="At least 8 characters" autocomplete="new-password">
+          <button type="button" class="auth-pw-toggle" data-pw-toggle="register-password" aria-label="Show password" aria-pressed="false">
+            <svg class="auth-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="auth-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.2A9.9 9.9 0 0 1 12 5c6.4 0 10 7 10 7a17.8 17.8 0 0 1-3.4 4.2"/><path d="M6.2 6.7A17.5 17.5 0 0 0 2 12s3.6 7 10 7a9.8 9.8 0 0 0 4.2-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+          </button>
+        </div>
+        <label class="auth-label" for="register-password-confirm">Confirm password</label>
+        <input type="password" id="register-password-confirm" class="coach-email-input auth-field" placeholder="Re-enter your password" autocomplete="new-password" onkeydown="if(event.key==='Enter')coachRegisterFromPage()">
+        <div class="auth-alert" id="register-error" role="alert"></div>
+        <button type="button" class="coach-primary-btn auth-btn-full" id="register-btn" onclick="coachRegisterFromPage()">Create account →</button>
+        <p class="auth-footnote">Already have an account? <a href="auth.html#signin">Sign in</a></p>
+      </div>
     </div>
   </div>
 </section>
 
 <section class="auth-page" id="auth-page-forgot-password" hidden>
-  <div class="hero auth-shell">
-    <h1 style="font-family:var(--font-display);font-size:clamp(2rem,5vw,2.75rem);margin-bottom:12px">Forgot password</h1>
-    <p style="color:var(--text-secondary);max-width:420px;margin:0 auto 32px;font-size:1.05rem">Enter your email and we will send you a reset link if an account exists.</p>
-    <div style="max-width:400px;margin:0 auto;text-align:left">
-      <input type="email" id="forgot-email" class="coach-email-input" placeholder="you@example.com" autocomplete="email" style="width:100%;margin-bottom:12px" onkeydown="if(event.key==='Enter')coachForgotPasswordSubmit()">
-      <div class="coach-error" id="forgot-error"></div>
-      <div class="coach-dossier-status ok" id="forgot-success" style="display:none;margin-bottom:12px"></div>
-      <button type="button" class="coach-primary-btn" id="forgot-btn" style="width:100%" onclick="coachForgotPasswordSubmit()">Send reset link →</button>
-      <p style="text-align:center;margin-top:20px;font-size:0.85rem;color:var(--text-tertiary)"><a href="auth.html#signin" style="color:var(--text-secondary);text-decoration:none">← Back to sign in</a></p>
+  <div class="auth-shell">
+    <div class="auth-card">
+      <div class="auth-card-head">
+        <a class="fw-brand auth-card-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay home"></a>
+        <h1 class="auth-card-title">Forgot password</h1>
+        <p class="auth-card-sub">We&rsquo;ll email a reset link if an account exists.</p>
+      </div>
+      <div class="auth-form-shell">
+        <label class="auth-label" for="forgot-email">Email</label>
+        <input type="email" id="forgot-email" class="coach-email-input auth-field" placeholder="you@example.com" autocomplete="email" onkeydown="if(event.key==='Enter')coachForgotPasswordSubmit()">
+        <div class="auth-alert" id="forgot-error" role="alert"></div>
+        <div class="auth-alert auth-alert--ok" id="forgot-success" role="status" hidden></div>
+        <button type="button" class="coach-primary-btn auth-btn-full" id="forgot-btn" onclick="coachForgotPasswordSubmit()">Send reset link →</button>
+        <p class="auth-footnote auth-footnote--muted"><a href="auth.html#signin">← Back to sign in</a></p>
+      </div>
     </div>
   </div>
 </section>
 
 <section class="auth-page" id="auth-page-reset-password" hidden>
-  <div class="hero auth-shell">
-    <h1 style="font-family:var(--font-display);font-size:clamp(2rem,5vw,2.75rem);margin-bottom:12px">Reset your password</h1>
-    <p style="color:var(--text-secondary);max-width:420px;margin:0 auto 32px;font-size:1.05rem">Choose a new password for your Flightway account.</p>
-    <div style="max-width:400px;margin:0 auto;text-align:left">
-      <input type="password" id="reset-password-new" class="coach-email-input" placeholder="New password (8+ characters)" autocomplete="new-password" style="width:100%;margin-bottom:12px">
-      <input type="password" id="reset-password-confirm" class="coach-email-input" placeholder="Confirm new password" autocomplete="new-password" style="width:100%;margin-bottom:12px" onkeydown="if(event.key==='Enter')coachResetPasswordSubmit()">
-      <div class="coach-error" id="reset-password-error"></div>
-      <button type="button" class="coach-primary-btn" id="reset-password-btn" style="width:100%" onclick="coachResetPasswordSubmit()">Update password →</button>
+  <div class="auth-shell">
+    <div class="auth-card">
+      <div class="auth-card-head">
+        <a class="fw-brand auth-card-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay home"></a>
+        <h1 class="auth-card-title">Reset your password</h1>
+        <p class="auth-card-sub">Choose a new password for your FlightWay account.</p>
+      </div>
+      <div class="auth-form-shell">
+        <label class="auth-label" for="reset-password-new">New password</label>
+        <div class="auth-pw-wrap">
+          <input type="password" id="reset-password-new" class="coach-email-input auth-field" placeholder="At least 8 characters" autocomplete="new-password">
+          <button type="button" class="auth-pw-toggle" data-pw-toggle="reset-password-new" aria-label="Show password" aria-pressed="false">
+            <svg class="auth-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="auth-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.2A9.9 9.9 0 0 1 12 5c6.4 0 10 7 10 7a17.8 17.8 0 0 1-3.4 4.2"/><path d="M6.2 6.7A17.5 17.5 0 0 0 2 12s3.6 7 10 7a9.8 9.8 0 0 0 4.2-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+          </button>
+        </div>
+        <label class="auth-label" for="reset-password-confirm">Confirm new password</label>
+        <input type="password" id="reset-password-confirm" class="coach-email-input auth-field" placeholder="Re-enter your new password" autocomplete="new-password" onkeydown="if(event.key==='Enter')coachResetPasswordSubmit()">
+        <div class="auth-alert" id="reset-password-error" role="alert"></div>
+        <button type="button" class="coach-primary-btn auth-btn-full" id="reset-password-btn" onclick="coachResetPasswordSubmit()">Update password →</button>
+        <p class="auth-footnote auth-footnote--muted"><a href="auth.html#signin">← Back to sign in</a></p>
+      </div>
     </div>
   </div>
 </section>
 
 <script src="assets/js/shared/page-boot.js?v=20260703p" defer></script>
-<script src="assets/js/shared/auth.js?v=20260703p" defer></script>
-<script src="assets/js/shared/auth-pages.js?v=20260703p" defer></script>
+<script src="assets/js/shared/fw-errors.js?v=20260720a" defer></script>
+<script src="assets/js/shared/auth.js?v=20260720c" defer></script>
+<script src="assets/js/shared/fw-busy.js?v=20260720a" defer></script>
+<script src="assets/js/shared/user.js?v=20260719g" defer></script>
+<script src="assets/js/shared/auth-pages.js?v=20260720c" defer></script>
 <script src="assets/js/shared/auth-nav.js?v=20260703p" defer></script>
-<script src="assets/js/shared/brand.js?v=20260703p" defer></script>
+<script src="assets/js/shared/brand.js?v=20260717g" defer></script>
 <script src="assets/js/shared/app-nav.js?v=20260703p" defer></script>
 <script src="assets/js/shared/theme.js?v=20260703p" defer></script>
 </body>

@@ -1,6 +1,6 @@
 /* FlightWay design system — light default, dark toggle, orange accents */
-/* Inter loads via per-page <link preconnect+stylesheet> — @import removed (render-blocking, double-fetch). Self-host follow-up in handoff. */
-@import url('zone-colors.css');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('zone-colors.css?v=20260718h');
 
 /* Fallback before boot script — light default */
 html:not([data-theme]) {
@@ -44,12 +44,6 @@ html:not([data-theme]) {
   --nav-border: rgb(var(--border));
   --overlay-bg: rgb(20 19 18 / 0.72);
   --content-elevated: rgb(var(--surface));
-
-  /* Confidence-tier + info semantics (single source; flightway-2.css aliases these) */
-  --conf-anchored: #35c184;
-  --conf-inferred: #e0a63a;
-  --conf-estimated: #8a93ac;
-  --info-accent: #6ea8ff;
 }
 
 /* ── Light (warm cream + peach) ── */
@@ -76,10 +70,8 @@ html:not([data-theme]) {
   --surface: 255 255 255;
   --surface-2: 248 248 248;
   --surface-hover: 255 244 238;
-  /* was 210 85 40 (brand orange): 4.04:1 on --bg, fails WCAG AA for body text.
-     Orange stays for interactive/brand elements via --primary/--accent. */
-  --text: 40 30 25;
-  --text-muted: 120 90 70;
+  --text: 24 20 18;
+  --text-muted: 96 86 78;
   --border: 235 228 222;
 
   --panel: 255 255 255;
@@ -91,12 +83,6 @@ html:not([data-theme]) {
   --nav-border: rgb(var(--border));
   --overlay-bg: rgb(20 12 9 / 0.35);
   --content-elevated: rgb(var(--surface));
-
-  /* Confidence-tier + info semantics — darkened for contrast on light surfaces */
-  --conf-anchored: #127a52;
-  --conf-inferred: #96640a;
-  --conf-estimated: #5a6378;
-  --info-accent: #1d58b2;
 }
 
 /* Solid aliases for Flightway.html legacy var(--bg) usage */
@@ -128,14 +114,29 @@ html:not([data-theme]) {
   --shadow-lg: 0 10px 40px rgba(0,0,0,0.12);
   --shadow-btn: 0 1px 2px rgb(0 0 0 / 0.12);
   --shadow-btn-hover: 0 4px 12px rgb(0 0 0 / 0.18);
-  --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition: 0.3s var(--fw-ease-standard);
 
-  /* Motion tokens — use these for all new transitions/animations */
-  --dur-fast: 120ms;
-  --dur-base: 200ms;
-  --dur-slow: 320ms;
-  --ease-out: cubic-bezier(0.2, 0, 0, 1);
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* ── Motion system (added 2026-07-18) — house-ease was already dominant; the
+     existing ad-hoc curves were migrated to these tokens in place. ── */
+  --fw-ease-out: cubic-bezier(0.22, 1, 0.36, 1);       /* decelerate — house ease */
+  --fw-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);    /* material standard */
+  --fw-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* overshoot — juice moments only */
+  --fw-dur-fast: 160ms;
+  --fw-dur-base: 240ms;
+  --fw-dur-slow: 450ms;
+
+  /* Accent gradient — ember→amber. Use sparingly: hero, CTA hover, quiz win, readiness fill. */
+  --fw-grad-accent: linear-gradient(135deg, rgb(210 85 40), rgb(235 150 60));
+
+  /* Semantic status (space-separated triplets for rgb()) */
+  --ok: 74 222 128;
+  --warn: 245 158 11;
+  --err: 239 68 68;
+
+  /* Elevation — light default (soft shadows); dark theme overrides below. */
+  --elev-1: 0 1px 2px rgb(23 20 18 / 0.06), 0 1px 3px rgb(23 20 18 / 0.10);
+  --elev-2: 0 2px 6px rgb(23 20 18 / 0.06), 0 8px 24px rgb(23 20 18 / 0.10);
+  --elev-3: 0 4px 12px rgb(23 20 18 / 0.08), 0 18px 48px rgb(23 20 18 / 0.14);
 
   /* Spacing scale (4px base) */
   --space-1: 4px;
@@ -154,9 +155,6 @@ html:not([data-theme]) {
   --text-lg: 1.125rem;
   --text-xl: 1.25rem;
   --text-2xl: 1.5rem;
-  --text-3xl: 1.875rem;
-  --text-4xl: 2.25rem;
-  --text-display: clamp(2.25rem, 5vw, 3rem);
   --line-tight: 1.25;
   --line-normal: 1.5;
   --line-relaxed: 1.65;
@@ -170,11 +168,6 @@ html:not([data-theme]) {
 
   --green: #4ade80;
   --green-bg: rgba(74, 222, 128, 0.12);
-
-  /* Fill-safe accents: constant across themes, always paired with dark text (#06122b).
-     Text usage must use --info-accent / --conf-* (theme-aware, contrast-safe). */
-  --info-accent-fill: #6ea8ff;
-  --conf-inferred-fill: #e0a63a;
 
   --q-blue: var(--primary-solid);
   --q-lblue: var(--primary-hover-solid);
@@ -195,6 +188,39 @@ html:not([data-theme]) {
   --shadow-lg: 0 10px 40px rgba(0,0,0,0.45);
   --shadow-btn: 0 1px 2px rgb(0 0 0 / 0.28);
   --shadow-btn-hover: 0 4px 12px rgb(0 0 0 / 0.38);
+  /* Elevation — dark: drop shadows die on near-black, so lead with a faint top-edge highlight. */
+  --elev-1: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 2px 6px rgb(0 0 0 / 0.45);
+  --elev-2: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 8px 24px rgb(0 0 0 / 0.55);
+  --elev-3: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 18px 48px rgb(0 0 0 / 0.65);
+}
+
+/* ── Hub chrome tokens (--hub-*), single-sourced here 2026-07-18 (were duplicated in
+   hub-dashboard.css + flightway-pages.css). dashboard.html overrides ONLY --hub-canvas-bg
+   to always-dark locally; the roadmap tree uses these theme-aware defaults. ── */
+:root,
+[data-theme="dark"] {
+  --hub-canvas-bg: rgb(var(--bg));
+  --hub-topbar-bg: rgb(26 24 22 / 0.92);
+  --hub-panel-bg: rgb(var(--panel));
+  --hub-control-bg: rgb(var(--control));
+  --hub-border: rgb(var(--border-strong));
+  --hub-text: rgb(var(--text));
+  --hub-text-muted: rgb(var(--text-muted));
+  --hub-accent: rgb(var(--primary));
+  --hub-accent-hover: rgb(var(--primary-hover));
+  --hub-accent-fg: rgb(var(--primary-fg));
+}
+[data-theme="light"] {
+  --hub-canvas-bg: rgb(var(--bg));
+  --hub-topbar-bg: rgb(255 255 255 / 0.94);
+  --hub-panel-bg: rgb(var(--panel));
+  --hub-control-bg: rgb(var(--control));
+  --hub-border: rgb(var(--border-strong));
+  --hub-text: rgb(15 15 15);
+  --hub-text-muted: rgb(100 100 100);
+  --hub-accent: rgb(var(--primary));
+  --hub-accent-hover: rgb(var(--primary-hover));
+  --hub-accent-fg: rgb(var(--primary-fg));
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -269,47 +295,6 @@ nav,
 [data-theme="dark"] nav,
 [data-theme="dark"] .fw-nav {
   box-shadow: 0 4px 24px rgb(0 0 0 / 0.35);
-}
-
-/* ── Mobile bottom tab bar (UI overhaul Phase 2, wireframe 1h) ── */
-.fw-tabbar-wrap {
-  position: fixed;
-  inset: auto 0 0 0;
-  z-index: 150; /* above nav (100), below modals (200+) */
-  display: none;
-  background: rgb(var(--surface));
-  border-top: 1px solid rgb(var(--border));
-  padding-bottom: env(safe-area-inset-bottom);
-  box-shadow: 0 -2px 16px rgb(0 0 0 / 0.08);
-}
-.fw-tabbar { display: grid; grid-template-columns: repeat(4, 1fr); }
-.fw-tab {
-  min-height: 64px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: rgb(var(--text-muted));
-  text-decoration: none;
-  transition: color var(--dur-fast) var(--ease-out);
-}
-.fw-tab svg { width: 22px; height: 22px; }
-.fw-tab.is-active { color: rgb(var(--text)); }
-.fw-tab.is-active svg { stroke-width: 2.6; }
-/* Ask Marco is an action, not a location — orange even when inactive (wireframe 1h·2) */
-.fw-tab--marco { color: rgb(var(--primary)); }
-.fw-tabbar-action {
-  padding: 10px 16px;
-  border-bottom: 1px solid rgb(var(--border));
-}
-.fw-tabbar-action > * { width: 100%; }
-@media (max-width: 768px) {
-  .fw-tabbar-wrap { display: block; }
-  body.has-fw-tabbar { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
-  body.has-fw-tabbar.has-fw-tabbar-action { padding-bottom: calc(64px + 76px + env(safe-area-inset-bottom)); }
 }
 
 /* Theme toggle */
@@ -525,11 +510,18 @@ nav .nav-links .app-nav-tab.is-active {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
-  background: rgb(var(--primary));
-  color: rgb(var(--primary-fg));
+  width: 34px;
+  height: 34px;
+  /* The bird mark stands on its own — no badge box, so it merges cleanly into
+     both light and dark backgrounds. */
+}
+.fw-brand-bird {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .fw-nav-links {
@@ -702,6 +694,14 @@ nav .nav-links .app-nav-tab.is-active {
   padding-top: 64px;
 }
 
+/* Sub-page hero (pricing): header-height offset instead of a full-viewport
+   band, so the content below starts above the fold. */
+.fw-hero--compact {
+  min-height: 0;
+  padding-top: 150px;
+  padding-bottom: 8px;
+}
+
 .fw-hero .fw-container {
   max-width: none;
   width: 100%;
@@ -805,24 +805,21 @@ nav .nav-links .app-nav-tab.is-active {
 
 .fw-mask {
   display: inline-block;
-  overflow: hidden;
   vertical-align: top;
   margin-right: 0.28em;
-  padding-bottom: 0.2em;
-  margin-bottom: -0.06em;
 }
 
 .fw-mask:last-child { margin-right: 0; }
 
 .fw-mask-inner {
   display: inline-block;
-  transform: translateY(110%);
+  transform: translateY(18px);
   opacity: 0;
   color: rgb(var(--text));
 }
 
 .fw-hero-ready .fw-mask-inner {
-  animation: fw-rise-word 0.75s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: fw-rise-word 0.75s var(--fw-ease-out) forwards;
   animation-delay: calc(0.12s + var(--fw-i, 0) * 0.09s);
 }
 
@@ -842,7 +839,7 @@ nav .nav-links .app-nav-tab.is-active {
 }
 
 .fw-hero-ready .fw-hero-fade {
-  animation: fw-hero-fade-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: fw-hero-fade-in 0.7s var(--fw-ease-out) forwards;
   animation-delay: var(--fw-delay, 0s);
 }
 
@@ -899,7 +896,7 @@ html.theme-switching body {
 .fw-nav-enter {
   opacity: 0;
   transform: translateY(-80px);
-  animation: fw-nav-slide 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: fw-nav-slide 0.6s var(--fw-ease-out) forwards;
 }
 
 @keyframes fw-nav-slide {
@@ -910,8 +907,8 @@ html.theme-switching body {
 .fw-reveal-stagger .fw-reveal-item {
   opacity: 0;
   transform: translateY(24px);
-  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
-              transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity 0.7s var(--fw-ease-out),
+              transform 0.7s var(--fw-ease-out);
 }
 
 .fw-reveal.is-visible,
@@ -1028,7 +1025,7 @@ html.theme-switching body {
   background: rgb(var(--surface));
   transform: translateY(0);
   transition: border-color 0.3s, background 0.3s, box-shadow 0.3s,
-              transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+              transform 0.3s var(--fw-ease-out);
 }
 
 .fw-feature-card:hover {
@@ -1183,7 +1180,7 @@ html.theme-switching body {
   background: rgb(var(--surface));
   transform: translateY(0);
   transition: border-color 0.3s, background 0.3s, box-shadow 0.3s,
-              transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+              transform 0.3s var(--fw-ease-out);
 }
 
 .fw-pricing-card:hover {
@@ -1292,7 +1289,7 @@ html.theme-switching body {
 .fw-faq-btn svg {
   flex-shrink: 0;
   color: rgb(var(--text-muted));
-  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 0.3s var(--fw-ease-out);
 }
 
 .fw-faq-item.open .fw-faq-btn svg { transform: rotate(180deg); }
@@ -2103,11 +2100,6 @@ p, li, span, label, h1, h2, h3, h4, h5, h6,
   color: rgb(var(--primary-fg)) !important;
 }
 
-#page-quiz .archetype-card {
-  background: linear-gradient(135deg, rgb(var(--primary)), rgb(var(--primary-hover))) !important;
-  color: rgb(var(--primary-fg)) !important;
-}
-
 #page-quiz .gpa-banner.elite { color: rgb(120 53 15) !important; }
 #page-quiz .gpa-banner.great { color: rgb(20 83 45) !important; }
 #page-quiz .gpa-banner.good { color: rgb(30 58 138) !important; }
@@ -2214,4 +2206,247 @@ textarea:focus-visible,
 [role="button"]:focus-visible {
   outline: 2px solid rgb(var(--primary) / 0.75);
   outline-offset: 2px;
+}
+
+/* ═══ Shared feedback + interaction layer (Phase 1, 2026-07-18) ═══
+   Toast v2, unified spinner/skeleton, and the hover/active micro-state recipe.
+   All reduced-motion guarded; consumes the Phase-0 motion/elevation/status tokens.
+   Screens adopt .fw-spinner/.fw-skeleton/.fw-hoverable in the Phase-4 per-screen pass. */
+
+/* Toast v2 — fixed bottom-center, one-at-a-time (driven by shared/fw-toast.js). */
+.fw-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%) translateY(12px);
+  z-index: 9999;
+  max-width: min(92vw, 420px);
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: rgb(var(--text));
+  background: rgb(var(--surface));
+  border: 1px solid rgb(var(--border-strong));
+  border-left: 3px solid rgb(var(--text-muted));
+  box-shadow: var(--elev-3);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity var(--fw-dur-base) var(--fw-ease-out),
+              transform var(--fw-dur-base) var(--fw-ease-out),
+              visibility 0s linear var(--fw-dur-base);
+}
+.fw-toast.is-in {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+  transition: opacity var(--fw-dur-base) var(--fw-ease-out),
+              transform var(--fw-dur-base) var(--fw-ease-out),
+              visibility 0s;
+}
+.fw-toast--success { border-left-color: rgb(var(--primary)); }
+.fw-toast--error   { border-left-color: rgb(var(--err)); }
+.fw-toast--info    { border-left-color: rgb(var(--text-muted)); }
+@media (prefers-reduced-motion: reduce) {
+  .fw-toast, .fw-toast.is-in {
+    transform: translateX(-50%);
+    transition: opacity var(--fw-dur-fast) linear, visibility 0s;
+  }
+}
+
+/* Unified spinner — canonical rotating ring (migrates hub/pb/coach/career/veil spinners). */
+@keyframes fw-spin { to { transform: rotate(360deg); } }
+.fw-spinner {
+  display: inline-block;
+  /* Never collapse when used as a flex item (boot veil + coach-updating are
+     display:flex; a flex child ignores width and shrinks to the border sliver
+     without this). flex is inert in non-flex contexts, so it's safe globally. */
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgb(var(--border-strong));
+  border-top-color: rgb(var(--primary));
+  border-radius: 50%;
+  animation: fw-spin 0.8s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fw-spinner { animation-duration: 1.4s; } /* slowed, not frozen — it's a live loader */
+}
+
+/* Visually hidden, still announced — every skeleton pairs one with its bars. */
+.fw-vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Unified skeleton shimmer — canonical loading placeholder. */
+@keyframes fw-skeleton-shimmer { to { background-position: -200% 0; } }
+.fw-skeleton {
+  border-radius: 10px;
+  background: linear-gradient(100deg,
+    rgb(var(--surface-2)) 30%,
+    rgb(var(--surface-hover)) 50%,
+    rgb(var(--surface-2)) 70%);
+  background-size: 200% 100%;
+  animation: fw-skeleton-shimmer 1.3s var(--fw-ease-standard) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fw-skeleton { animation: none; }
+}
+
+/* Interaction micro-state recipe (M2) — opt-in; screens adopt it in Phase 4. */
+.fw-hoverable {
+  transition: transform var(--fw-dur-fast) var(--fw-ease-out),
+              box-shadow var(--fw-dur-fast) var(--fw-ease-out),
+              border-color var(--fw-dur-fast) var(--fw-ease-out);
+}
+.fw-hoverable:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--elev-2);
+}
+.fw-hoverable:active { transform: scale(0.985); }
+@media (prefers-reduced-motion: reduce) {
+  .fw-hoverable, .fw-hoverable:hover, .fw-hoverable:active {
+    transform: none;
+    transition: box-shadow var(--fw-dur-fast) linear, border-color var(--fw-dur-fast) linear;
+  }
+}
+
+/* ── Universal button press (M2 → all button families, 2026-07-20) ──
+   The .fw-hoverable:active recipe, generalised. Uses the independent `scale`
+   property rather than `transform: scale()` on purpose: several of these
+   families already carry a transform (hover lift, translate-centering), and a
+   transform here would clobber it — `scale` composes instead. */
+.back-btn, .coach-danger-btn, .coach-primary-btn, .coach-secondary-btn,
+.coach-send-btn, .cta-btn, .cta-btn-outline, .emo-btn, .fit-ask-ai-btn,
+.fit-track-roadmap-btn, .fw-art-type-btn, .fw-bigbtn, .fw-btn, .fw-faq-btn,
+.fw-iv-btn, .fw-menu-btn, .fw-price-toggle-btn, .fw-scale-btn, .fw-share-btn,
+.fw-textbtn, .hub-hud-btn, .pair-own-btn, .pb-btn, .placement-btn,
+.portal-profile-entry-btn, .portal-signout-btn, .portal-target-btn, .qz-btn,
+.qz-btn-back, .qz-btn-next, .qz-combo-btn, .qz-signup-btn, .qz-skip-btn,
+.qz-skip-quiz-btn, .qz-start-btn, .resume-ingest-upload-btn,
+.roadmap-commit-branch-btn, .roadmap-exit-preview-btn,
+.roadmap-extend-branch-btn, .roadmap-generate-btn, .roadmap-hud-btn,
+.roadmap-mark-done-btn, .roadmap-mark-undone-btn, .roadmap-preview-branch-btn,
+.roadmap-track-branch-btn, .salary-unlock-btn, .sgt-elab-send, .sgt-marco-send,
+.sw-btn, .yn-btn, .yn-custom-btn, .admin-btn-quiet {
+  transition: scale var(--fw-dur-fast) var(--fw-ease-out), opacity var(--fw-dur-fast) var(--fw-ease-out);
+}
+.back-btn:active:not(:disabled), .coach-danger-btn:active:not(:disabled),
+.coach-primary-btn:active:not(:disabled), .coach-secondary-btn:active:not(:disabled),
+.coach-send-btn:active:not(:disabled), .cta-btn:active:not(:disabled),
+.cta-btn-outline:active:not(:disabled), .emo-btn:active:not(:disabled),
+.fit-ask-ai-btn:active:not(:disabled), .fit-track-roadmap-btn:active:not(:disabled),
+.fw-art-type-btn:active:not(:disabled), .fw-bigbtn:active:not(:disabled),
+.fw-btn:active:not(:disabled), .fw-faq-btn:active:not(:disabled),
+.fw-iv-btn:active:not(:disabled), .fw-menu-btn:active:not(:disabled),
+.fw-price-toggle-btn:active:not(:disabled), .fw-scale-btn:active:not(:disabled),
+.fw-share-btn:active:not(:disabled), .fw-textbtn:active:not(:disabled),
+.hub-hud-btn:active:not(:disabled), .pair-own-btn:active:not(:disabled),
+.pb-btn:active:not(:disabled), .placement-btn:active:not(:disabled),
+.portal-profile-entry-btn:active:not(:disabled), .portal-signout-btn:active:not(:disabled),
+.portal-target-btn:active:not(:disabled), .qz-btn:active:not(:disabled),
+.qz-btn-back:active:not(:disabled), .qz-btn-next:active:not(:disabled),
+.qz-combo-btn:active:not(:disabled), .qz-signup-btn:active:not(:disabled),
+.qz-skip-btn:active:not(:disabled), .qz-skip-quiz-btn:active:not(:disabled),
+.qz-start-btn:active:not(:disabled), .resume-ingest-upload-btn:active:not(:disabled),
+.roadmap-commit-branch-btn:active:not(:disabled), .roadmap-exit-preview-btn:active:not(:disabled),
+.roadmap-extend-branch-btn:active:not(:disabled), .roadmap-generate-btn:active:not(:disabled),
+.roadmap-hud-btn:active:not(:disabled), .roadmap-mark-done-btn:active:not(:disabled),
+.roadmap-mark-undone-btn:active:not(:disabled), .roadmap-preview-branch-btn:active:not(:disabled),
+.roadmap-track-branch-btn:active:not(:disabled), .salary-unlock-btn:active:not(:disabled),
+.sgt-elab-send:active:not(:disabled), .sgt-marco-send:active:not(:disabled),
+.sw-btn:active:not(:disabled), .yn-btn:active:not(:disabled),
+.yn-custom-btn:active:not(:disabled), .admin-btn-quiet:active:not(:disabled) {
+  scale: 0.985;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cta-btn:active, .fw-btn:active, .qz-btn:active, .pb-btn:active,
+  .coach-primary-btn:active, .fw-iv-btn:active, .fw-bigbtn:active,
+  .roadmap-hud-btn:active, .hub-hud-btn:active {
+    scale: 1;
+  }
+}
+
+/* Global busy/disabled affordance — no hover lift, no press, dimmed. */
+button:disabled,
+button[aria-busy="true"],
+[role="button"][aria-busy="true"] {
+  cursor: default;
+  scale: 1 !important;
+}
+button[aria-busy="true"] {
+  opacity: 0.72;
+}
+button:disabled:hover,
+button[aria-busy="true"]:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* In-button busy state (FWButtonBusy) — the one place .fw-spinner survives
+   the skeleton migration: a skeleton inside a button is wrong. */
+.is-busy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+.is-busy .fw-spinner {
+  width: 14px;
+  height: 14px;
+  border-width: 2px;
+  border-top-color: currentColor;
+}
+
+/* ── Mobile bottom tab bar (ported from igor_work_2 UI overhaul) ── */
+/* ── Mobile bottom tab bar (UI overhaul Phase 2, wireframe 1h) ── */
+.fw-tabbar-wrap {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 150; /* above nav (100), below modals (200+) */
+  display: none;
+  background: rgb(var(--surface));
+  border-top: 1px solid rgb(var(--border));
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -2px 16px rgb(0 0 0 / 0.08);
+}
+.fw-tabbar { display: grid; grid-template-columns: repeat(4, 1fr); }
+.fw-tab {
+  min-height: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: rgb(var(--text-muted));
+  text-decoration: none;
+  transition: color 0.18s ease;
+}
+.fw-tab svg { width: 22px; height: 22px; }
+.fw-tab.is-active { color: rgb(var(--text)); }
+.fw-tab.is-active svg { stroke-width: 2.6; }
+/* Ask Marco is an action, not a location — orange even when inactive (wireframe 1h·2) */
+.fw-tab--marco { color: rgb(var(--primary)); }
+.fw-tabbar-action {
+  padding: 10px 16px;
+  border-bottom: 1px solid rgb(var(--border));
+}
+.fw-tabbar-action > * { width: 100%; }
+@media (max-width: 768px) {
+  .fw-tabbar-wrap { display: block; }
+  body.has-fw-tabbar { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+  body.has-fw-tabbar.has-fw-tabbar-action { padding-bottom: calc(64px + 76px + env(safe-area-inset-bottom)); }
 }

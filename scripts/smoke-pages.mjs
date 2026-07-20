@@ -7,7 +7,7 @@
 import { chromium } from 'playwright';
 
 const BASE = process.env.SMOKE_BASE_URL || 'https://flightwayjacobprototype.pages.dev';
-const PAGES = ['/portal.html', '/career.html?slug=chief-executives', '/roadmap.html', '/simulation.html', '/pricing.html', '/resume.html'];
+const PAGES = ['/portal.html', '/career.html?slug=chief-executives', '/roadmap.html', '/simulation.html', '/pricing.html', '/resume.html', '/coach.html', '/admin.html'];
 
 const browser = await chromium.launch();
 const page = await browser.newPage();

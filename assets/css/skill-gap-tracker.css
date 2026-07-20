@@ -115,6 +115,20 @@
   flex: 1;
   min-width: 0;
 }
+.sgt-log-weight {
+  flex-shrink: 0;
+  display: inline-block;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--green-bg);
+  color: var(--green);
+}
+[data-theme="dark"] .sgt-log-weight {
+  background: rgba(74, 222, 128, 0.18);
+  color: var(--green);
+}
 .sgt-log-remove {
   flex-shrink: 0;
   border: none;
@@ -129,14 +143,34 @@
   border-radius: 6px;
   transition: opacity 0.18s ease, color 0.18s ease;
 }
+.sgt-log-promote {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  padding: 6px 6px;
+  margin: -6px 0;
+  font-size: 0.85em;
+  line-height: 1;
+  color: var(--text-secondary);
+  cursor: pointer;
+  opacity: 0;
+  border-radius: 6px;
+  transition: opacity 0.18s ease, color 0.18s ease;
+}
 .sgt-log-item:hover .sgt-log-remove,
-.sgt-log-item:focus-within .sgt-log-remove {
+.sgt-log-item:focus-within .sgt-log-remove,
+.sgt-log-item:hover .sgt-log-promote,
+.sgt-log-item:focus-within .sgt-log-promote {
   opacity: 1;
 }
 .sgt-log-remove:hover {
   color: var(--text-solid);
 }
-.sgt-log-remove:focus-visible {
+.sgt-log-promote:hover {
+  color: var(--text-solid);
+}
+.sgt-log-remove:focus-visible,
+.sgt-log-promote:focus-visible {
   opacity: 1;
   outline: 2px solid rgb(var(--primary));
   outline-offset: 2px;
@@ -174,6 +208,82 @@
 }
 .sgt-step input:disabled + span {
   opacity: 0.85;
+}
+@supports selector(:has(*)) {
+  .sgt-step label,
+  .sgt-step--gap-only label {
+    position: relative;
+    align-items: center;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border-light);
+    background: var(--surface-solid);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+  }
+  .sgt-step label:hover,
+  .sgt-step--gap-only label:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-btn);
+    border-color: rgb(var(--primary));
+  }
+  .sgt-step label:focus-within,
+  .sgt-step--gap-only label:focus-within {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(var(--primary), 0.35);
+  }
+  .sgt-step label .sgt-step-check,
+  .sgt-step--gap-only label .sgt-gap-check {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .sgt-step-tick {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: rgb(var(--primary));
+    font-weight: 700;
+    transform: scale(0);
+    opacity: 0;
+    width: 0;
+    margin-right: 0;
+    transition: transform 0.18s ease, opacity 0.18s ease, width 0.18s ease, margin-right 0.18s ease;
+  }
+  .sgt-step label:has(input:checked) .sgt-step-tick,
+  .sgt-step--gap-only label:has(input:checked) .sgt-step-tick {
+    transform: scale(1);
+    opacity: 1;
+    width: 1em;
+    margin-right: 2px;
+  }
+  .sgt-step label:has(input:checked),
+  .sgt-step--gap-only label:has(input:checked) {
+    background: var(--accent-light);
+    border-color: rgb(var(--primary));
+  }
+  .sgt-step label:has(input:checked) span:not(.sgt-step-tick):not(.sgt-step-kind),
+  .sgt-step--gap-only label:has(input:checked) span:not(.sgt-step-tick):not(.sgt-step-kind) {
+    opacity: 0.6;
+    background-image: linear-gradient(currentColor, currentColor);
+    background-repeat: no-repeat;
+    background-position: 0 55%;
+    background-size: 100% 1px;
+    transition: background-size 0.3s ease, opacity 0.3s ease;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sgt-step label,
+  .sgt-step--gap-only label,
+  .sgt-step-tick,
+  .sgt-step label span:not(.sgt-step-tick):not(.sgt-step-kind) {
+    transition: none !important;
+  }
 }
 .sgt-step-gap {
   display: block;
@@ -267,7 +377,10 @@
   color: var(--text-solid);
 }
 .sgt-focus-head {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
+}
+.sgt-focus-head .sgt-eyebrow {
+  margin-bottom: 2px;
 }
 .sgt-branch-switcher {
   display: flex;
@@ -299,8 +412,20 @@
 .sgt-focus-title {
   font-family: var(--font-display);
   font-size: clamp(1.25rem, 2.5vw, 1.6rem);
-  margin: 0 0 10px;
+  margin: 0 0 6px;
   color: var(--text-solid);
+}
+.sgt-focus-target {
+  font-size: 0.875rem;
+  color: var(--text-tertiary);
+  margin: 0 0 14px;
+}
+.sgt-focus-target a {
+  color: rgb(var(--primary));
+  text-decoration: none;
+}
+.sgt-focus-target a:hover {
+  text-decoration: underline;
 }
 .sgt-back-map {
   border: none;
@@ -370,7 +495,7 @@
 .sgt-focus-layout {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 28px;
   min-width: 0;
 }
 .sgt-focus-col {
@@ -379,13 +504,177 @@
 @media (min-width: 900px) {
   .sgt-focus-layout {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 28px 32px;
+    /* Waypoint steps are the primary column — wider, reads first. */
+    grid-template-columns: 3fr 2fr;
+    gap: 28px 36px;
     align-items: start;
   }
   .sgt-focus-col--gaps .sgt-gaps {
     margin-bottom: 0;
   }
+}
+
+/* Waypoint steps as the primary, visually dominant column. */
+.sgt-focus-col--steps .sgt-steps {
+  gap: 14px;
+  margin-bottom: 0;
+}
+.sgt-focus-col--steps .sgt-step label {
+  font-size: 1rem;
+  gap: 10px;
+  line-height: 1.4;
+}
+.sgt-focus-col--steps .sgt-step-check {
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  accent-color: rgb(var(--primary));
+}
+.sgt-focus-col--steps .sgt-step-gap {
+  margin-left: 30px;
+  font-size: 0.8125rem;
+}
+
+/* Step "kind" chips — small rounded tag before the step text, tinted per kind.
+   Colors are fixed (not theme tokens) so the hue reads consistently in light
+   and dark; only the background/text opacity is tuned per theme below. */
+.sgt-step-kind {
+  display: inline-block;
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-top: 1px;
+}
+.sgt-step-kind--reading {
+  background: rgba(59, 130, 246, 0.14);
+  color: #3b82f6;
+}
+.sgt-step-kind--course {
+  background: rgba(168, 85, 247, 0.14);
+  color: #a855f7;
+}
+.sgt-step-kind--club {
+  background: rgba(20, 184, 166, 0.14);
+  color: #14b8a6;
+}
+.sgt-step-kind--deliverable {
+  background: rgba(245, 158, 11, 0.16);
+  color: #d97706;
+}
+.sgt-step-kind--network {
+  background: rgba(236, 72, 153, 0.14);
+  color: #ec4899;
+}
+.sgt-step-kind--milestone {
+  background: rgb(var(--primary) / 0.14);
+  color: rgb(var(--primary));
+}
+[data-theme="dark"] .sgt-step-kind--reading {
+  background: rgba(59, 130, 246, 0.22);
+  color: #7cb0fb;
+}
+[data-theme="dark"] .sgt-step-kind--course {
+  background: rgba(168, 85, 247, 0.22);
+  color: #c896fa;
+}
+[data-theme="dark"] .sgt-step-kind--club {
+  background: rgba(20, 184, 166, 0.22);
+  color: #5eead4;
+}
+[data-theme="dark"] .sgt-step-kind--deliverable {
+  background: rgba(245, 158, 11, 0.24);
+  color: #fbbf24;
+}
+[data-theme="dark"] .sgt-step-kind--network {
+  background: rgba(236, 72, 153, 0.22);
+  color: #f792bf;
+}
+[data-theme="dark"] .sgt-step-kind--milestone {
+  background: rgb(var(--primary) / 0.22);
+  color: rgb(var(--primary));
+}
+
+/* Secondary compact "Skill gaps" section — collapsed rows that expand to
+   reveal checklist / bars / log controls. Replaces the old stack of
+   full-size gap cards plus the separate duplicated log-progress list. */
+.sgt-section-title--gaps {
+  margin-top: 0;
+}
+.sgt-gaps--collapsible {
+  gap: 8px;
+  margin-bottom: 0;
+}
+.sgt-gaps--collapsible .sgt-gap-row {
+  padding: 0;
+  overflow: hidden;
+}
+.sgt-gap-row {
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  background: var(--surface-solid);
+}
+[data-theme="dark"] .sgt-gap-row {
+  background: rgb(var(--surface));
+  border-color: rgb(var(--surface-2));
+}
+.sgt-gap-row-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: none;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.sgt-gap-row-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-solid);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sgt-gap-row-head .sgt-bar-wrap--slim {
+  flex: 0 0 72px;
+}
+.sgt-bar-wrap--slim {
+  height: 6px;
+}
+.sgt-gap-row-pct {
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary);
+}
+.sgt-gap-row-head .sgt-gap-status {
+  flex: 0 0 auto;
+}
+.sgt-gap-chevron {
+  flex: 0 0 auto;
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+  transition: transform 0.18s ease;
+}
+.sgt-gap-row--open .sgt-gap-chevron {
+  transform: rotate(-180deg);
+}
+.sgt-gap-expand {
+  padding: 0 14px 14px;
+  border-top: 1px solid var(--border-light);
+  padding-top: 12px;
+}
+[data-theme="dark"] .sgt-gap-expand {
+  border-color: rgb(var(--surface-2));
 }
 .roadmap-detail-locked {
   padding: 10px 12px;
@@ -555,7 +844,7 @@
   -webkit-backdrop-filter: blur(3px);
 }
 .sgt-confirm-overlay[hidden] {
-  display: none !important;
+  display: none; /* attribute selector already outranks the base rule */
 }
 .sgt-confirm-modal {
   width: min(400px, 100%);
@@ -586,3 +875,428 @@
 .sgt-confirm-actions .cta-btn {
   min-height: 44px;
 }
+
+/* Semester plan — the engaging centerpiece of the focus view, between the
+   header and the steps/gaps columns. Fetched per-waypoint from the
+   waypoint-plan endpoint; sessionStorage-cached client side. */
+.sgt-plan {
+  margin: 4px 0 26px;
+}
+.sgt-plan-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  padding: 14px 16px;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  background: rgb(var(--surface-2) / 0.5);
+}
+.sgt-plan-skeleton-copy { margin: 0 0 2px; }
+/* Size only — .fw-skeleton (flightway-theme.css) supplies the shimmer. */
+.sgt-plan-skel-line { display: block; height: 12px; width: 100%; border-radius: 6px; }
+.sgt-plan-skel-line--short { width: 62%; }
+.sgt-plan-error {
+  font-size: 0.875rem;
+  color: var(--text-tertiary);
+  margin: 0;
+  padding: 10px 2px;
+}
+.sgt-plan-retry {
+  background: none;
+  border: none;
+  padding: 0;
+  color: rgb(var(--primary));
+  font-size: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.sgt-plan-overview {
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  margin: 0 0 20px;
+}
+
+/* Phases: horizontal progression on desktop, stacked cards on mobile. */
+.sgt-plan-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+@media (min-width: 900px) {
+  .sgt-plan-timeline {
+    flex-direction: row;
+    align-items: stretch;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .sgt-plan-phase {
+    flex: 1 1 0;
+    min-width: 220px;
+  }
+}
+.sgt-plan-phase {
+  padding: 16px 18px;
+  border: 1px solid var(--border-light);
+  border-radius: 16px;
+  background: var(--surface-solid);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+}
+.sgt-plan-phase-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.sgt-plan-phase-weeks {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgb(var(--primary));
+  background: rgb(var(--primary) / 0.12);
+  border-radius: 999px;
+  padding: 3px 9px;
+  flex-shrink: 0;
+}
+.sgt-plan-phase-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-solid);
+}
+.sgt-plan-phase-focus {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin: 0 0 12px;
+  line-height: 1.45;
+}
+.sgt-plan-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sgt-plan-item {
+  padding-top: 10px;
+  border-top: 1px solid var(--border-light);
+}
+.sgt-plan-item:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+.sgt-plan-item-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.sgt-plan-item-text {
+  font-size: 0.875rem;
+  color: var(--text-solid);
+  line-height: 1.4;
+}
+.sgt-plan-item-how {
+  margin: 4px 0 0;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  line-height: 1.4;
+}
+.sgt-plan-item-track {
+  display: inline-block;
+  margin-top: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgb(var(--primary));
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* Momentary highlight on the matching step row when a plan item's tracked
+   step marker is clicked. */
+.sgt-step--flash {
+  animation: sgt-step-flash 1.2s ease;
+}
+@keyframes sgt-step-flash {
+  0% { background: rgb(var(--primary) / 0.18); border-radius: 10px; }
+  100% { background: transparent; }
+}
+
+.sgt-plan-cadence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.sgt-plan-cadence-pill {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  background: rgb(var(--surface-2));
+  border: 1px solid var(--border-light);
+  border-radius: 999px;
+  padding: 5px 12px;
+}
+
+.sgt-plan-protocol {
+  padding: 14px 18px;
+  border-radius: 12px;
+  border: 1px solid rgb(var(--primary) / 0.25);
+  background: rgb(var(--primary) / 0.06);
+  margin-bottom: 18px;
+}
+.sgt-plan-protocol-label {
+  margin: 0 0 4px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgb(var(--primary));
+}
+.sgt-plan-protocol-text {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text-solid);
+}
+
+.sgt-plan-targets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.sgt-plan-target {
+  flex: 1 1 200px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  background: var(--surface-solid);
+}
+.sgt-plan-target--stretch {
+  border-color: rgb(var(--primary) / 0.3);
+  background: rgb(var(--primary) / 0.05);
+}
+.sgt-plan-target-label {
+  margin: 0 0 4px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.sgt-plan-target--stretch .sgt-plan-target-label {
+  color: rgb(var(--primary));
+}
+.sgt-plan-target-text {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--text-solid);
+}
+
+[data-theme="dark"] .sgt-plan-skeleton {
+  background: rgb(var(--surface-2) / 0.3);
+}
+[data-theme="dark"] .sgt-plan-phase {
+  box-shadow: none;
+}
+[data-theme="dark"] .sgt-plan-protocol {
+  background: rgb(var(--primary) / 0.1);
+}
+
+/* ---- Plan-item drill-down ("Go deeper") -------------------------------- */
+.sgt-plan-item-links {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.sgt-plan-item-deeper {
+  display: inline-block;
+  margin-top: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgb(var(--primary));
+  cursor: pointer;
+  text-decoration: underline;
+}
+.sgt-plan-item-detail {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(var(--primary), 0.05);
+  border: 1px solid rgba(var(--primary), 0.14);
+}
+[data-theme="dark"] .sgt-plan-item-detail {
+  background: rgba(var(--primary), 0.1);
+  border-color: rgba(var(--primary), 0.22);
+}
+.sgt-elab-text,
+.sgt-elab-a {
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  margin: 0 0 8px;
+}
+.sgt-elab-q {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  margin: 8px 0 4px;
+}
+.sgt-elab-loading {
+  font-size: 0.8125rem;
+  opacity: 0.7;
+  margin: 0;
+}
+.sgt-elab-ask {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+.sgt-elab-input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 0.8125rem;
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong, rgb(var(--border)));
+  background: rgb(var(--surface));
+  color: inherit;
+}
+.sgt-elab-send {
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 10px;
+  border: none;
+  background: rgb(var(--primary));
+  color: #fff;
+  cursor: pointer;
+}
+.sgt-elab-send:disabled { opacity: 0.6; cursor: default; }
+
+/* ---- Inline Marco on the focus waypoint -------------------------------- */
+.sgt-marco {
+  margin-top: 26px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  background: rgba(var(--text), 0.02);
+}
+[data-theme="dark"] .sgt-marco {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+}
+.sgt-marco-hint {
+  font-size: 0.8125rem;
+  opacity: 0.75;
+  margin: 2px 0 10px;
+}
+.sgt-marco-thread {
+  max-height: 260px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.sgt-marco-thread:empty { display: none; }
+.sgt-marco-msg {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  max-width: 85%;
+}
+.sgt-marco-msg--user {
+  align-self: flex-end;
+  background: rgba(var(--primary), 0.12);
+}
+.sgt-marco-msg--marco {
+  align-self: flex-start;
+  background: rgba(var(--text), 0.05);
+}
+[data-theme="dark"] .sgt-marco-msg--marco {
+  background: rgba(255, 255, 255, 0.06);
+}
+.sgt-marco-loading { opacity: 0.6; }
+.sgt-marco-row {
+  display: flex;
+  gap: 8px;
+}
+.sgt-marco-input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 0.8125rem;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong, rgb(var(--border)));
+  background: rgb(var(--surface));
+  color: inherit;
+}
+.sgt-marco-send {
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 9px 18px;
+  border-radius: 10px;
+  border: none;
+  background: rgb(var(--primary));
+  color: #fff;
+  cursor: pointer;
+}
+.sgt-marco-send:disabled { opacity: 0.6; cursor: default; }
+
+/* Readiness meter — gaps as pure measurement (You/Target bars, no controls). */
+.sgt-gaps--meter {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sgt-gaps-hint {
+  margin: -4px 0 10px;
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+}
+.sgt-gap-meter {
+  padding: 12px 14px;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  background: rgb(var(--surface));
+}
+.sgt-gap-meter-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.sgt-gap-meter-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.sgt-gap-meter-status {
+  flex: 0 0 auto;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.sgt-gap-meter .sgt-cmp-bars { margin-bottom: 0; }

@@ -213,7 +213,9 @@ export async function appendCareerSwitchToDossier(env, email, entry) {
   const fromName = String(entry.fromName || 'none').slice(0, 80);
   const toName = String(entry.toName).slice(0, 80);
   const source = String(entry.source || 'unknown').slice(0, 32);
-  const switchNote = `Switched target career from ${fromName} to ${toName} on ${date} (via ${source}).`;
+  const pivotLine = String(entry.pivotLine || '').slice(0, 200);
+  const switchNote = `Switched target career from ${fromName} to ${toName} on ${date} (via ${source}).`
+    + (pivotLine ? ` ${pivotLine}` : '');
   const targetLine = `${toName} (switched ${date}, via ${source})`;
 
   let lines = dossier.split('\n');

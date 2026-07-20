@@ -1,5 +1,5 @@
 import { callGeminiJson } from './gemini-json.js';
-import { loadQuizProfile, saveQuizProfile } from './auth.js';
+import { loadUserBlob } from './user.js';
 import { maybePatchPersonalityForUser } from './onet/personality-patch.js';
 
 export const SECTOR_KEYS = [
@@ -190,7 +190,7 @@ export async function maybePatchSectorFitForUser(env, email, { source, contextTe
     if (result.skipped) {
       return { sectorFitSheet: null, changed: false, rateLimited: result.reason === 'rate_limit' };
     }
-    const quiz = await loadQuizProfile(env, email);
+    const quiz = await loadUserBlob(env, email);
     return {
       sectorFitSheet: quiz?.sectorFitSheet || null,
       changed: !!result.changed,
@@ -200,7 +200,7 @@ export async function maybePatchSectorFitForUser(env, email, { source, contextTe
   } catch (err) {
     console.warn('maybePatchPersonalityForUser failed', err);
     try {
-      const quiz = await loadQuizProfile(env, email);
+      const quiz = await loadUserBlob(env, email);
       return {
         sectorFitSheet: quiz?.sectorFitSheet || null,
         changed: false,

@@ -5,7 +5,9 @@
 // dimension labels are mapped client-side from the registry the portal already loads.
 
 import { originFromEnv, jsonResponse, preflightResponse } from './_lib.js';
-import { getSessionEmail, loadQuizProfile } from './_lib/auth.js';
+import { getSessionEmail } from './_lib/auth.js';
+import { requirePlan } from './_lib/entitlements.js';
+import { loadUser } from './_lib/user.js';
 import { isoWeek } from './_lib/weekly-plan-core.js';
 
 const WINDOW = 8;
@@ -21,18 +23,26 @@ function mean(arr) {
 }
 
 export async function onRequestOptions(context) {
-  return preflightResponse(originFromEnv(context.env));
+  return preflightResponse(originFromEnv(context.env, context.request));
 }
 
 export async function onRequestGet(context) {
   const { request, env } = context;
-  const origin = originFromEnv(env);
+  const origin = originFromEnv(env, request);
   const email = await getSessionEmail(request, env);
   if (!email) return jsonResponse(401, { error: 'Not signed in.' }, origin);
+
+  // Free/paid merge §1: Receipts ship with the Weekly Flight Plan.
+  const ent = await requirePlan(env, email, 'premium');
+  if (!ent.ok) {
+    return jsonResponse(402, { error: 'Receipts are a Flight Plan feature.', upgrade: true, feature: 'receipts' }, origin);
+  }
+
   if (!env.DB) return jsonResponse(200, { week: isoWeek(), hasHistory: false, movers: [], trend: [] }, origin);
 
-  const quiz = (await loadQuizProfile(env, email)) || {};
-  const pers = values(quiz.personalityVector);
+  const user = await loadUser(env, email);
+  const vectors = (user && user.vectors) || {};
+  const pers = values(vectors.personality);
   const week = isoWeek();
 
   // Ensure this week's snapshot exists (first /receipts load of the week writes it).
@@ -43,7 +53,7 @@ export async function onRequestGet(context) {
     ).bind(
       email, week,
       pers ? JSON.stringify(pers) : null,
-      values(quiz.objectiveVector) ? JSON.stringify(quiz.objectiveVector.values) : null,
+      values(vectors.objective) ? JSON.stringify(vectors.objective.values) : null,
       new Date().toISOString(),
     ).run();
   } catch (err) {

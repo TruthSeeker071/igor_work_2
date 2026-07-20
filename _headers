@@ -20,3 +20,12 @@
 
 /
   Cache-Control: no-cache
+
+# Security headers, site-wide (static responses only — Functions set their own).
+# Deliberately no Content-Security-Policy yet: every page relies on inline
+# scripts/styles, so a real CSP needs its own dedicated pass with testing.
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()

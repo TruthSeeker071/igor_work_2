@@ -3,18 +3,140 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/favicon.ico?v=20260717h" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/favicon.png?v=20260717h">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=20260717h">
   <title>FlightWay — Your dream, turbocharged</title>
-  <meta name="description" content="FlightWay is the talent development platform that helps students and college career centers turn ambition into outcomes.">
+  <meta name="description" content="FlightWay matches you against 5,000+ real careers, shows you exactly why each one fits, and turns the best match into a step-by-step roadmap.">
   <meta property="og:title" content="FlightWay — Your dream, turbocharged">
-  <meta property="og:description" content="The talent development platform for students and college career centers.">
+  <meta property="og:description" content="Career matches you can actually check — see why you fit, then get a roadmap.">
   <meta property="og:type" content="website">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260720b">
+  <link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260720c">
   <script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
-  <script src="assets/js/shared/flags.js?v=20260703p"></script>
-<script src="assets/js/shared/events.js?v=20260708a" defer></script>
+  <script src="assets/js/shared/flags.js?v=20260716h"></script>
+  <script src="assets/js/shared/events.js?v=20260716h" defer></script>
+  <style>
+    /* Landing-only sections (How it works + comparison) — scoped here so the
+       shared theme stylesheet (loaded by all 11 pages) stays untouched. */
+    .fw-hiw-grid { display: grid; gap: 24px; margin-top: 56px; }
+    @media (min-width: 768px) { .fw-hiw-grid { grid-template-columns: repeat(3, 1fr); } }
+    .fw-hiw-card {
+      border: 1px solid rgb(var(--border));
+      border-radius: 16px;
+      background: rgb(var(--surface));
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: border-color 0.3s, box-shadow 0.3s, transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .fw-hiw-card:hover {
+      border-color: rgb(var(--primary) / 0.25);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-4px);
+    }
+    .fw-hiw-visual {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 28px 24px;
+      min-height: 150px;
+      background: rgb(var(--primary) / 0.05);
+      border-bottom: 1px solid rgb(var(--border));
+    }
+    .fw-hiw-visual svg { max-width: 100%; height: auto; }
+    .fw-hiw-body { padding: 24px 28px 28px; }
+    .fw-hiw-step {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 9px;
+      background: rgb(var(--primary));
+      color: rgb(var(--primary-fg));
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-right: 12px;
+      vertical-align: middle;
+      flex: none;
+    }
+    .fw-hiw-body h3 {
+      display: flex;
+      align-items: center;
+      font-size: 1.15rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+    .fw-hiw-body p { margin-top: 12px; color: rgb(var(--text-muted)); font-size: 0.95rem; line-height: 1.6; }
+    .fw-vs-grid { display: grid; gap: 24px; margin-top: 56px; }
+    @media (min-width: 820px) { .fw-vs-grid { grid-template-columns: 1fr 1fr; } }
+    .fw-vs-card {
+      border: 1px solid rgb(var(--border));
+      border-radius: 16px;
+      background: rgb(var(--surface));
+      padding: 28px;
+    }
+    .fw-vs-card.fw-vs-flightway {
+      border-color: rgb(var(--primary) / 0.35);
+      background: linear-gradient(rgb(var(--primary) / 0.05), rgb(var(--primary) / 0.05)), rgb(var(--surface));
+    }
+    .fw-vs-card h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin-bottom: 4px;
+    }
+    .fw-vs-card h3 + ul { margin-top: 12px; }
+    .fw-vs-card ul { list-style: none; margin: 0 0 20px; padding: 0; }
+    .fw-vs-card ul:last-child { margin-bottom: 0; }
+    .fw-vs-card li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 11px 0;
+      border-bottom: 1px solid rgb(var(--border) / 0.6);
+      font-size: 0.95rem;
+      color: rgb(var(--text-muted));
+      line-height: 1.5;
+    }
+    .fw-vs-card ul li:last-child { border-bottom: none; }
+    .fw-vs-flightway li { color: rgb(var(--text)); }
+    .fw-vs-mark { flex: none; margin-top: 2px; }
+    .fw-vs-mark.no { color: rgb(var(--text-muted)); opacity: 0.7; }
+    .fw-vs-mark.yes { color: rgb(var(--primary)); }
+    .fw-vs-brand {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .fw-vs-brand .fw-vs-tag {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: rgb(var(--text-muted));
+    }
+    /* Phase 4 — landing hero accent: the highlighted word carries the ember->amber
+       gradient (--fw-grad-accent), used sparingly per the color system (§5.3). */
+    .fw-hero h1 .peach,
+    .fw-mask-inner.peach {
+      background: var(--fw-grad-accent);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: rgb(var(--primary)); /* fallback where background-clip:text is unsupported */
+      /* The gradient is only painted inside this box, and text-fill is
+         transparent — so any ink outside the box is simply never drawn. At
+         line-height 1.05 the box bottom lands 0.13em above the descenders,
+         which is what beheads the 'g'. Nothing is clipping it: overflow is
+         visible the whole way up, so masks/overflow rules cannot fix this.
+         Drop the box past the descenders, then take the same amount back out
+         of layout so the line spacing is unchanged. */
+      padding-bottom: 0.18em;
+      margin-bottom: -0.18em;
+    }
+  </style>
 </head>
 <body>
   <canvas id="fw-data-field" aria-hidden="true"></canvas>
@@ -24,6 +146,7 @@
       <nav class="fw-nav-inner">
         <a href="/" class="fw-brand" data-fw-brand data-fw-brand-href="/" aria-label="FlightWay home"></a>
         <ul class="fw-nav-links">
+          <li><a href="#how-it-works">How it works</a></li>
           <li><a href="#features">Features</a></li>
           <li><a href="pricing.html">Pricing</a></li>
         </ul>
@@ -41,6 +164,7 @@
     </div>
     <div class="fw-mobile-menu" id="fw-mobile-menu">
       <ul>
+        <li><a href="#how-it-works">How it works</a></li>
         <li><a href="#features">Features</a></li>
         <li><a href="pricing.html">Pricing</a></li>
         <li>
@@ -66,35 +190,133 @@
         </p>
         <h1 class="fw-hero-title" aria-label="Your dream, turbocharged.">
           <span class="fw-mask-line">
-            <span class="fw-mask"><span class="fw-mask-inner" style="--fw-i:0">Your</span></span>
-            <span class="fw-mask"><span class="fw-mask-inner" style="--fw-i:1">dream,</span></span>
+            <span class="fw-mask"><span class="fw-mask-inner" style="--fw-i:0">Your</span></span><span class="fw-mask"><span class="fw-mask-inner" style="--fw-i:1">dream,</span></span>
           </span>
           <span class="fw-mask-line">
             <span class="fw-mask"><span class="fw-mask-inner peach" style="--fw-i:2">turbocharged.</span></span>
           </span>
         </h1>
         <p class="fw-hero-sub fw-hero-fade" style="--fw-delay:0.65s">
-          Whether you know exactly where you're headed or haven't picked a major yet, FlightWay turns it into a plan — a personal roadmap, matched internships, and real coaching from your campus career center.
+          Take a short quiz, see how you compare against 5,000+ real careers — with the exact reasons behind every match — and turn the one that fits into a step-by-step roadmap.
         </p>
         <div class="fw-hero-ctas fw-hero-fade" id="fw-hero-ctas" style="--fw-delay:0.8s">
           <a href="quiz.html" class="fw-btn fw-btn-primary fw-btn-lg">
             Get started
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </a>
-          <a href="#pricing" class="fw-text-link">
-            For career centers
+          <a href="auth.html#signin" class="fw-text-link">
+            Already have an account? Sign in
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </a>
         </div>
       </div>
-      <div class="fw-scroll-cue" aria-hidden="true"></div>
+    </section>
+
+    <section class="fw-section fw-reveal" id="how-it-works">
+      <div class="fw-container">
+        <div class="fw-heading fw-reveal-item">
+          <h2>How it works</h2>
+          <p>Three steps from "not sure" to a plan you can actually follow.</p>
+        </div>
+        <div class="fw-hiw-grid fw-reveal-stagger">
+          <article class="fw-hiw-card fw-reveal-item">
+            <div class="fw-hiw-visual" aria-hidden="true">
+              <svg width="200" height="110" viewBox="0 0 200 110" fill="none">
+                <rect x="30" y="12" width="140" height="24" rx="8" stroke="rgb(var(--border))" fill="rgb(var(--surface))"/>
+                <rect x="30" y="43" width="140" height="24" rx="8" stroke="rgb(var(--primary))" fill="rgb(var(--primary) / 0.12)"/>
+                <path d="M40 55l4 4 7-8" stroke="rgb(var(--primary))" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <rect x="58" y="51" width="72" height="8" rx="4" fill="rgb(var(--primary) / 0.45)"/>
+                <rect x="30" y="74" width="140" height="24" rx="8" stroke="rgb(var(--border))" fill="rgb(var(--surface))"/>
+                <rect x="40" y="20" width="60" height="8" rx="4" fill="rgb(var(--text-muted) / 0.35)"/>
+                <rect x="40" y="82" width="80" height="8" rx="4" fill="rgb(var(--text-muted) / 0.35)"/>
+              </svg>
+            </div>
+            <div class="fw-hiw-body">
+              <h3><span class="fw-hiw-step" aria-hidden="true">1</span>Tell us where you're leaning</h3>
+              <p>A short quiz about your interests and strengths — including what you already think you want. If you have a career in mind, we start there instead of ignoring it.</p>
+            </div>
+          </article>
+          <article class="fw-hiw-card fw-reveal-item">
+            <div class="fw-hiw-visual" aria-hidden="true">
+              <svg width="200" height="110" viewBox="0 0 200 110" fill="none">
+                <circle cx="100" cy="50" r="26" stroke="rgb(var(--primary))" stroke-width="2" fill="rgb(var(--primary) / 0.12)"/>
+                <text x="100" y="56" text-anchor="middle" font-size="15" font-weight="700" fill="rgb(var(--primary))">87%</text>
+                <circle cx="38" cy="28" r="9" fill="rgb(var(--text-muted) / 0.3)"/>
+                <circle cx="160" cy="24" r="7" fill="rgb(var(--text-muted) / 0.3)"/>
+                <circle cx="170" cy="76" r="10" fill="rgb(var(--text-muted) / 0.3)"/>
+                <circle cx="34" cy="80" r="6" fill="rgb(var(--text-muted) / 0.3)"/>
+                <line x1="47" y1="32" x2="76" y2="43" stroke="rgb(var(--text-muted) / 0.4)"/>
+                <line x1="153" y1="27" x2="125" y2="41" stroke="rgb(var(--text-muted) / 0.4)"/>
+                <line x1="160" y1="73" x2="125" y2="59" stroke="rgb(var(--text-muted) / 0.4)"/>
+                <line x1="40" y1="78" x2="75" y2="59" stroke="rgb(var(--text-muted) / 0.4)"/>
+              </svg>
+            </div>
+            <div class="fw-hiw-body">
+              <h3><span class="fw-hiw-step" aria-hidden="true">2</span>See your matches — and why</h3>
+              <p>We compare your profile against 5,000+ real careers from the U.S. Department of Labor's O*NET database. Every match shows the specific factors behind it, so it's a data point you can judge — not a verdict.</p>
+            </div>
+          </article>
+          <article class="fw-hiw-card fw-reveal-item">
+            <div class="fw-hiw-visual" aria-hidden="true">
+              <svg width="200" height="110" viewBox="0 0 200 110" fill="none">
+                <path d="M30 88 C70 88 70 55 100 55 C130 55 130 22 170 22" stroke="rgb(var(--primary))" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="1 7"/>
+                <circle cx="30" cy="88" r="7" fill="rgb(var(--primary))"/>
+                <circle cx="100" cy="55" r="7" stroke="rgb(var(--primary))" stroke-width="2" fill="rgb(var(--surface))"/>
+                <circle cx="170" cy="22" r="7" stroke="rgb(var(--primary))" stroke-width="2" fill="rgb(var(--surface))"/>
+                <path d="M166 22h8M170 18v8" stroke="rgb(var(--primary))" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="fw-hiw-body">
+              <h3><span class="fw-hiw-step" aria-hidden="true">3</span>Turn it into a plan</h3>
+              <p>Pick a direction and get a personalized roadmap — skills to build, classes to take, milestones to hit — with a coach that keeps it up to date as you go.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="fw-section fw-reveal" id="compare">
+      <div class="fw-container">
+        <div class="fw-heading fw-reveal-item">
+          <h2>A better way to figure it out</h2>
+          <p>Most career help is either expensive, one-shot, or unexplained. FlightWay is none of those.</p>
+        </div>
+        <div class="fw-vs-grid fw-reveal-stagger">
+          <article class="fw-vs-card fw-reveal-item">
+            <h3>Career coaches</h3>
+            <ul>
+              <li><svg class="fw-vs-mark no" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>Expensive — often $100+ per session</li>
+              <li><svg class="fw-vs-mark no" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>Not there at 11pm when you're actually deciding</li>
+            </ul>
+            <h3>One-shot career tests</h3>
+            <ul>
+              <li><svg class="fw-vs-mark no" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>Hand you a label, then stop</li>
+              <li><svg class="fw-vs-mark no" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>Never explain why you got the result you got</li>
+              <li><svg class="fw-vs-mark no" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>No next step after the result</li>
+            </ul>
+          </article>
+          <article class="fw-vs-card fw-vs-flightway fw-reveal-item">
+            <div class="fw-vs-brand">
+              <h3>FlightWay</h3>
+              <span class="fw-vs-tag">Matching + roadmap</span>
+            </div>
+            <ul>
+              <li><svg class="fw-vs-mark yes" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Free to start — take the quiz, see your matches</li>
+              <li><svg class="fw-vs-mark yes" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Every match explains itself — see the exact factors behind the number</li>
+              <li><svg class="fw-vs-mark yes" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Built on the U.S. Department of Labor's O*NET data, not a black box</li>
+              <li><svg class="fw-vs-mark yes" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Gets sharper as you add your resume, classes, and goals</li>
+              <li><svg class="fw-vs-mark yes" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Ends in a step-by-step roadmap, not just a label</li>
+            </ul>
+          </article>
+        </div>
+      </div>
     </section>
 
     <section class="fw-section fw-reveal" id="features">
       <div class="fw-container">
         <div class="fw-heading fw-reveal-item">
-          <h2>Everything a career center needs, in one cockpit</h2>
-          <p>Stop stitching together spreadsheets, job boards, and email. FlightWay brings advising, opportunities, and analytics together.</p>
+          <h2>Everything you need to pick a path and fly it</h2>
+          <p>Stop stitching together quizzes, job boards, and guesswork. FlightWay puts your matches, your roadmap, and your progress in one place.</p>
         </div>
         <div class="fw-features-grid fw-reveal-stagger">
           <article class="fw-feature-card fw-reveal-item">
@@ -109,67 +331,19 @@
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
             </span>
             <h3>Opportunity engine</h3>
-            <p>Matched internships, jobs, and events surface automatically — students apply faster and advisors track every step.</p>
+            <p>Matched internships, jobs, and events surface automatically — so you spend your time applying, not searching.</p>
           </article>
           <article class="fw-feature-card fw-reveal-item">
             <span class="fw-feature-icon" aria-hidden="true">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
             </span>
-            <h3>Outcomes analytics</h3>
-            <p>Dashboards help career teams track engagement and student progress in one place.</p>
+            <h3>Progress you can see</h3>
+            <p>A readiness meter and weekly flight plan show exactly how far you've come and what to do next.</p>
           </article>
         </div>
       </div>
     </section>
 
-    <section class="fw-section fw-reveal" id="pricing">
-      <div class="fw-container">
-        <div class="fw-heading fw-reveal-item">
-          <h2>Pricing that scales with your campus</h2>
-          <p>Start free as a student. Upgrade when your career center is ready to launch everyone.</p>
-        </div>
-        <div class="fw-pricing-grid fw-reveal-stagger">
-          <article class="fw-pricing-card fw-reveal-item">
-            <h3>Student</h3>
-            <p class="desc">For individual students mapping their own path.</p>
-            <div class="fw-price"><span class="amount">$0</span><span class="cadence">forever</span></div>
-            <ul class="fw-pricing-features">
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Personalized career roadmap</li>
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Job &amp; internship matches</li>
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Resume &amp; interview tools</li>
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Community access</li>
-            </ul>
-            <a href="auth.html#signin" class="fw-btn fw-btn-secondary fw-btn-md" style="width:100%">Sign in free</a>
-          </article>
-          <article class="fw-pricing-card highlighted fw-reveal-item">
-            <h3>Career Center</h3>
-            <p class="desc">For college career centers supporting their whole student body.</p>
-            <div class="fw-price"><span class="amount">$8</span><span class="cadence">per student / yr</span></div>
-            <ul class="fw-pricing-features">
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Everything in Student</li>
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Advisor dashboards</li>
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Outcomes &amp; placement analytics</li>
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Employer pipeline tools</li>
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>SSO &amp; roster sync</li>
-            </ul>
-            <a href="#pricing" class="fw-btn fw-btn-primary fw-btn-md" style="width:100%">Book a demo</a>
-          </article>
-          <article class="fw-pricing-card fw-reveal-item">
-            <h3>Enterprise</h3>
-            <p class="desc">For university systems and multi-campus deployments.</p>
-            <div class="fw-price"><span class="amount">Custom</span></div>
-            <ul class="fw-pricing-features">
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Everything in Career Center</li>
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Multi-campus reporting</li>
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Custom integrations</li>
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Dedicated success manager</li>
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>SLA &amp; security review</li>
-            </ul>
-            <a href="#pricing" class="fw-btn fw-btn-secondary fw-btn-md" style="width:100%">Contact sales</a>
-          </article>
-        </div>
-      </div>
-    </section>
   </main>
 
   <footer class="fw-footer">
@@ -177,13 +351,13 @@
       <div class="fw-footer-grid">
         <div>
           <a href="/" class="fw-brand" data-fw-brand data-fw-brand-href="/" aria-label="FlightWay"></a>
-          <p class="fw-footer-tagline">The talent development platform for students and career centers.</p>
+          <p class="fw-footer-tagline">The talent development platform for students.</p>
         </div>
         <div class="fw-footer-col">
           <h3>Product</h3>
           <ul>
             <li><a href="#features">Features</a></li>
-            <li><a href="#pricing">Pricing</a></li>
+            <li><a href="pricing.html">Pricing</a></li>
             <li><a href="quiz.html">Career Quiz</a></li>
             <li><a href="auth.html#signin">Sign in</a></li>
           </ul>
@@ -212,7 +386,7 @@
     </div>
   </footer>
 
-  <script src="assets/js/shared/brand.js?v=20260703p" defer></script>
+  <script src="assets/js/shared/brand.js?v=20260717g" defer></script>
   <script src="assets/js/shared/theme.js?v=20260703p" defer></script>
   <script src="assets/js/shared/data-field.js?v=20260703p" defer></script>
   <script src="assets/js/landing/reveal.js?v=20260703p" defer></script>

@@ -7,7 +7,7 @@ import { getCareers, getLayout, getRegistry, getManifest } from '../_lib/onet/st
 
 export async function onRequest(context) {
   const { request, env } = context;
-  const origin = originFromEnv(env);
+  const origin = originFromEnv(env, request);
   if (request.method === 'OPTIONS') return preflightResponse(origin);
 
   const url = new URL(request.url);

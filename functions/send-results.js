@@ -6,6 +6,7 @@ import {
   originFromEnv,
   resendConfigFromEnv,
 } from './_lib.js';
+import { checkRateLimit, clientIp } from './_lib/auth.js';
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -83,12 +84,12 @@ function buildText(resultsUrl) {
 }
 
 export async function onRequestOptions(context) {
-  return preflightResponse(originFromEnv(context.env));
+  return preflightResponse(originFromEnv(context.env, context.request));
 }
 
 export async function onRequestPost(context) {
   const { request, env } = context;
-  const origin = originFromEnv(env);
+  const origin = originFromEnv(env, request);
 
   let payload;
   try {
@@ -105,6 +106,16 @@ export async function onRequestPost(context) {
   }
   if (!/^https?:\/\//i.test(resultsUrl) || resultsUrl.length > 8000) {
     return jsonResponse(400, { error: 'Invalid results URL.' }, origin);
+  }
+
+  // This endpoint is unauthenticated (it fires from the quiz result screen) and
+  // sends mail via Resend, so throttle per-IP and per-recipient to prevent
+  // email-bombing and Resend cost/reputation abuse.
+  try {
+    await checkRateLimit(env, `sendresults:${clientIp(request)}`);
+    await checkRateLimit(env, `sendresults:${email}`);
+  } catch (err) {
+    return jsonResponse(err.status || 429, { error: err.message || 'Too many requests. Please try again later.' }, origin);
   }
 
   const { apiKey, fromEmail } = resendConfigFromEnv(env);

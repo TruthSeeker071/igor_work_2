@@ -1,5 +1,4 @@
 (function (global) {
-  const HUB_QUIZ_KEY = 'fw_hub_quiz_v1';
   const ANALYSIS_CACHE_KEY = 'fw_career_analysis_v6';
   const ROADMAP_KEY = 'fw_roadmap_v1';
   const MIN_PASSWORD_LEN = 8;
@@ -7,6 +6,15 @@
 
   let sessionEmail = null;
   let bootPromise = null;
+
+  // Every failure that can reach a display site goes through FWErr, so server
+  // dev-speak never lands in the UI. (fw-errors.js loads before auth.js on
+  // every page; the fallback keeps auth working if it ever doesn't.)
+  function respError(resp, data, fallback) {
+    return global.FWErr
+      ? FWErr.fromResponse(resp ? resp.status : 0, data, fallback)
+      : new Error(fallback);
+  }
 
   function authFetchTimeoutSignal(existingSignal, timeoutMs) {
     var controller = new AbortController();
@@ -53,7 +61,9 @@
     options.signal = authFetchTimeoutSignal(options.signal, fetchTimeoutMs);
     return fetch(path, options).catch(function (err) {
       if (err && err.name === 'AbortError') {
-        throw new Error('Request timed out. Check your connection and try again.');
+        throw global.FWErr
+          ? FWErr.friendly('Request timed out. Check your connection and try again.')
+          : new Error('Request timed out. Check your connection and try again.');
       }
       throw err;
     });
@@ -70,15 +80,21 @@
     try {
       return text ? JSON.parse(text) : {};
     } catch (_) {
-      return { error: text ? text.slice(0, 200) : 'Invalid server response.' };
+      // Never hand the raw body back — it becomes data.error and would reach
+      // the UI. Log it for debugging, return nothing usable.
+      if (text) console.warn('[auth] non-JSON response', text.slice(0, 200));
+      return {};
     }
   }
 
+  // Storage goes through FWUser's v1-shaped blob view (user.js loads directly
+  // after this file on every page) — the Phase 4 storage flip happens inside
+  // that facade. The scores-check + sector-sheet materialization semantics of
+  // readLocalQuiz are preserved on top of the view.
   function readLocalQuiz() {
     try {
-      const raw = localStorage.getItem(HUB_QUIZ_KEY);
-      if (!raw) return null;
-      const data = JSON.parse(raw);
+      if (!global.FWUser || typeof FWUser.getBlob !== 'function') return null;
+      const data = FWUser.getBlob();
       if (data && data.scores && typeof data.scores === 'object') {
         if (global.FWSectorFitSheet && typeof FWSectorFitSheet.ensureSectorFitSheet === 'function') {
           FWSectorFitSheet.ensureSectorFitSheet(data);
@@ -92,7 +108,7 @@
   function writeLocalQuiz(profile) {
     if (!profile || typeof profile !== 'object') return;
     try {
-      localStorage.setItem(HUB_QUIZ_KEY, JSON.stringify(profile));
+      if (global.FWUser && typeof FWUser.putBlob === 'function') FWUser.putBlob(profile);
     } catch (_) { /* ignore */ }
   }
 
@@ -166,7 +182,6 @@
     var payload = {
       scores: quiz.scores || {},
       sectorUpdatedAt: String((sheet && sheet.updatedAt) || ''),
-      archetype: String(quiz.archetype || ''),
       characterSummary: String(quiz.characterSummary || ''),
       traits: Array.isArray(quiz.traits) ? quiz.traits : [],
       pb: Array.isArray(pb && pb.answers)
@@ -364,7 +379,7 @@
           },
         });
         var data = await parseJson(resp);
-        if (!resp.ok) throw new Error(data.error || 'Could not refresh portal snapshot.');
+        if (!resp.ok) throw respError(resp, data, 'Could not refresh portal snapshot.');
         return data;
       }
 
@@ -538,7 +553,6 @@
     // change locally and silently never re-sync to D1 for the session.
     return hashString(JSON.stringify({
       scores: quiz.scores || {},
-      archetype: String(quiz.archetype || ''),
       characterSummary: String(quiz.characterSummary || ''),
       traits: Array.isArray(quiz.traits) ? quiz.traits : [],
       pb: profileBuildingAnswersForApi(quiz.profileBuilding),
@@ -589,7 +603,7 @@
         },
       });
       var data = await parseJson(resp);
-      if (!resp.ok) throw new Error(data.error || 'Could not record career focus.');
+      if (!resp.ok) throw respError(resp, data, 'Could not record career focus.');
       if (data.focus) {
         var enriched = Object.assign({}, data.focus);
         if (opts.soc) enriched.soc = opts.soc;
@@ -623,7 +637,7 @@
         },
       });
       var data = await parseJson(resp);
-      if (!resp.ok) throw new Error(data.error || 'Could not sync roadmap.');
+      if (!resp.ok) throw respError(resp, data, 'Could not sync roadmap.');
       if (data.roadmap) cacheRoadmap(data.roadmap);
       if (data.focus) writeCareerFocus(data.focus);
       return data;
@@ -670,7 +684,7 @@
       });
       if (!resp.ok) {
         const data = await parseJson(resp);
-        throw new Error(data.error || 'Could not sync quiz profile.');
+        throw respError(resp, data, 'Could not sync quiz profile.');
       }
       lastUploadedQuizHash = quizPayloadHash(toUpload);
       writeUploadedHash(lastUploadedQuizHash);
@@ -839,7 +853,7 @@
     }
     if (!resp) resp = await authFetch('/profile');
     const data = await parseJson(resp);
-    if (!resp.ok) throw new Error(data.error || 'Could not load profile.');
+    if (!resp.ok) throw respError(resp, data, 'Could not load profile.');
     if (data.quiz) {
       var merged = mergeProfileBuilding(localBefore, data.quiz);
       merged = mergeSectorFitSheet(localBefore, merged);
@@ -883,7 +897,7 @@
     if (!sessionEmail) return null;
     const resp = await authFetch('/profile/roadmap');
     const data = await parseJson(resp);
-    if (!resp.ok) throw new Error(data.error || 'Could not load roadmap.');
+    if (!resp.ok) throw respError(resp, data, 'Could not load roadmap.');
     cacheRoadmap(data.roadmap || null);
     return data.roadmap || null;
   }
@@ -892,8 +906,11 @@
     if (!sessionEmail) return null;
     const resp = await authFetch('/profile/roadmap', { method: 'PUT', body: { roadmap } });
     const data = await parseJson(resp);
-    if (!resp.ok) throw new Error(data.error || 'Could not save roadmap.');
+    if (!resp.ok) throw respError(resp, data, 'Could not save roadmap.');
     cacheRoadmap(roadmap);
+    // The server re-syncs the objective vector to step progress on every save;
+    // absorb the result so local fit numbers move without a reload.
+    if (data && data.objectiveSynced) applyObjectiveFromResponse(data);
     return data;
   }
 
@@ -979,7 +996,7 @@
 
     const resp = await authFetch('/auth/register', { method: 'POST', body });
     const data = await parseJson(resp);
-    if (!resp.ok) throw new Error(data.error || 'Registration failed.');
+    if (!resp.ok) throw respError(resp, data, 'Registration failed.');
 
     setSessionEmail(data.email || email);
     scheduleQuizProfileSync('post-register quiz sync failed');
@@ -989,7 +1006,7 @@
   async function authLogin(email, password) {
     const resp = await authFetch('/auth/login', { method: 'POST', body: { email, password } });
     const data = await parseJson(resp);
-    if (!resp.ok) throw new Error(data.error || 'Invalid email or password.');
+    if (!resp.ok) throw respError(resp, data, 'Invalid email or password.');
 
     setSessionEmail(data.email || email);
     scheduleQuizProfileSync('post-login quiz sync failed');
@@ -1007,7 +1024,7 @@
   async function authForgotPassword(email) {
     const resp = await authFetch('/auth/forgot-password', { method: 'POST', body: { email } });
     const data = await parseJson(resp);
-    if (!resp.ok) throw new Error(data.error || 'Could not send reset email.');
+    if (!resp.ok) throw respError(resp, data, 'Could not send reset email.');
     return data;
   }
 
@@ -1017,12 +1034,11 @@
       body: { token, newPassword },
     });
     const data = await parseJson(resp);
-    if (!resp.ok) throw new Error(data.error || 'Could not reset password.');
+    if (!resp.ok) throw respError(resp, data, 'Could not reset password.');
     return data;
   }
 
   global.FWAuth = {
-    HUB_QUIZ_KEY,
     ROADMAP_KEY,
     MIN_PASSWORD_LEN,
     authBoot,

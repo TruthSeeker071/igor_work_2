@@ -1,0 +1,166 @@
+/* Opportunity Finder — "Opportunities for you" panel (roadmap focus view).
+   Visual language mirrors skill-gap-tracker.css; .oppf* namespace only. */
+
+.oppf {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-light);
+}
+.oppf-heading {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-solid);
+  margin: 0 0 4px;
+}
+.oppf-sub {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: 0 0 14px;
+  line-height: 1.5;
+}
+.oppf-empty {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: 0 0 12px;
+}
+
+.oppf-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0 0 14px;
+  padding: 0;
+}
+.oppf-item {
+  padding: 14px 16px;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  background: var(--surface-solid);
+  box-shadow: var(--shadow-sm);
+}
+.oppf-item-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.oppf-type,
+.oppf-tier {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-light);
+  background: rgb(var(--surface-2));
+  color: var(--text-secondary);
+}
+.oppf-tier--high {
+  border-color: rgb(var(--primary) / 0.3);
+  background: rgb(var(--primary) / 0.1);
+  color: rgb(var(--primary));
+}
+.oppf-tier--medium {
+  border-color: rgb(var(--primary) / 0.18);
+  background: rgb(var(--primary) / 0.05);
+}
+.oppf-title {
+  display: inline-block;
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-solid);
+  text-decoration: none;
+  margin-bottom: 2px;
+}
+.oppf-title:hover { text-decoration: underline; }
+.oppf-org {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin: 2px 0 0;
+}
+.oppf-why {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 8px 0 0;
+}
+
+.oppf-foot { margin-top: 4px; }
+.oppf-asof {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin: 0 0 10px;
+}
+.oppf-school {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+.oppf-school strong { color: var(--text-solid); font-weight: 600; }
+.oppf-school-change,
+.oppf-school-save {
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: rgb(var(--primary));
+  background: none;
+  border: 1px solid rgb(var(--primary) / 0.3);
+  border-radius: 999px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+.oppf-school-change:hover,
+.oppf-school-save:hover:not(:disabled) { background: rgb(var(--primary) / 0.08); }
+.oppf-school-save:disabled { opacity: 0.6; cursor: default; }
+.oppf-school-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.oppf-school-input {
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--text-solid);
+  background: var(--surface-solid);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 7px 12px;
+  min-width: 200px;
+  flex: 1 1 200px;
+  max-width: 300px;
+}
+.oppf-school-input:focus {
+  outline: none;
+  border-color: rgb(var(--primary) / 0.5);
+}
+.oppf-school-hint {
+  flex-basis: 100%;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* Loading skeleton — size only; .fw-skeleton (flightway-theme.css) supplies
+   the shimmer, so this panel shines like every other loader. The old local
+   gradient faded surface-2 to 40% ALPHA rather than to a lighter surface, so
+   the sweep read as a barely-visible dimming instead of a shine. */
+.oppf-skel { display: flex; flex-direction: column; gap: 10px; }
+.oppf-skel-bar {
+  height: 58px;
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+}
+
+/* One-shot entrance at veil reveal, same convention as sibling panels
+   (page-veil.js): plays only between fw-revealed and fw-settled. */
+body.fw-revealed:not(.fw-settled) .oppf {
+  animation: fw-rise-in 0.55s var(--fw-ease-out) 0.12s backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.fw-revealed:not(.fw-settled) .oppf { animation: none; }
+  /* .fw-skeleton already stops its own shimmer under reduced motion. */
+}

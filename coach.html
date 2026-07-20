@@ -3,21 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/favicon.ico?v=20260717h" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/favicon.png?v=20260717h">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=20260717h">
 <title>FlightWay — Marco, your AI advisor</title>
-<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260720b">
-<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260720b">
+<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260720c">
+<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260720c">
 <script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
 <script src="assets/js/shared/global-shim.js?v=20260703p"></script>
-<script src="assets/js/shared/flags.js?v=20260703p"></script>
-<link rel="stylesheet" href="assets/css/flightway-2.css?v=20260720b">
-<script src="assets/js/shared/events.js?v=20260708d" defer></script>
-<script src="assets/js/shared/fw-tabbar.js?v=20260716a" defer></script>
-<script src="assets/js/shared/entitlements.js?v=20260708d" defer></script>
+<script src="assets/js/shared/flags.js?v=20260716h"></script>
+<link rel="stylesheet" href="assets/css/flightway-2.css?v=20260720c">
+<script src="assets/js/shared/events.js?v=20260716h" defer></script>
+<script src="assets/js/shared/entitlements.js?v=20260719a" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 </head>
 <body class="coach-page">
+<div id="fw-page-veil" class="fw-page-veil" aria-live="polite" aria-busy="true">
+</div>
 
 <nav>
   <div class="nav-inner">
@@ -50,7 +54,7 @@
     </div>
     <div class="coach-progress">
       <div class="coach-progress-bar"><div class="coach-progress-fill" id="coach-progress-fill" style="width:0%"></div></div>
-      <div class="coach-progress-label" id="coach-progress-label">Exchange 0 / 5 — memory refreshes after 5 (dossier + roadmap)</div>
+      <div class="coach-progress-label" id="coach-progress-label">Exchange 0 / 5 — Marco updates what he remembers about you every 5 exchanges</div>
     </div>
     <div class="coach-chat" id="coach-chat">
       <div class="coach-empty" id="coach-empty">
@@ -58,7 +62,7 @@
       </div>
     </div>
     <div class="coach-updating" id="coach-updating">
-      <div class="coach-spinner"></div>
+      <div class="fw-spinner coach-spinner"></div>
       <div>Updating dossier — your coach is committing what it learned to memory…</div>
     </div>
     <form class="coach-input-row" id="coach-input-row" onsubmit="event.preventDefault(); coachSend();">
@@ -111,15 +115,21 @@
   </div>
 </div>
 
+<script src="assets/js/shared/page-veil.js?v=20260720c" defer></script>
 <script src="assets/js/shared/page-boot.js?v=20260703p" defer></script>
-<script src="assets/js/shared/auth.js?v=20260703p" defer></script>
+<script src="assets/js/shared/fw-errors.js?v=20260720a" defer></script>
+<script src="assets/js/shared/auth.js?v=20260720c" defer></script>
+<script src="assets/js/shared/fw-busy.js?v=20260720a" defer></script>
+<script src="assets/js/shared/user.js?v=20260719g" defer></script>
 <script src="assets/js/shared/profile-alignment.js?v=20260703p" defer></script>
 <script src="assets/js/quiz/quiz-data.js?v=20260703p" defer></script>
 <script src="assets/js/shared/auth-nav.js?v=20260703p" defer></script>
-<script src="assets/js/coach/coach.js?v=20260703p" defer></script>
-<script src="assets/js/coach/interview-mode.js?v=20260708d" defer></script>
-<script src="assets/js/shared/brand.js?v=20260703p" defer></script>
+<script src="assets/js/coach/coach.js?v=20260720c" defer></script>
+<script src="assets/js/shared/resume-render.js?v=20260718b" defer></script>
+<script src="assets/js/coach/interview-mode.js?v=20260718b" defer></script>
+<script src="assets/js/shared/brand.js?v=20260717g" defer></script>
 <script src="assets/js/shared/app-nav.js?v=20260703p" defer></script>
 <script src="assets/js/shared/theme.js?v=20260703p" defer></script>
+<script src="assets/js/shared/fw-toast.js?v=20260718i" defer></script>
 </body>
 </html>

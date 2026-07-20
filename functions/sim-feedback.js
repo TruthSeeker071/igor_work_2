@@ -37,12 +37,12 @@ function normalizeList(v, n, maxLen) {
 }
 
 export async function onRequestOptions(context) {
-  return authPreflight(originFromEnv(context.env));
+  return authPreflight(originFromEnv(context.env, context.request));
 }
 
 export async function onRequest(context) {
   const { request, env } = context;
-  const origin = originFromEnv(env);
+  const origin = originFromEnv(env, request);
 
   if (request.method === 'OPTIONS') return authPreflight(origin);
   if (request.method !== 'POST') return authJsonResponse(405, { error: 'Method not allowed' }, origin);

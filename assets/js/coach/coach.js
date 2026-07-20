@@ -1,13 +1,20 @@
 const COACH_CHAT_EP    = '/chat';
 const COACH_DOSSIER_EP = '/dossier';
 const COACH_RESET_AT   = 5;
-const COACH_HUB_KEY    = 'fw_hub_quiz_v1';
 
 let coachUserId = null;
 let coachSending = false;
 let coachPendingStarter = '';
 let coachPostSignupTarget = 'coach';
 let coachAuthReady = false;
+
+// Display gate (WS3): server/browser error text never reaches the UI unless
+// FWErr marked it user-facing.
+function fwRespError(resp, data, fallback) {
+  return window.FWErr
+    ? FWErr.fromResponse(resp ? resp.status : 0, data, fallback)
+    : new Error(fallback);
+}
 
 function coachSyncUserFromAuth() {
   coachUserId = (window.FWAuth && FWAuth.authEmail()) || null;
@@ -30,9 +37,7 @@ function isCoachPage() {
 
 function coachLoadHubQuiz(){
   try {
-    const raw = localStorage.getItem(COACH_HUB_KEY);
-    if (!raw) return null;
-    const data = JSON.parse(raw);
+    const data = (window.FWUser && typeof FWUser.getBlob === 'function') ? FWUser.getBlob() : null;
     if (data && data.scores && typeof data.scores === 'object') return data;
   } catch(_) {}
   return null;
@@ -49,10 +54,16 @@ function coachHasQuizContext(){
 
 function coachBootPage() {
   if (!coachUserId) {
-    if (coachHasQuizContext()) coachOpenSignup();
-    else window.location.replace(coachAuthUrl());
+    if (coachHasQuizContext()) {
+      coachOpenSignup();
+      coachNotifyPageVeil();
+    } else {
+      window.location.replace(coachAuthUrl());
+      // no veil notify — keep the veil up through the redirect
+    }
     return;
   }
+  coachNotifyPageVeil();
   document.getElementById('coach-user-email').textContent = coachUserId;
   document.getElementById('coach-empty').style.display = '';
   const chatEl = document.getElementById('coach-chat');
@@ -113,6 +124,14 @@ function coachInit(){
       coachSyncUserFromAuth();
       if (window.FWAuthNav && typeof FWAuthNav.sync === 'function') FWAuthNav.sync();
     });
+  }
+}
+
+// Boot-veil hook: the coach page reveals once the authed chat shell (or the
+// signup gate) has rendered — FWPageVeil handles quiet-window + failsafes.
+function coachNotifyPageVeil(){
+  if (window.FWPageVeil && typeof FWPageVeil.notifyRender === 'function') {
+    FWPageVeil.notifyRender();
   }
 }
 
@@ -292,12 +311,9 @@ function coachExtractQuizResults(){
       const ind = window.QZ_IND ? QZ_IND[k] : null;
       if (ind && Array.isArray(ind.majors)) recommendedMajors.push(...ind.majors.slice(0,2));
     });
-    const archetype = (typeof qzDetermineArchetype === 'function')
-      ? (qzDetermineArchetype().name || null) : null;
     return {
       topIndustries,
       recommendedMajors: Array.from(new Set(recommendedMajors)).slice(0,6),
-      archetype,
       school: (typeof qzSchool !== 'undefined' && qzSchool) ? qzSchool : null,
       gpa: (typeof qzGpa !== 'undefined' && qzGpa !== null) ? qzGpa : null,
       strengths: [],
@@ -319,7 +335,7 @@ function coachInjectResultsCard(){
   if (coachUserId){
     wrap.innerHTML = `
       <div class="coach-results-eye">Continue with your AI coach</div>
-      <div class="coach-results-title">You're already signed in as ${coachUserId}</div>
+      <div class="coach-results-title">You're already signed in as ${String(coachUserId).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
       <div class="coach-results-sub">Pick up the conversation where you left off — your coach remembers your dossier across sessions.</div>
       <div class="coach-results-actions">
         <button class="primary" onclick="coachOpenFromNav()">Open coach →</button>
@@ -356,7 +372,9 @@ function coachOpenSignup(){
   input.value = ''; input.disabled = false;
   if (pw) pw.value = '';
   if (pw2) pw2.value = '';
-  document.getElementById('coach-signup-btn').disabled = false;
+  const signupBtn = document.getElementById('coach-signup-btn');
+  if (window.FWButtonBusy) FWButtonBusy.stop(signupBtn);
+  signupBtn.disabled = false;
   ov.classList.add('vis');
   setTimeout(()=>input.focus(), 80);
 }
@@ -374,7 +392,7 @@ async function coachSignup(opts){
   const pwConfirm = opts.pwConfirmEl || document.getElementById('coach-signup-password-confirm');
   const errEl = opts.errEl || document.getElementById('coach-signup-error');
   const btn = opts.btnEl || document.getElementById('coach-signup-btn');
-  const btnLabel = opts.btnLabel || 'Create account →';
+  // No btnLabel: FWButtonBusy captures and restores the button's own markup.
   const btnBusy = opts.btnBusy || 'Creating…';
   const email = (input.value||'').trim();
   const password = pwInput ? pwInput.value : '';
@@ -395,8 +413,7 @@ async function coachSignup(opts){
   input.disabled = true;
   if (pwInput) pwInput.disabled = true;
   if (pwConfirm) pwConfirm.disabled = true;
-  btn.disabled = true;
-  btn.textContent = btnBusy;
+  const restoreBtn = window.FWButtonBusy ? FWButtonBusy.start(btn, { label: btnBusy }) : function () {};
   try {
     const hubQuiz = (window.FWAuthPages && FWAuthPages.loadHubQuiz)
       ? FWAuthPages.loadHubQuiz() : coachLoadHubQuiz();
@@ -412,14 +429,14 @@ async function coachSignup(opts){
       window.location.href = (window.FWPageBoot && FWPageBoot.URLS.coach) || 'coach.html';
     }
   } catch(err){
-    const msg = (err && err.message) || String(err) || 'Something went wrong.';
-    errEl.textContent = msg;
+    errEl.textContent = window.FWErr
+      ? FWErr.forUser(err, 'Something went wrong. Please try again.')
+      : 'Something went wrong. Please try again.';
     console.error('coachSignup failed:', err);
     input.disabled = false;
     if (pwInput) pwInput.disabled = false;
     if (pwConfirm) pwConfirm.disabled = false;
-    btn.disabled = false;
-    btn.textContent = btnLabel;
+    restoreBtn();
   }
 }
 
@@ -442,7 +459,7 @@ function coachSetProgress(n){
   const pct = Math.min(100, Math.round((n / COACH_RESET_AT) * 100));
   document.getElementById('coach-progress-fill').style.width = pct + '%';
   document.getElementById('coach-progress-label').textContent =
-    `Exchange ${n} / ${COACH_RESET_AT} — memory refreshes after ${COACH_RESET_AT} (dossier + roadmap)`;
+    `Exchange ${n} / ${COACH_RESET_AT} — Marco updates what he remembers about you every ${COACH_RESET_AT} exchanges`;
 }
 
 function coachRefreshRoadmapAfterUpdate(data) {
@@ -553,6 +570,34 @@ function coachRenderMarkdown(text){
   return html;
 }
 
+// Pillar W provenance UX: when a reply used live web evidence, show a quiet
+// "as of <date>" line + source links under it. DOM-built (no innerHTML with
+// server strings) — source titles/urls are untrusted web text.
+function coachAppendSources(replyEl, data){
+  if (!replyEl || !data || !data.grounded) return;
+  const sources = Array.isArray(data.groundedSources) ? data.groundedSources : [];
+  if (!sources.length) return; // no bare "Current as of" chip with nothing to cite
+  const asOf = String(data.groundedAt || '').slice(0, 10);
+  const line = document.createElement('div');
+  line.className = 'coach-msg-sources';
+  if (asOf) {
+    const chip = document.createElement('span');
+    chip.textContent = 'Current as of ' + asOf;
+    line.appendChild(chip);
+  }
+  sources.slice(0, 4).forEach((s) => {
+    const url = String((s && s.url) || '');
+    if (!/^https?:\/\//i.test(url)) return;
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.textContent = String((s && s.title) || url).slice(0, 60);
+    line.appendChild(a);
+  });
+  replyEl.appendChild(line);
+}
+
 function coachAppendMsg(role, text){
   const empty = document.getElementById('coach-empty');
   if (empty) empty.style.display = 'none';
@@ -583,6 +628,37 @@ function coachHideTyping(){
   if (t) t.remove();
 }
 
+// Free/paid merge §1/§2 — Marco's free allowance. The server is the authority
+// (it returns `remaining` on every reply and 429s at the wall); this only makes
+// the wall visible early, so the free tier degrades with a nudge instead of
+// dead-ending mid-conversation.
+function coachSystemNudge(text, linkLabel) {
+  const chat = document.getElementById('coach-chat');
+  if (!chat) return;
+  const sys = document.createElement('div');
+  sys.className = 'coach-msg system';
+  sys.textContent = text + ' ';
+  const a = document.createElement('a');
+  a.href = 'pricing.html';
+  a.textContent = linkLabel || 'See Flight Plan \u2192';
+  sys.appendChild(a);
+  chat.appendChild(sys);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function coachTrackRemaining(data) {
+  if (!data || data.remaining === undefined || data.remaining === null) return;
+  if (window.FWEnt && typeof FWEnt.setRemaining === 'function') FWEnt.setRemaining('marco-chat', data.remaining);
+  const left = Number(data.remaining);
+  if (!Number.isFinite(left) || left > 2) return;
+  coachSystemNudge(
+    left > 0
+      ? left + (left === 1 ? ' message' : ' messages') + ' left today on the free plan.'
+      : "That was your last free message today.",
+    'Flight Plan removes the cap \u2192',
+  );
+}
+
 async function coachSend(){
   if (coachSending) return;
   if (!coachUserId){ coachOpenSignup(); return; }
@@ -596,7 +672,9 @@ async function coachSend(){
   input.value = '';
   input.style.height = 'auto';
   input.disabled = true;
-  document.getElementById('coach-send-btn').disabled = true;
+  const restoreSend = window.FWButtonBusy
+    ? FWButtonBusy.start(document.getElementById('coach-send-btn'), { label: 'Sending…' })
+    : function () {};
 
   coachAppendMsg('user', msg);
   coachShowTyping();
@@ -620,11 +698,22 @@ async function coachSend(){
       });
     const data = await resp.json().catch(()=>({}));
     coachHideTyping();
-    if (!resp.ok) throw new Error(data.error || 'Coach is offline. Try again in a moment.');
+    if (!resp.ok) {
+      if (data.upgrade) {
+        coachSystemNudge(data.error || 'You have used your free Marco messages for today.');
+        return;
+      }
+      throw fwRespError(resp, data, 'Coach is offline. Try again in a moment.');
+    }
 
     const replyEl = coachAppendMsg('assistant', data.reply || '(no reply)');
+    coachAppendSources(replyEl, data);
     coachSetProgress(data.exchangeCount || 0);
     coachRefreshRoadmapAfterUpdate(data);
+    coachTrackRemaining(data);
+    if (data.roadmapUpgrade) {
+      coachSystemNudge('Rewriting your roadmap with Marco is a Flight Plan feature \u2014 checking steps off stays free.');
+    }
 
     if (data.manualUpdate) {
       const banner = document.getElementById('coach-updating');
@@ -672,11 +761,13 @@ async function coachSend(){
     }
   } catch(err){
     coachHideTyping();
-    errEl.textContent = err.message || 'Something went wrong.';
+    errEl.textContent = window.FWErr
+      ? FWErr.forUser(err, 'Marco could not answer that — please try again.')
+      : 'Marco could not answer that — please try again.';
   } finally {
     coachSending = false;
     input.disabled = false;
-    document.getElementById('coach-send-btn').disabled = false;
+    restoreSend();
     input.focus();
   }
 }
@@ -694,6 +785,11 @@ function coachCloseSettings(){
 function coachSettingsOverlayClick(e){
   if (e.target && e.target.id === 'coach-settings-overlay') coachCloseSettings();
 }
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  const settings = document.getElementById('coach-settings-overlay');
+  if (settings && settings.classList.contains('vis')) coachCloseSettings();
+});
 
 async function coachLoadDossier(){
   if (!coachUserId) return;
@@ -706,10 +802,10 @@ async function coachLoadDossier(){
       credentials: 'include',
     });
     const data = await resp.json().catch(()=>({}));
-    if (!resp.ok) throw new Error(data.error || 'Could not load dossier.');
+    if (!resp.ok) throw fwRespError(resp, data, 'Could not load your dossier.');
     ta.value = data.dossier || '';
   } catch(err){
-    status.textContent = err.message || 'Load failed.';
+    status.textContent = window.FWErr ? FWErr.forUser(err, 'Could not load your dossier.') : 'Could not load your dossier.';
     status.className = 'coach-dossier-status err';
   }
 }
@@ -720,7 +816,7 @@ async function coachSaveDossier(){
   const status = document.getElementById('coach-dossier-status');
   const btn = document.getElementById('coach-dossier-save-btn');
   status.textContent = 'Saving…'; status.className = 'coach-dossier-status';
-  btn.disabled = true;
+  const restoreSave = window.FWButtonBusy ? FWButtonBusy.start(btn, { label: 'Saving…' }) : function () {};
   try {
     const resp = await fetch(COACH_DOSSIER_EP, {
       method: 'PUT',
@@ -729,15 +825,15 @@ async function coachSaveDossier(){
       body: JSON.stringify({ dossier: ta.value }),
     });
     const data = await resp.json().catch(()=>({}));
-    if (!resp.ok) throw new Error(data.error || 'Save failed.');
+    if (!resp.ok) throw fwRespError(resp, data, 'Could not save your dossier.');
     ta.value = data.dossier || ta.value;
     status.textContent = '✓ Saved.'; status.className = 'coach-dossier-status ok';
     coachRefreshPortalAfterDossier();
   } catch(err){
-    status.textContent = err.message || 'Save failed.';
+    status.textContent = window.FWErr ? FWErr.forUser(err, 'Could not save your dossier.') : 'Could not save your dossier.';
     status.className = 'coach-dossier-status err';
   } finally {
-    btn.disabled = false;
+    restoreSave();
   }
 }
 

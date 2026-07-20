@@ -3,6 +3,7 @@
 import {
   isoWeek, selectWeeklyTasks, applyDoneState, markStepDone, planProgress,
 } from '../functions/_lib/weekly-plan-core.js';
+import { computeGapProgressDims } from '../functions/_lib/gap-progress-sync.js';
 
 let fail = 0;
 const assert = (c, m) => { if (c) console.log('  PASS', m); else { fail++; console.error('  FAIL', m); } };
@@ -49,6 +50,18 @@ assert(eq(selectWeeklyTasks(allDone), []), 'all steps done → []');
 const noPath = sampleTree(); delete noPath.activePath;
 assert(selectWeeklyTasks(noPath, { limit: 3 }).length === 3, 'falls back to node order when no active path');
 
+// semester-plan sequencing: plan-anchored steps come first, in phase order,
+// carrying the phase's weeks label; unanchored steps follow in step order.
+const planned = sampleTree();
+planned.nodes[0].semesterPlan = { sig: 'x', plan: { phases: [
+  { title: 'P1', weeks: 'Weeks 1-3', items: [{ text: 'later step first', stepId: 's3' }] },
+  { title: 'P2', weeks: 'Weeks 4-6', items: [{ text: 'then this', stepId: 's1' }] },
+] } };
+const seq = selectWeeklyTasks(planned, { limit: 3 });
+assert(eq(seq.map((t) => t.id), ['wp1:s3', 'wp1:s1', 'wp2:s1']), 'semester plan reorders steps (s3 before s1)');
+assert(seq[0].weeks === 'Weeks 1-3' && seq[1].weeks === 'Weeks 4-6', 'tasks carry their phase week window');
+assert(seq[2].weeks === undefined, 'unanchored step has no weeks label');
+
 console.log('applyDoneState:');
 const tree2 = sampleTree();
 tree2.nodes[0].steps[0].done = true; // wp1:s1 now done
@@ -66,5 +79,114 @@ assert(markStepDone(tree3, 'nope', 's1', true) === false, 'missing waypoint → 
 
 console.log('planProgress:');
 assert(eq(planProgress([{ done: true }, { done: false }, { done: true }]), { done: 2, total: 3 }), 'counts done/total');
+
+console.log('computeGapProgressDims (steps → absolute gap values):');
+function gapTree() {
+  const t = sampleTree();
+  t.nodes[0].addressedGaps = ['Analyzing Data'];
+  t.focusTracker = {
+    version: 3,
+    skillGaps: [
+      { id: 'g1', dimIndex: 10, label: 'Analyzing Data', vBase: 30, user: 30, target: 90 },
+      { id: 'g2', dimIndex: 20, label: 'Unmatched Gap', vBase: 40, user: 40, target: 80 },
+    ],
+  };
+  return t;
+}
+{
+  const t = gapTree(); // wp1 (addresses g1): 1 of 3 done; overall: 1 of 5 done
+  const dims = computeGapProgressDims(t);
+  const g1 = dims.find((d) => d.index === 10);
+  const g2 = dims.find((d) => d.index === 20);
+  // g1: 30 + 60·0.6·(1/3) = 42; g2 falls back to overall ratio: 40 + 40·0.6·(1/5) = 44.8 → 45
+  assert(g1 && g1.value === 42, 'matched gap uses its waypoints\' step ratio (42)');
+  assert(g2 && g2.value === 45, 'unmatched gap falls back to overall path ratio (45)');
+  assert(eq(computeGapProgressDims(t), dims), 'idempotent: same tree → same dims');
+}
+{
+  const t = gapTree();
+  t.nodes.forEach((n) => n.steps.forEach((s) => { s.done = false; }));
+  const dims = computeGapProgressDims(t);
+  assert(dims.every((d, i) => d.value === [30, 40][i]), 'zero steps done → exact vBase restore');
+  t.nodes.forEach((n) => n.steps.forEach((s) => { s.done = true; }));
+  const full = computeGapProgressDims(t);
+  const g1 = full.find((d) => d.index === 10);
+  assert(g1.value === 30 + Math.round(60 * 0.6), 'all steps done → base + 60% of span');
+  t.focusTracker.skillGaps[0].manualComplete = true;
+  const manual = computeGapProgressDims(t).find((d) => d.index === 10);
+  assert(manual.value === 84, 'manualComplete pins at least 90% of span (84)');
+}
+{
+  const t = gapTree();
+  t.focusTracker.skillGaps[0].logs = [{ id: 'l1', text: 'built it', w: 12 }, { id: 'l2', text: 'shipped', w: 12 }, { id: 'l3', text: 'more', w: 12 }];
+  const g1 = computeGapProgressDims(t).find((d) => d.index === 10);
+  // evidence capped at 30: 30 + 60·min(0.9, 0.6·(1/3) + 0.30) = 30 + 60·0.5 = 60
+  assert(g1.value === 60, 'evidence weights count, capped at 30% (60)');
+  t.focusTracker.skillGaps[0].checklist = [{ id: 'c1', done: true }, { id: 'c2', done: true }];
+  const withLegacy = computeGapProgressDims(t).find((d) => d.index === 10);
+  // legacy checklist fully done lifts ratio to 1.0: 30 + 60·min(0.9, 0.6+0.3) = 84
+  assert(withLegacy.value === 84, 'legacy checklist credit never regresses (max ratio)');
+}
+assert(eq(computeGapProgressDims({ nodes: [] }), []), 'no focusTracker → []');
+
+// ── v2: AI weekly plan pure helpers ─────────────────────────────
+const { currentWaypoint, sanitizeWeeklyTasks, fallbackWeeklyTasks, describeStepProgress } =
+  await import('../functions/_lib/weekly-plan-gen.js');
+const { emptyProgressState, accrueTaskToggle, reconcileFractionsWithTree } =
+  await import('../functions/_lib/flightplan-progress.js');
+
+console.log('weekly-plan-gen:');
+{
+  const t = sampleTree();
+  assert(currentWaypoint(t)?.id === 'wp1', 'currentWaypoint = first not-done path node with steps');
+  t.nodes[0].done = true;
+  assert(currentWaypoint(t)?.id === 'wp2', 'skips done waypoints');
+}
+{
+  const node = sampleTree().nodes[0];
+  const tasks = sanitizeWeeklyTasks([
+    { label: 'Read ch. 4 of the stats book', stepId: 's1', advance: 0.4 },
+    { label: 'Task on a done step', stepId: 's2', advance: 0.5 },
+    { label: 'Send 3 networking emails', stepId: 'nope', advance: 2, carried: true },
+    { label: '', stepId: 's3' },
+    { label: 'x'.repeat(300), stepId: 's3', advance: -1 },
+  ], node, '2026-W28');
+  assert(tasks.length === 3, 'drops empty labels and done-step tasks only');
+  assert(tasks[0].id === '2026-W28-t1' && tasks[0].stepId === 's1' && tasks[0].advance === 0.4, 'week-scoped ids, valid stepId + advance kept');
+  assert(tasks[1].stepId === null && tasks[1].carried === true && tasks[1].advance === 1, 'unknown stepId nulled, advance clamped to 1, carried kept');
+  assert(tasks[2].label.length === 120 && tasks[2].advance === 0.05, 'label capped at 120, advance floor 0.05');
+  assert(tasks.every((x) => x.waypointId === 'wp1' && x.done === false), 'tasks bound to the waypoint, start undone');
+}
+{
+  const fb = fallbackWeeklyTasks(sampleTree(), '2026-W28');
+  assert(fb.length === 3 && fb[0].id === '2026-W28-t1' && fb[0].stepId === 's1' && fb[0].advance === 1, 'fallback maps old selection into v2 shape (advance 1)');
+}
+{
+  const lines = describeStepProgress(sampleTree().nodes[0], { 'wp1:s1': 0.5 });
+  assert(lines[0].state.startsWith('IN PROGRESS'), 'fractional credit reads as IN PROGRESS');
+  assert(lines[1].state === 'DONE' && lines[2].state === 'not started', 'done/not-started states derived from tree');
+}
+
+console.log('flightplan-progress:');
+{
+  const st = emptyProgressState();
+  const task = { stepId: 's1', waypointId: 'wp1', advance: 0.4 };
+  let r = accrueTaskToggle(st, task, true);
+  assert(r.fraction === 0.4 && r.stepDone === false, 'accrual adds advance, below 1 → step not done');
+  r = accrueTaskToggle(st, task, true);
+  accrueTaskToggle(st, task, true);
+  r = accrueTaskToggle(st, task, true);
+  assert(r.fraction === 1 && r.stepDone === true, 'accrual clamps at 1 and flips stepDone');
+  r = accrueTaskToggle(st, task, false);
+  assert(r.fraction === 0.6 && r.stepDone === false, 'un-checking subtracts and un-flips');
+  assert(accrueTaskToggle(st, { label: 'glue' }, true) === null, 'stepless tasks accrue nothing');
+}
+{
+  const st = emptyProgressState();
+  st.fractions['wp1:s1'] = 0.999;
+  const rec = reconcileFractionsWithTree(st, sampleTree());
+  assert(rec.fractions['wp1:s2'] === 1, 'directly-completed steps read as fraction 1');
+  assert(rec.fractions['wp1:s1'] === 0.9, 'stale ≥1 fraction on an undone step drops back below the flip point');
+}
 
 process.exit(fail ? 1 : 0);

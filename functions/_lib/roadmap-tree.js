@@ -3,13 +3,13 @@
  */
 
 export const ROADMAP_TREE_VERSION = 2;
-export const MAX_TREE_NODES = 24;
+export const MAX_TREE_NODES = 30;
 export const MAX_TREE_DECISIONS = 2;
 export const MAX_TREE_DEPTH = 6;
 export const ROADMAP_TREE_MAX_CHARS = 48000;
 export const SPINE_WAYPOINT_COUNT = 6;
 export const MAJOR_WAYPOINT_COUNT = 2;
-export const MAX_STEPS_PER_NODE = 5;
+export const MAX_STEPS_PER_NODE = 8;
 export const MAX_STEP_TEXT = 100;
 
 const CAREER_VALUES = new Set(['knowledge', 'network', 'resume', 'mixed']);
@@ -133,6 +133,8 @@ function normalizeCareerValue(raw) {
   return CAREER_VALUES.has(v) ? v : 'mixed';
 }
 
+const STEP_KINDS = new Set(['reading', 'course', 'club', 'deliverable', 'network', 'milestone']);
+
 function normalizeSteps(rawSteps, nodeId, stepDoneMap) {
   if (!Array.isArray(rawSteps)) return [];
   return rawSteps.slice(0, MAX_STEPS_PER_NODE).map((s, idx) => {
@@ -141,7 +143,8 @@ function normalizeSteps(rawSteps, nodeId, stepDoneMap) {
     const done = stepDoneMap && stepDoneMap[key] !== undefined ? !!stepDoneMap[key] : !!s?.done;
     const text = trim(s?.text, MAX_STEP_TEXT);
     if (!text) return null;
-    return { id, text, done };
+    const kind = STEP_KINDS.has(s?.kind) ? s.kind : null;
+    return kind ? { id, text, done, kind } : { id, text, done };
   }).filter(Boolean);
 }
 
@@ -273,11 +276,18 @@ function normalizeV3Gap(raw) {
     .slice(0, MAX_CHECKLIST_ITEMS)
     .map((c, i) => normalizeChecklistItem(c, `dim-${dimIndex}`, i))
     .filter(Boolean);
-  const logs = (Array.isArray(raw.logs) ? raw.logs : []).slice(0, 12).map((l, i) => ({
-    id: trim(l?.id, 40) || `log-${dimIndex}-${i}`,
-    text: trim(l?.text, 280),
-    at: trim(l?.at, 40),
-  })).filter((l) => l.text);
+  const logs = (Array.isArray(raw.logs) ? raw.logs : []).slice(0, 12).map((l, i) => {
+    const out = {
+      id: trim(l?.id, 40) || `log-${dimIndex}-${i}`,
+      text: trim(l?.text, 280),
+      at: trim(l?.at, 40),
+    };
+    // Evidence weight (client rules engine, 2-12% of gap) — must round-trip
+    // or logged contributions silently stop counting after the next save.
+    const w = Math.round(Number(l?.w));
+    if (w >= 2 && w <= 12) out.w = w;
+    return out;
+  }).filter((l) => l.text);
   const progress = clampScore(raw.progress);
   const status = ['open', 'in_progress', 'closed'].includes(raw.status)
     ? raw.status
@@ -288,6 +298,9 @@ function normalizeV3Gap(raw) {
     label,
     domain: trim(raw.domain, 32) || 'unknown',
     user: clampScore(raw.user),
+    // Immutable first-seen user value — the base for gap-progress vector
+    // patches (bleedBase pattern). Must survive every save/merge round-trip.
+    vBase: raw.vBase != null ? clampScore(raw.vBase) : clampScore(raw.user),
     target: clampScore(raw.target),
     gap: clampScore(raw.gap),
     source: COORDINATE_GAP_SOURCE,
@@ -545,6 +558,21 @@ function normalizeNode(raw, doneById, stepDoneMap, parentId, depth) {
   }
   if (raw.phaseEndsAt) node.phaseEndsAt = trim(raw.phaseEndsAt, 24);
   if (raw.branchId) node.branchId = trim(raw.branchId, 32);
+  // Branch provenance: synthetic = template-built fallback branch (candidate
+  // for on-demand AI build-out); aiBuilt = build-out already ran.
+  if (raw.synthetic) node.synthetic = true;
+  if (raw.aiBuilt) node.aiBuilt = true;
+  // Persisted semester operating plan (waypoint-plan action). Round-tripped
+  // whole — dropping it here would regenerate the plan (a Gemini call) on the
+  // user's next focus-view visit. sig ties the plan to the steps it was built
+  // from so step edits invalidate it.
+  if (raw.semesterPlan && typeof raw.semesterPlan === 'object' && raw.semesterPlan.plan) {
+    node.semesterPlan = {
+      sig: trim(raw.semesterPlan.sig, 24),
+      plan: raw.semesterPlan.plan,
+      generatedAt: trim(raw.semesterPlan.generatedAt, 32),
+    };
+  }
   const pathRole = normalizePathRole(raw.pathRole);
   if (pathRole) node.pathRole = pathRole;
   const outcomes = normalizeOutcomes(raw.outcomes);
@@ -981,12 +1009,16 @@ function synthesizeMissingBranches(nodes, spineChain, decisions, fitContext) {
 
     const majorTitle = major.title || 'this step';
     const options = [];
-    const labels = ['Go deeper', 'Try another route'];
 
-    // Use specific gaps from fitContext to create targeted branch waypoints
+    // Use specific gaps from fitContext to create targeted branch waypoints.
+    // Vector gaps lead and are sorted by coordinate distance (largest gap
+    // first) so regenerated gap-closing branches attack the biggest gap first;
+    // name-only topGaps fill in behind them.
     const topGaps = (fitContext?.topGaps || []).slice(0, 4);
-    const vectorGaps = (fitContext?.vectorGaps || []).slice(0, 4);
-    const allGaps = [...new Set([...topGaps, ...vectorGaps.map(g => g.name).filter(Boolean)])];
+    const vectorGaps = [...(fitContext?.vectorGaps || [])]
+      .sort((a, b) => (Number(b.gap) || 0) - (Number(a.gap) || 0))
+      .slice(0, 4);
+    const allGaps = [...new Set([...vectorGaps.map(g => g.name).filter(Boolean), ...topGaps])];
 
     // Create specific branch titles based on actual gaps
     const gapForBranch0 = allGaps[0] || 'core skills';
@@ -998,6 +1030,10 @@ function synthesizeMissingBranches(nodes, spineChain, decisions, fitContext) {
     const childTitles = [
       `Apply ${gapForBranch0} in practice`,
       `Build ${gapForBranch1} portfolio`
+    ];
+    const optionLabels = [
+      `Deepen ${gapForBranch0}`,
+      `Alternative: ${gapForBranch1}`
     ];
 
     for (let oi = 0; oi < 2; oi += 1) {
@@ -1038,6 +1074,8 @@ function synthesizeMissingBranches(nodes, spineChain, decisions, fitContext) {
         status: 'active',
       };
 
+      rootNode.synthetic = true;
+      childNode.synthetic = true;
       const rootBackfill = backfillWaypointSteps(rootNode, fitContext);
       rootNode.whyItMatters = rootBackfill.whyItMatters;
       rootNode.addressedGaps = rootBackfill.addressedGaps;
@@ -1055,7 +1093,7 @@ function synthesizeMissingBranches(nodes, spineChain, decisions, fitContext) {
       nodes.push(rootNode, childNode);
       options.push({
         id: nextNodeId('opt'),
-        label: labels[oi],
+        label: optionLabels[oi],
         childNodeId: rootId,
       });
     }
@@ -1665,7 +1703,7 @@ export function mergeTreeSplit(current, decisionId, optionId, subtree) {
 
 // Extend cap (WS4). The generator contract targets <=22 nodes total; we hold
 // that ceiling here so an AI extend can never bloat a tree toward MAX_TREE_NODES.
-export const MAX_EXTEND_NODES = 22;
+export const MAX_EXTEND_NODES = 28;
 
 // Walk trunk->tip down a branch, following parentId. Returns the deepest node on
 // the chain rooted at branchNodeId (or branchNodeId itself if it has no branch
@@ -1797,15 +1835,160 @@ ${trim(dossier, 2400)}
 </dossier>
 
 Generate ONLY the new nodes that extend this branch further. Return JSON:
-{"nodes":[{"id":"ext1","parentId":"${branchNode?.id || 'trunk'}","depth":N,"type":"waypoint","title":"...","shortTitle":"<=36 chars","detail":"...","whyItMatters":"...","actionType":"class|project|skill|network|other","confidence":1-5,"horizon":"next_month|next_semester|longer_term","addressedGaps":["..."],"careerValue":"knowledge|network|resume|mixed","steps":[{"id":"ext1-st1","text":"...","done":false}]}],"decisions":[]}
+{"nodes":[{"id":"ext1","parentId":"${branchNode?.id || 'trunk'}","depth":N,"type":"waypoint","title":"...","shortTitle":"<=36 chars","detail":"...","whyItMatters":"...","actionType":"class|project|skill|network|other","confidence":1-5,"horizon":"next_month|next_semester|longer_term","addressedGaps":["..."],"careerValue":"knowledge|network|resume|mixed","steps":[{"id":"ext1-st1","text":"...","done":false,"kind":"reading|course|club|deliverable|network|milestone"}]}],"decisions":[]}
 
 Rules:
 - Add 1-2 new nodes, chained one after another from the branch tip (pathRole is always "branch").
-- Each node needs a short shortTitle (<=36 chars) for the map, plus 2-4 concrete "steps".
+- Each node needs a short shortTitle (<=36 chars) for the map, plus 5-7 concrete "steps". Each waypoint is a SEMESTER-scale block: steps MIX action types around one main focus (a specific reading with real title, a real course code or named platform course, a club/community action, a concrete deliverable, a networking action, an assessment/milestone). Every step names its specific object and carries its "kind".
 - Use the specific gaps above (${branchGaps}) to craft whyItMatters and addressedGaps.
+- CRITICAL — Steps must be CUSTOM-TAILORED to the specific skill gap and student context. Do NOT use generic templates. For each new waypoint:
+  - If skill type: 5-7 concrete micro-actions to LEARN the specific gap (e.g., if gap is "Python programming", steps = "Complete Python for Data Science course on Coursera", "Build 3 data cleaning scripts with pandas", "Submit a pull request to an open-source Python project").
+  - If project type: 5-7 concrete micro-actions to APPLY the gap in a deliverable (e.g., "Design a portfolio project showcasing Python for [career-relevant domain]", "Write a technical blog post explaining your approach", "Present the project in a mock interview").
+  - whyItMatters must explicitly connect the gap to the target career and student's current level.
+  - addressedGaps on each node MUST include the specific gap name from the branch.
+  - The steps should reference the student's dossier (school, year, location) and quiz strengths where relevant.
 - confidence decreases with depth; keep total tree size small.
 - OPTIONALLY include exactly one new decision to open a deeper fork: its "nodeId" must be one of the new node ids, with 2 options whose "childNodeId" each points at a further new 1-node stub you also generate. Omit "decisions" (use []) if no natural fork exists.
-- Concrete student actions only. No markdown.`;
+- Concrete student actions only. No markdown.
+
+${PLAIN_STYLE_RULES}`;
+}
+
+// Shared voice rules for every user-facing generation prompt. FlightWay's
+// content must read like a sharp mentor who knows this student — not a
+// careers website. Appended verbatim to generation prompts.
+export const PLAIN_STYLE_RULES = `Voice rules (apply to every string you write):
+- Write like a sharp mentor who knows this student personally, not a careers website.
+- Concrete and specific to THIS student — name their school, courses, clubs when the context gives them. A line that could appear on anyone's plan is a failure.
+- BANNED words/phrases: leverage, utilize, passionate, journey, delve, foster, showcase, stakeholders, synergy, dynamic (as adjective), landscape, proactively, invaluable, robust, holistic, empower, unlock, elevate, "navigate the world of", "take your X to the next level", "hone your skills", "broaden your horizons".
+- Say "do X", never "consider doing X" or "aim to explore X".
+- Short sentences. Plain words. If a college freshman would smirk at it, cut it.`;
+
+// ---- On-demand branch build-out -------------------------------------------
+// Branches often ship as template fallbacks (synthesizeMissingBranches) or
+// thin Gemini output. buildBranchBuildPrompt + applyBranchBuild rewrite an
+// existing branch's CONTENT in place — same node ids, same topology — so
+// committed paths, done-state keys, and decisions all stay valid.
+
+export function branchChainFrom(nodes, rootId) {
+  const byParent = new Map();
+  (nodes || []).forEach((n) => {
+    if (!n?.parentId) return;
+    if (!byParent.has(n.parentId)) byParent.set(n.parentId, []);
+    byParent.get(n.parentId).push(n);
+  });
+  const chain = [];
+  const root = (nodes || []).find((n) => n?.id === rootId);
+  if (!root) return chain;
+  const queue = [root];
+  while (queue.length) {
+    const cur = queue.shift();
+    chain.push(cur);
+    (byParent.get(cur.id) || []).forEach((c) => {
+      if (c.pathRole === 'branch') queue.push(c);
+    });
+  }
+  return chain;
+}
+
+export function buildBranchBuildPrompt({
+  dossier,
+  currentRoadmap,
+  branchChain,
+  careerName,
+}) {
+  const root = branchChain[0];
+  const gap = (root?.addressedGaps || [])[0]
+    || (currentRoadmap?.fitContext?.topGaps || [])[0]
+    || 'core skills';
+  const forkParent = (currentRoadmap?.nodes || []).find((n) => n?.id === root?.parentId);
+  const spineTitles = (currentRoadmap?.activePath || [])
+    .map((id) => (currentRoadmap?.nodes || []).find((n) => n?.id === id))
+    .filter(Boolean)
+    .map((n) => trim(n.shortTitle || n.title, 48));
+
+  return `You are a career planning coach. Rewrite ONE alternative branch of a student's career roadmap so it is specific to them — real course codes, book titles, clubs, artifacts. Keep every node id EXACTLY as given.
+
+# Context
+Career target: ${trim(careerName, 80)}
+This branch closes the gap: ${trim(gap, 120)}
+Branch forks off after: "${trim(forkParent?.title || 'the current waypoint', 90)}"
+Main path (for contrast — the branch must offer a genuinely DIFFERENT route): ${spineTitles.join(' → ')}
+
+# Branch nodes to rewrite (keep ids, keep order)
+${branchChain.map((n) => `- id "${n.id}": currently "${trim(n.title, 90)}"`).join('\n')}
+
+# Student dossier
+<dossier>
+${trim(dossier, 2400)}
+</dossier>
+
+# Output — ONLY JSON
+{"nodes":[{"id":"<same id>","title":"semester-scale goal naming the specific gap","shortTitle":"<=36 chars","whyItMatters":"1-2 sentences tying this branch to THIS student and the ${trim(gap, 60)} gap","addressedGaps":["${trim(gap, 60)}"],"actionType":"skill|project|class|network","careerValue":"knowledge|network|resume|mixed","steps":[{"id":"<nodeId>-st1","text":"specific action naming its object","done":false,"kind":"reading|course|club|deliverable|network|milestone"}]}]}
+
+# Rules
+1. One output node per input id — never add, drop, or rename ids.
+2. 4-6 steps per node, mixed kinds, every step names its specific object (real book title, real course code at their school, named club, concrete artifact). Never vague.
+3. Ground steps in the dossier (school, year, clubs, strengths) when it names them.
+4. The branch must read as a real alternative strategy, not a copy of the main path.
+5. No markdown.
+
+${PLAIN_STYLE_RULES}`;
+}
+
+export function applyBranchBuild(current, rootId, gen) {
+  if (!current || current.version !== ROADMAP_TREE_VERSION) return current;
+  const rawNodes = Array.isArray(gen?.nodes) ? gen.nodes : [];
+  if (!rawNodes.length) return current;
+  const genById = new Map(rawNodes.filter((r) => r?.id).map((r) => [String(r.id), r]));
+  const chainIds = new Set(branchChainFrom(current.nodes, rootId).map((n) => n.id));
+  let changed = false;
+
+  const nodes = (current.nodes || []).map((n) => {
+    if (!n || !chainIds.has(n.id)) return n;
+    const raw = genById.get(n.id);
+    if (!raw) return n;
+    const title = trim(raw.title, 90);
+    const steps = normalizeSteps(raw.steps, n.id, collectStepDoneMap([n]));
+    if (!title || steps.length < 3) return n; // reject thin rewrites, keep old
+    changed = true;
+    const out = {
+      ...n,
+      title,
+      shortTitle: trim(raw.shortTitle, 48) || shortTitleFromTitle(title),
+      whyItMatters: trim(raw.whyItMatters, 320) || n.whyItMatters,
+      actionType: normalizeActionType(raw.actionType || n.actionType),
+      steps,
+      aiBuilt: true,
+    };
+    if (Array.isArray(raw.addressedGaps) && raw.addressedGaps.length) {
+      out.addressedGaps = raw.addressedGaps.map((g) => trim(g, 120)).filter(Boolean).slice(0, 3);
+    }
+    if (raw.careerValue) out.careerValue = normalizeCareerValue(raw.careerValue);
+    delete out.synthetic;
+    // A content rewrite invalidates any semester plan built from the old steps.
+    delete out.semesterPlan;
+    repairShortTitle(out);
+    syncNodeDoneFromSteps(out);
+    return out;
+  });
+
+  if (!changed) return current;
+
+  // Keep decision option labels in sync with the rewritten branch root.
+  const newRoot = nodes.find((n) => n?.id === rootId);
+  const decisions = (current.decisions || []).map((d) => {
+    if (!d?.options) return d;
+    return {
+      ...d,
+      options: d.options.map((o) => (o?.childNodeId === rootId && newRoot
+        ? { ...o, label: trim(newRoot.shortTitle || newRoot.title, 60) }
+        : o)),
+    };
+  });
+
+  const merged = { ...current, nodes, decisions, updatedAt: new Date().toISOString() };
+  return normalizeRoadmapTree(merged, current) || merged;
 }
 
 export function collectDoneActionIdsFromTree(tree) {
@@ -1895,12 +2078,17 @@ export function buildSplitPrompt({
 }) {
   const decision = (currentRoadmap.decisions || []).find((d) => d.id === decisionId);
   const option = decision?.options?.find((o) => o.id === optionId);
+  const branchRoot = (currentRoadmap.nodes || []).find((n) => n.id === option?.childNodeId);
+  const branchGaps = (branchRoot?.addressedGaps || []).join(', ') || 'core skills';
+  const fitGaps = (currentRoadmap?.fitContext?.topGaps || []).slice(0, 4).join(', ') || 'key skills';
   const treeJson = JSON.stringify(compactTreeForPrompt(currentRoadmap, { lite: false }));
   return `You are a career planning coach for FlightWay. The student chose a branch at a decision point.
 
 Career target: ${careerName}
 Decision: ${decision?.prompt || ''}
 Chosen option: ${option?.label || ''}
+Branch root addresses: ${branchGaps}
+Overall top gaps: ${fitGaps}
 
 Current tree:
 ${treeJson}
@@ -1910,11 +2098,19 @@ ${trim(dossier, 2400)}
 </dossier>
 
 Generate ONLY the new subtree after this choice. Return JSON:
-{"nodes":[{"id":"new1","parentId":"${option?.childNodeId || decision?.nodeId || 'trunk'}","depth":N,"type":"waypoint","title":"...","detail":"...","actionType":"class|project|skill|network|other","confidence":1-5,"horizon":"next_month|next_semester|longer_term","phaseId":"p1","phaseLabel":"...","phaseColor":"#hex","phaseEndsAt":"YYYY-MM-DD"}],"decisions":[]}
+{"nodes":[{"id":"new1","parentId":"${option?.childNodeId || decision?.nodeId || 'trunk'}","depth":N,"type":"waypoint","title":"...","shortTitle":"<=36 chars","detail":"...","whyItMatters":"...","actionType":"class|project|skill|network|other","confidence":1-5,"horizon":"next_month|next_semester|longer_term","phaseId":"p1","phaseLabel":"...","phaseColor":"#hex","phaseEndsAt":"YYYY-MM-DD","addressedGaps":["..."],"careerValue":"knowledge|network|resume|mixed","steps":[{"id":"new1-st1","text":"...","done":false}]}],"decisions":[]}
 
 Rules:
 - Add 3-6 new nodes extending from the chosen branch.
 - confidence decreases with depth; max depth 5.
 - Include at most 1 new unresolved decision if a natural fork exists.
+- Use the specific gaps above (${branchGaps}) to craft whyItMatters and addressedGaps for each node.
+- Branch node shortTitles should be very short and specific (e.g., "Deepen Python", "Build ML portfolio") — never "Explore depth" or "Alternative angle".
+- CRITICAL — Steps must be CUSTOM-TAILORED to the specific skill gap and student context. Do NOT use generic templates. For each new waypoint:
+  - If skill type: 5-7 concrete micro-actions to LEARN the specific gap (e.g., if gap is "Python programming", steps = "Complete Python for Data Science course on Coursera", "Build 3 data cleaning scripts with pandas", "Submit a pull request to an open-source Python project").
+  - If project type: 5-7 concrete micro-actions to APPLY the gap in a deliverable (e.g., "Design a portfolio project showcasing Python for [career-relevant domain]", "Write a technical blog post explaining your approach", "Present the project in a mock interview").
+  - whyItMatters must explicitly connect the gap to the target career and student's current level.
+  - addressedGaps on each node MUST include the specific gap name from the branch.
+  - The steps should reference the student's dossier (school, year, location) and quiz strengths where relevant.
 - Concrete student actions only.`;
 }

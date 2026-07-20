@@ -1,10 +1,10 @@
 import { originFromEnv, loadDossier } from './_lib.js';
+import { loadUserBlob } from './_lib/user.js';
 import {
   authPreflight,
   authJsonResponse,
   authErrorResponse,
   requireSession,
-  loadQuizProfile,
   saveQuizPortalSnapshot,
   checkRateLimit,
 } from './_lib/auth.js';
@@ -84,12 +84,12 @@ function normalizeCareerPool(raw) {
 }
 
 export async function onRequestOptions(context) {
-  return authPreflight(originFromEnv(context.env));
+  return authPreflight(originFromEnv(context.env, context.request));
 }
 
 export async function onRequest(context) {
   const { request, env } = context;
-  const origin = originFromEnv(env);
+  const origin = originFromEnv(env, request);
 
   if (request.method === 'OPTIONS') return authPreflight(origin);
   if (request.method !== 'POST') return authJsonResponse(405, { error: 'Method not allowed' }, origin);
@@ -104,7 +104,7 @@ export async function onRequest(context) {
   try {
     const { email } = await requireSession(request, env);
     const [quizRaw, dossierRaw] = await Promise.all([
-      loadQuizProfile(env, email),
+      loadUserBlob(env, email),
       loadDossier(env, email),
     ]);
     const quiz = quizRaw || {};

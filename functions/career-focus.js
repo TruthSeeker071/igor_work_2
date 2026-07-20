@@ -19,12 +19,12 @@ const MAX_SLUG_LEN = 64;
 const MAX_NAME_LEN = 120;
 
 export async function onRequestOptions(context) {
-  return authPreflight(originFromEnv(context.env));
+  return authPreflight(originFromEnv(context.env, context.request));
 }
 
 export async function onRequest(context) {
   const { request, env } = context;
-  const origin = originFromEnv(env);
+  const origin = originFromEnv(env, request);
   const baseUrl = new URL(request.url).origin;
 
   if (request.method === 'OPTIONS') return authPreflight(origin);
@@ -52,7 +52,7 @@ export async function onRequest(context) {
 
   try {
     const { email } = await requireSession(request, env);
-    const { focus, retarget, careerFocusHistory, switchCount, quiz: focusQuiz, alignment } = await recordCareerFocus(env, email, { slug, name, source, soc });
+    const { focus, retarget, careerFocusHistory, switchCount, quiz: focusQuiz, alignment, pivot } = await recordCareerFocus(env, email, { slug, name, source, soc });
 
     // Global fragment generation: on a successful focus record for a real
     // (non-99) O*NET career with a resolvable SOC, spawn its AI specializations
@@ -78,6 +78,7 @@ export async function onRequest(context) {
     return authJsonResponse(200, {
       focus,
       focusUpdated: true,
+      pivot: pivot || null,
       retarget,
       careerFocusHistory: careerFocusHistory || [],
       switchCount: switchCount || 0,

@@ -73,10 +73,35 @@
     return ((gap.checklist || []).some(function (c) { return c && c.done; }));
   }
 
+  // ---- Evidence rules engine -------------------------------------------
+  // Typed progress logs earn a bounded contribution toward closing the gap:
+  // +2% base, +2% per gap keyword the note matches, +3% for artifact language
+  // (built/shipped/scored/…), +1% for substantive length — capped at 12% per
+  // log and 30% total per gap. The weight is computed ONCE when the log is
+  // added and stored on the log (l.w), so recomputes never re-judge old notes.
+  var ARTIFACT_RE = /\b(built|build|shipped|completed?|finished|published|presented|won|scored|passed|submitted|deployed|wrote|created|led|taught|intern(ed|ship)?|certificat\w*|competition|project|repo|portfolio)\b/i;
+
+  function logEvidenceWeight(text, kwDelta) {
+    var w = 2 + 2 * Math.max(0, kwDelta || 0);
+    var t = String(text || '').trim();
+    if (ARTIFACT_RE.test(t)) w += 3;
+    if (t.length >= 80) w += 1;
+    return Math.max(2, Math.min(12, w));
+  }
+
+  function gapEvidencePct(gap) {
+    var logs = (gap && gap.logs) || [];
+    if (!logs.length) return 0;
+    var sum = 0;
+    logs.forEach(function (l) { sum += (l && Number(l.w)) || 2; });
+    return Math.min(30, Math.round(sum));
+  }
+
   function syncV3Progress(gap) {
     var cl = checklistProgress(gap);
+    var ev = gapEvidencePct(gap);
     var manual = gap.manualComplete ? 100 : 0;
-    var progress = Math.min(100, Math.max(cl, manual));
+    var progress = Math.min(100, Math.max(Math.min(100, cl + ev), manual));
     var status = progress >= 100 ? 'closed' : progress > 0 ? 'in_progress' : 'open';
     return Object.assign({}, gap, { progress: progress, status: status });
   }
@@ -88,6 +113,10 @@
       label: item.name,
       domain: item.domain || 'unknown',
       user: item.user,
+      // Immutable first-seen user value — base for gap-progress vector patches.
+      // Never refreshed on recompute (the live user value already includes the
+      // patches, so re-basing on it would compound them).
+      vBase: item.user,
       target: item.target,
       gap: item.gap,
       source: COORDINATE_SOURCE,
@@ -139,6 +168,7 @@
         checklistSource: prev.checklistSource || 'fast',
         logs: (prev.logs || []).slice(0, 12),
         manualComplete: !!prev.manualComplete,
+        vBase: prev.vBase != null ? prev.vBase : prev.user,
       })));
     });
     // Pin touched prior gaps that fell out of the fresh top set.
@@ -282,13 +312,21 @@
     return 'spine';
   }
 
+  // A pin only holds within the active branch — a stale pin left from another
+  // branch would lock the focus card off-path after a switch. Strict equality:
+  // even a committed branch's nodes are NOT main-path pins, or "Main path"
+  // could never leave a committed branch's waypoint.
+  function pinMatchesActiveBranch(tree, pinned) {
+    return branchKeyForNode(tree, pinned.id) === activeBranchKey(tree);
+  }
+
   function branchFocusWaypoint(tree) {
     var key = activeBranchKey(tree);
     if (key === 'spine') {
       var ft = tree && tree.focusTracker;
       if (ft && ft.waypointId) {
         var pinned = waypointById(tree, ft.waypointId);
-        if (pinned) return pinned;
+        if (pinned && pinMatchesActiveBranch(tree, pinned)) return pinned;
       }
       return nextWaypoint(tree);
     }
@@ -365,9 +403,14 @@
       var known = (tree.focusTracker.branchFocuses || []).some(function (b) { return b.branchKey === key; });
       if (!known) return tree;
     }
+    // Re-pin to the target branch's own next waypoint — carrying the old pin
+    // across a switch is what left the focus card stuck on the prior branch.
+    var next = key === 'spine' ? nextWaypoint(tree) : immediateWaypointForBranch(tree, key);
     return Object.assign({}, tree, {
       focusTracker: Object.assign({}, tree.focusTracker, {
         activeBranchKey: key,
+        waypointId: next ? next.id : tree.focusTracker.waypointId,
+        needsRecompute: true,
         updatedAt: new Date().toISOString(),
       }),
     });
@@ -446,9 +489,10 @@
     if (opts && opts.advance) return nextWaypoint(tree);
     if (existing && existing.waypointId) {
       const pinned = waypointById(tree, existing.waypointId);
-      if (pinned) return pinned;
+      if (pinned && pinMatchesActiveBranch(tree, pinned)) return pinned;
     }
-    return nextWaypoint(tree);
+    // Use branch-aware focus waypoint (respects activeBranchKey)
+    return branchFocusWaypoint(tree);
   }
 
   function isWaypointStepsComplete(waypoint) {
@@ -477,12 +521,18 @@
       entries.push({ label: displayGapLabel(norm), source: source || 'quiz' });
     }
     const fit = (tree && tree.fitContext) || {};
-    (fit.vectorGaps || []).slice(0, 4).forEach(function (g) { add(g.name || g.label, 'vector'); });
-    (fit.topGaps || []).slice(0, 4).forEach(function (g) { add(g, fit.vectorGaps && fit.vectorGaps.length ? 'vector' : 'quiz'); });
     const wp = waypoint || nextWaypoint(tree);
+    // PRIORITY 1: Waypoint-specific addressedGaps (most relevant to this waypoint)
     if (wp && wp.addressedGaps) {
-      wp.addressedGaps.slice(0, 2).forEach(function (g) { add(g, 'waypoint'); });
+      wp.addressedGaps.slice(0, 4).forEach(function (g) { add(g, 'waypoint'); });
     }
+    // PRIORITY 2: Branch-specific vector gaps (if this waypoint is on a branch, filter by branch)
+    // For now, use global vector gaps but limit to make room for waypoint gaps
+    const vectorGapNames = (fit.vectorGaps || []).map(g => g.name || g.label).filter(Boolean);
+    vectorGapNames.slice(0, 4).forEach(function (g) { add(g, 'vector'); });
+    // PRIORITY 3: Global top gaps (quiz-based)
+    (fit.topGaps || []).slice(0, 4).forEach(function (g) { add(g, fit.vectorGaps && fit.vectorGaps.length ? 'vector' : 'quiz'); });
+    // PRIORITY 4: Quiz fit breakdown gaps
     if (entries.length < 4 && !fit.targetSoc && quizFitBreakdown && quizFitBreakdown.gaps) {
       quizFitBreakdown.gaps.forEach(function (g) { add(g, 'quiz'); });
     }
@@ -551,7 +601,8 @@
     // recompute (recomputeCoordinateGaps, driven by the focus panel) refreshes the
     // numbers. On advance/waypoint change we clear the pin so the panel rebuilds.
     if (isV3Tracker(existing)) {
-      const advancedOrChanged = (opts && opts.advance) || existing.waypointId !== wp.id;
+      const branchChanged = !!(opts && opts.branchChanged);
+      const advancedOrChanged = (opts && opts.advance) || existing.waypointId !== wp.id || branchChanged;
       const gaps = advancedOrChanged
         ? existing.skillGaps.filter(gapIsTouched).map(syncV3Progress)
         : existing.skillGaps.map(syncV3Progress);
@@ -568,7 +619,8 @@
     }
 
     const breakdown = quizFitBreakdownForTree(tree, quizScores);
-    const waypointChanged = !existing || existing.waypointId !== wp.id;
+    const branchChanged = !!(opts && opts.branchChanged);
+    const waypointChanged = !existing || existing.waypointId !== wp.id || branchChanged;
     let skillGaps;
 
     if (waypointChanged || !existing || !existing.skillGaps || !existing.skillGaps.length) {
@@ -617,7 +669,7 @@
 
   function syncProgress(tree) {
     if (!tree || !tree.focusTracker) return ensureFocusTracker(tree);
-    const wp = waypointById(tree, tree.focusTracker.waypointId) || nextWaypoint(tree);
+    const wp = waypointById(tree, tree.focusTracker.waypointId) || branchFocusWaypoint(tree);
     if (!wp) return tree;
     if (isV3Tracker(tree.focusTracker)) {
       const gaps = (tree.focusTracker.skillGaps || []).map(syncV3Progress);
@@ -666,7 +718,14 @@
     let updated = appendLog(tree, gapId, text);
     const skillGaps = (updated.focusTracker.skillGaps || []).map(function (g) {
       if (g.id !== gapId) return g;
-      return applyLogKeywords(g, text, wp);
+      const kwBefore = (g.matchedKeywords || []).length;
+      const withKw = applyLogKeywords(g, text, wp);
+      const kwDelta = (withKw.matchedKeywords || []).length - kwBefore;
+      // Stamp the just-added log (index 0 — appendLog unshifts) with its weight.
+      const logs = (withKw.logs || []).map(function (l, i) {
+        return i === 0 ? Object.assign({}, l, { w: logEvidenceWeight(text, kwDelta) }) : l;
+      });
+      return Object.assign({}, withKw, { logs: logs });
     });
     updated = Object.assign({}, updated, {
       focusTracker: Object.assign({}, updated.focusTracker, { skillGaps: skillGaps }),
@@ -751,6 +810,66 @@
         updatedAt: new Date().toISOString(),
       }),
     });
+  }
+
+  // Report a gap's FULL checklist state to the server, which sets the dimension
+  // to an absolute value computed from the gap's immutable vBase — idempotent
+  // and order-independent, so check/uncheck in any order can never compound.
+  // On success the local quiz blob absorbs the new vector + replayable patch so
+  // the UI (and the next hydration) reflect it immediately.
+  function sendGapProgress(gap, opts) {
+    if (!gap || gap.dimIndex == null) return Promise.resolve(null);
+    var checklist = gap.checklist || [];
+    var doneCount = checklist.filter(function (c) { return c && c.done; }).length;
+    var body = {
+      action: 'gap-progress',
+      dimIndex: gap.dimIndex,
+      gapLabel: gap.label,
+      base: gap.vBase != null ? gap.vBase : (gap.user || 0),
+      target: gap.target || 0,
+      doneCount: doneCount,
+      totalCount: Math.max(1, checklist.length),
+      manualComplete: !!gap.manualComplete,
+      evidencePct: gapEvidencePct(gap),
+    };
+    return fetch('/career-roadmap', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then(function (r) { return r.ok ? r.json() : null; }).then(function (result) {
+      if (!result || !result.objectivePatched) return null;
+      if (global.FWAuth && typeof FWAuth.readLocalQuiz === 'function' && typeof FWAuth.writeLocalQuiz === 'function') {
+        var quiz = FWAuth.readLocalQuiz();
+        if (quiz) {
+          if (result.objectiveVector) quiz.objectiveVector = result.objectiveVector;
+          if (result.objectiveAiPatch) quiz.objectiveAiPatch = result.objectiveAiPatch;
+          quiz.objectiveSkipped = false;
+          FWAuth.writeLocalQuiz(quiz);
+        }
+      }
+      var from = Math.round(gap.user || 0);
+      var delta = Math.round(result.value) - from;
+      if (delta !== 0) {
+        if (opts && typeof opts.onVectorChange === 'function') {
+          opts.onVectorChange({ label: gap.label, delta: delta, value: result.value });
+        } else if (global.FWFwToast && typeof FWFwToast.show === 'function') {
+          FWFwToast.show((delta > 0 ? '+' : '') + delta + ' ' + displayGapLabel(gap.label) + ' — progress saved');
+        }
+      }
+      return result;
+    }).catch(function () { return null; });
+  }
+
+  // After any log change on a v3 coordinate gap, resend its full absolute state
+  // to gap-progress so the objective vector moves (portal + focus share this).
+  function syncGapVectorAfterLogChange(updatedTree, gapId, opts) {
+    opts = opts || {};
+    const gap = ((updatedTree && updatedTree.focusTracker || {}).skillGaps || [])
+      .find(function (g) { return g && g.id === gapId; });
+    if (gap && gap.dimIndex != null) {
+      sendGapProgress(gap, { onVectorChange: opts.onVectorChange });
+    }
   }
 
   // Call the complete-step endpoint to update objective vector
@@ -857,12 +976,15 @@
         const prior = isV3Tracker(tree.focusTracker) ? (tree.focusTracker.skillGaps || []) : [];
         const merged = mergeV3Gaps(prior, freshItems).map(syncV3Progress);
         return Object.assign({}, tree, {
-          focusTracker: {
+          // Rebuild must not drop branch-focus fields — losing activeBranchKey
+          // here silently kicks the user off their tracked branch.
+          focusTracker: Object.assign({
             version: V3_VERSION,
             waypointId: wp.id,
             skillGaps: merged,
+          }, branchFocusFields(tree, tree.focusTracker), {
             updatedAt: new Date().toISOString(),
-          },
+          }),
         });
       }).catch(function () { return tree; });
     }).catch(function () { return tree; });
@@ -880,16 +1002,43 @@
   function requestAiChecklists(tree, onPersist) {
     if (!tree || !isV3Tracker(tree.focusTracker)) return;
     var gaps = tree.focusTracker.skillGaps || [];
+    if (!gaps.length) return;
     var soc = tree.fitContext && tree.fitContext.targetSoc;
-    if (!soc || !gaps.length) return;
+    if (!soc) {
+      // Older roadmaps lack fitContext.targetSoc — resolve it instead of
+      // silently never upgrading past the generic fast ladders.
+      resolveTargetSocForTree(tree).then(function (resolved) {
+        if (!resolved) return;
+        var patched = Object.assign({}, tree, {
+          fitContext: Object.assign({}, tree.fitContext || {}, { targetSoc: resolved }),
+        });
+        requestAiChecklists(patched, onPersist);
+      });
+      return;
+    }
     var sig = 'sgt-aichk:' + gapSetSignature(tree);
     try {
       if (sessionStorage.getItem(sig)) return;
-      sessionStorage.setItem(sig, '1');
     } catch (_) { /* sessionStorage unavailable — proceed once */ }
+    if (requestAiChecklists._inflight === sig) return;
+    requestAiChecklists._inflight = sig;
 
+    // Completed checklist items feed the server's "compounding" plan: the next
+    // AI plan picks up where the user left off. Capped for a compact payload.
     var payloadGaps = gaps.slice(0, MAX_V3_GAPS).map(function (g) {
-      return { dimIndex: g.dimIndex, name: g.label, domain: g.domain, user: g.user, target: g.target };
+      var doneItems = (g.checklist || [])
+        .filter(function (c) { return c && c.done; })
+        .map(function (c) { return String(c.text || '').slice(0, 90); })
+        .slice(0, 6);
+      return {
+        dimIndex: g.dimIndex,
+        name: g.label,
+        domain: g.domain,
+        user: g.user,
+        target: g.target,
+        progress: g.progress || 0,
+        doneItems: doneItems,
+      };
     });
     var body = {
       action: 'gap-checklists',
@@ -904,23 +1053,40 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     }).then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
+      if (requestAiChecklists._inflight === sig) requestAiChecklists._inflight = null;
       var checklists = data && data.checklists;
       if (!checklists) return;
       var latest = typeof onPersist === 'function' && onPersist.getTree ? onPersist.getTree() : tree;
       var current = latest && isV3Tracker(latest.focusTracker) ? latest : tree;
       var changed = false;
+      var missedAny = false;
       var skillGaps = (current.focusTracker.skillGaps || []).map(function (g) {
+        if (g.checklistSource === 'ai') return g;
         var actions = checklists[g.dimIndex] || checklists[String(g.dimIndex)];
-        if (!actions || !actions.length) return g;
-        if ((g.checklist || []).some(function (c) { return c && c.done; })) return g;
+        if (!actions || !actions.length) { missedAny = true; return g; }
         changed = true;
+        // Keep items the user already checked (their progress is real) and
+        // fill the rest of the ladder with the specific AI actions — a gap
+        // with any done item used to be skipped entirely, freezing it on the
+        // generic fast ladder for good.
+        var doneItems = (g.checklist || []).filter(function (c) { return c && c.done; });
+        var doneTexts = {};
+        doneItems.forEach(function (c) { doneTexts[String(c.text || '').toLowerCase()] = 1; });
+        // 'a' id prefix: kept done items retain their fast 'c' ids, so AI ids
+        // must not collide with them (toggle targets items by id).
+        var aiItems = actions.slice(0, 6).map(function (a, i) {
+          return { id: 'dim-' + g.dimIndex + '-a' + (i + 1), text: String(a.text || a).slice(0, 90), done: false };
+        }).filter(function (c) { return !doneTexts[String(c.text).toLowerCase()]; });
         return syncV3Progress(Object.assign({}, g, {
-          checklist: actions.slice(0, 6).map(function (a, i) {
-            return { id: 'dim-' + g.dimIndex + '-c' + (i + 1), text: String(a.text || a).slice(0, 90), done: false };
-          }),
+          checklist: doneItems.concat(aiItems).slice(0, 6),
           checklistSource: 'ai',
         }));
       });
+      // Stamp only on full coverage — a partial response (rate limit, model
+      // hiccup) must not freeze the missed gaps on generic ladders all session.
+      if (!missedAny) {
+        try { sessionStorage.setItem(sig, '1'); } catch (_) { /* ignore */ }
+      }
       if (!changed) return;
       var updated = Object.assign({}, current, {
         focusTracker: Object.assign({}, current.focusTracker, {
@@ -929,7 +1095,10 @@
         }),
       });
       if (typeof onPersist === 'function') onPersist(updated);
-    }).catch(function () { /* AI upgrade is best-effort */ });
+    }).catch(function () {
+      if (requestAiChecklists._inflight === sig) requestAiChecklists._inflight = null;
+      /* AI upgrade is best-effort */
+    });
   }
 
   var confirmModalBound = false;
@@ -960,7 +1129,7 @@
     }
     overlay.hidden = false;
     overlay.setAttribute('aria-hidden', 'false');
-    yesBtn.focus();
+    try { yesBtn.focus({ preventScroll: true }); } catch (e) { yesBtn.focus(); }
 
     function close(result) {
       overlay.hidden = true;
@@ -990,89 +1159,15 @@
     var wpId = ctx.waypointId || tree.focusTracker.waypointId;
     var stepId = cb.getAttribute('data-step-id');
     var wantDone = cb.checked;
-
-    if (!wantDone) {
-      var unchecked = toggleWaypointStep(tree, wpId, stepId, false);
-
-      // Revert objective vector for this step
-      var waypoint = (tree.nodes || []).find(function (n) { return n.id === wpId; });
-      var gapLabel = waypoint?.addressedGaps?.[0] || 'this waypoint';
-      var dimIndex = waypoint?.addressedGaps?.length
-        ? (tree.fitContext?.vectorGaps || []).findIndex(function (vg) { return vg.name === gapLabel; })
-        : -1;
-      var targetDimIndex = (dimIndex >= 0 && tree.fitContext?.vectorGaps?.[dimIndex]?.index)
-        ? tree.fitContext.vectorGaps[dimIndex].index
-        : null;
-
-      if (targetDimIndex != null) {
-        revertStep({
-          stepId: stepId,
-          waypointId: wpId,
-          gapLabel: gapLabel,
-          dimIndex: targetDimIndex,
-          currentValue: tree.fitContext?.vectorGaps?.[dimIndex]?.user || 0,
-          boost: 6,
-        }).then(function (result) {
-          if (result && result.objectivePatched) {
-            console.log('[SGT] Objective vector reverted from step:', result.objectiveVector ? 'yes' : 'no');
-          }
-        }).catch(function () { /* ignore */ });
-      }
-
-      if (ctx.maybeAdvanceOnComplete) {
-        ctx.maybeAdvanceOnComplete(unchecked);
-      } else {
-        ctx.onPersist(unchecked);
-      }
-      return;
+    // No confirm friction and no per-step vector calls: the server recomputes
+    // gap progress from FULL step state on every roadmap save (absolute values
+    // from each gap's vBase), so toggling either way is exact and reversible.
+    var updated = toggleWaypointStep(tree, wpId, stepId, wantDone);
+    if (ctx.maybeAdvanceOnComplete) {
+      ctx.maybeAdvanceOnComplete(updated);
+    } else {
+      ctx.onPersist(updated);
     }
-
-    cb.checked = false;
-    requestStepToggleConfirm({
-      onConfirm: function () {
-        var latest = ctx.getTree();
-        if (!latest || !latest.focusTracker) return;
-        var confirmWpId = ctx.waypointId || latest.focusTracker.waypointId;
-        var stepIdConfirm = cb.getAttribute('data-step-id');
-        var updated = toggleWaypointStep(latest, confirmWpId, stepIdConfirm, true);
-
-        // Update objective vector for this step
-        // Find the waypoint to get its addressed gaps
-        var waypoint = (latest.nodes || []).find(function (n) { return n.id === confirmWpId; });
-        var gapLabel = waypoint?.addressedGaps?.[0] || 'this waypoint';
-        var dimIndex = waypoint?.addressedGaps?.length
-          ? (latest.fitContext?.vectorGaps || []).findIndex(function (vg) { return vg.name === gapLabel; })
-          : -1;
-        // If we can't find a matching vector gap, use a reasonable default
-        var targetDimIndex = (dimIndex >= 0 && latest.fitContext?.vectorGaps?.[dimIndex]?.index)
-          ? latest.fitContext.vectorGaps[dimIndex].index
-          : null;
-
-        if (targetDimIndex != null) {
-          completeStep({
-            stepId: stepIdConfirm,
-            waypointId: confirmWpId,
-            gapLabel: gapLabel,
-            dimIndex: targetDimIndex,
-            currentValue: latest.fitContext?.vectorGaps?.[dimIndex]?.user || 0,
-            boost: 6,
-          }).then(function (result) {
-            if (result && result.objectivePatched) {
-              console.log('[SGT] Objective vector updated from step:', result.objectiveVector ? 'yes' : 'no');
-            }
-          }).catch(function () { /* ignore */ });
-        }
-
-        if (ctx.maybeAdvanceOnComplete) {
-          ctx.maybeAdvanceOnComplete(updated);
-        } else {
-          ctx.onPersist(updated);
-        }
-      },
-      onCancel: function () {
-        cb.checked = false;
-      },
-    });
   }
 
   function handleGapCheckboxChange(cb, ctx) {
@@ -1083,27 +1178,15 @@
     var wantDone = cb.checked;
 
     if (!wantDone) {
-      // Revert objective vector when unchecking manual gap completion
-      var gap = (tree.focusTracker.skillGaps || []).find(function (g) { return g.id === gapId; });
-      if (gap && gap.dimIndex != null) {
-        revertStep({
-          stepId: 'manual-' + gapId,
-          waypointId: tree.focusTracker.waypointId,
-          gapLabel: gap.label,
-          dimIndex: gap.dimIndex,
-          currentValue: gap.user || 0,
-          boost: 8,
-        }).then(function (result) {
-          if (result && result.objectivePatched) {
-            console.log('[SGT] Objective vector reverted from manual gap uncheck:', result.objectiveVector ? 'yes' : 'no');
-          }
-        }).catch(function () { /* ignore */ });
+      var reverted = toggleGapManualComplete(tree, gapId, false);
+      var revGap = (reverted.focusTracker.skillGaps || []).find(function (g) { return g.id === gapId; });
+      if (revGap && revGap.dimIndex != null) {
+        sendGapProgress(revGap, { onVectorChange: ctx.onVectorChange });
       }
-
       if (ctx.maybeAdvanceOnComplete) {
-        ctx.maybeAdvanceOnComplete(toggleGapManualComplete(tree, gapId, false));
+        ctx.maybeAdvanceOnComplete(reverted);
       } else {
-        ctx.onPersist(toggleGapManualComplete(tree, gapId, false));
+        ctx.onPersist(reverted);
       }
       return;
     }
@@ -1114,21 +1197,9 @@
         var latest = ctx.getTree();
         var updated = toggleGapManualComplete(latest, gapId, true);
 
-        // Update objective vector for manual gap completion
-        var gap = (latest.focusTracker.skillGaps || []).find(function (g) { return g.id === gapId; });
+        var gap = (updated.focusTracker.skillGaps || []).find(function (g) { return g.id === gapId; });
         if (gap && gap.dimIndex != null) {
-          completeStep({
-            stepId: 'manual-' + gapId,
-            waypointId: latest.focusTracker.waypointId,
-            gapLabel: gap.label,
-            dimIndex: gap.dimIndex,
-            currentValue: gap.user || 0,
-            boost: 8, // Manual completion gets a bigger boost
-          }).then(function (result) {
-            if (result && result.objectivePatched) {
-              console.log('[SGT] Objective vector updated from manual gap completion:', result.objectiveVector ? 'yes' : 'no');
-            }
-          }).catch(function () { /* ignore */ });
+          sendGapProgress(gap, { onVectorChange: ctx.onVectorChange });
         }
 
         if (ctx.maybeAdvanceOnComplete) {
@@ -1155,42 +1226,12 @@
     var updated = toggleChecklistItem(tree, gapId, itemId, wantDone);
     ctx.onPersist(updated);
 
-    // When checking a checklist item, update objective vector
-    if (wantDone) {
-      // Find the gap to get dimIndex and current value
-      var gap = (tree.focusTracker.skillGaps || []).find(function (g) { return g.id === gapId; });
+    // Either direction: report the gap's full checklist state; the server sets
+    // the dimension to an absolute value from vBase (never an increment).
+    {
+      var gap = (updated.focusTracker.skillGaps || []).find(function (g) { return g.id === gapId; });
       if (gap && gap.dimIndex != null) {
-        completeStep({
-          stepId: itemId,
-          waypointId: tree.focusTracker.waypointId,
-          gapLabel: gap.label,
-          dimIndex: gap.dimIndex,
-          currentValue: gap.user || 0,
-          boost: 6,
-        }).then(function (result) {
-          if (result && result.objectivePatched && ctx.onPersist) {
-            // The server already saved the quiz profile, but we might need to
-            // refresh the local quiz blob. For now, just log.
-            console.log('[SGT] Objective vector updated from checklist:', result.objectiveVector ? 'yes' : 'no');
-          }
-        }).catch(function () { /* ignore */ });
-      }
-    } else {
-      // When unchecking a checklist item, revert objective vector
-      var gap = (tree.focusTracker.skillGaps || []).find(function (g) { return g.id === gapId; });
-      if (gap && gap.dimIndex != null) {
-        revertStep({
-          stepId: itemId,
-          waypointId: tree.focusTracker.waypointId,
-          gapLabel: gap.label,
-          dimIndex: gap.dimIndex,
-          currentValue: gap.user || 0,
-          boost: 6,
-        }).then(function (result) {
-          if (result && result.objectivePatched) {
-            console.log('[SGT] Objective vector reverted from checklist:', result.objectiveVector ? 'yes' : 'no');
-          }
-        }).catch(function () { /* ignore */ });
+        sendGapProgress(gap, { onVectorChange: ctx.onVectorChange }).catch(function () { /* ignore */ });
       }
     }
   }
@@ -1281,8 +1322,11 @@
     const logHtml = logs.length
       ? '<ul class="sgt-logs">' + logs.map(function (l, li) {
         const logId = l.id || ('log-legacy-' + g.id + '-' + li);
+        const isArt = !!(l.artifactId || (l.id && String(l.id).indexOf('art-') === 0));
         return '<li class="sgt-log-item" data-log-id="' + escAttr(logId) + '">'
           + '<span class="sgt-log-text">' + esc(l.text) + '</span>'
+          + (l.w ? '<span class="sgt-log-weight" title="Evidence contribution toward closing this gap">+' + l.w + '%</span>' : '')
+          + (isArt ? '' : '<button type="button" class="sgt-log-promote" data-gap-id="' + escAttr(g.id) + '" data-log-id="' + escAttr(logId) + '" title="Save as portfolio artifact">↗</button>')
           + '<button type="button" class="sgt-log-remove" data-gap-id="' + escAttr(g.id) + '" data-log-id="' + escAttr(logId) + '" aria-label="Remove note">×</button>'
           + '</li>';
       }).join('') + '</ul>'
@@ -1319,8 +1363,11 @@
       const logHtml = logs.length
         ? '<ul class="sgt-logs">' + logs.map(function (l, li) {
           const logId = l.id || ('log-legacy-' + g.id + '-' + li);
+          const isArt = !!(l.artifactId || (l.id && String(l.id).indexOf('art-') === 0));
           return '<li class="sgt-log-item" data-log-id="' + escAttr(logId) + '">'
             + '<span class="sgt-log-text">' + esc(l.text) + '</span>'
+          + (l.w ? '<span class="sgt-log-weight" title="Evidence contribution toward closing this gap">+' + l.w + '%</span>' : '')
+            + (isArt ? '' : '<button type="button" class="sgt-log-promote" data-gap-id="' + escAttr(g.id) + '" data-log-id="' + escAttr(logId) + '" title="Save as portfolio artifact">↗</button>')
             + '<button type="button" class="sgt-log-remove" data-gap-id="' + escAttr(g.id) + '" data-log-id="' + escAttr(logId) + '" aria-label="Remove log">×</button>'
             + '</li>';
         }).join('') + '</ul>'
@@ -1338,20 +1385,146 @@
     }).join('');
   }
 
+  const STEP_KIND_LABELS = {
+    reading: 'Reading',
+    course: 'Course',
+    club: 'Club',
+    deliverable: 'Deliverable',
+    network: 'Network',
+    milestone: 'Milestone',
+  };
+
+  function stepKindChip(kind) {
+    if (!kind || !STEP_KIND_LABELS[kind]) return '';
+    return '<span class="sgt-step-kind sgt-step-kind--' + escAttr(kind) + '">' + esc(STEP_KIND_LABELS[kind]) + '</span>';
+  }
+
+  function gapChecklistHtml(g) {
+    const items = (g.checklist || []);
+    if (!items.length) return '';
+    return '<ul class="sgt-checklist">' + items.map(function (c) {
+      return '<li class="sgt-checklist-item">'
+        + '<label><input type="checkbox" class="sgt-checklist-check" data-gap-id="' + escAttr(g.id) + '" data-item-id="' + escAttr(c.id) + '"' + (c.done ? ' checked' : '') + '>'
+        + '<span>' + esc(c.text) + '</span></label>'
+        + '</li>';
+    }).join('') + '</ul>';
+  }
+
+  function gapLogsHtml(g) {
+    const logs = (g.logs || []).slice(0, 3);
+    if (!logs.length) return '';
+    return '<ul class="sgt-logs">' + logs.map(function (l, li) {
+      const logId = l.id || ('log-legacy-' + g.id + '-' + li);
+      const isArt = !!(l.artifactId || (l.id && String(l.id).indexOf('art-') === 0));
+      return '<li class="sgt-log-item" data-log-id="' + escAttr(logId) + '">'
+        + '<span class="sgt-log-text">' + esc(l.text) + '</span>'
+          + (l.w ? '<span class="sgt-log-weight" title="Evidence contribution toward closing this gap">+' + l.w + '%</span>' : '')
+        + (isArt ? '' : '<button type="button" class="sgt-log-promote" data-gap-id="' + escAttr(g.id) + '" data-log-id="' + escAttr(logId) + '" title="Save as portfolio artifact">↗</button>')
+        + '<button type="button" class="sgt-log-remove" data-gap-id="' + escAttr(g.id) + '" data-log-id="' + escAttr(logId) + '" aria-label="Remove note">×</button>'
+        + '</li>';
+    }).join('') + '</ul>';
+  }
+
+  // Expanded content for a compact skill-gap row: v3 coordinate gaps get the
+  // domain chip + You/Target bars + checklist; legacy gaps get a linked-step
+  // count. Both get "Mark complete", existing logs, and the log-input controls
+  // (this replaces the old separate "Log progress" section — logging now lives
+  // inside the expanded row).
+  function renderGapExpandBody(g) {
+    const isV3 = g.source === COORDINATE_SOURCE;
+    const userPct = Math.max(0, Math.min(100, g.user || 0));
+    const targetPct = Math.max(0, Math.min(100, g.target || 0));
+    const domainHtml = isV3 ? '<span class="sgt-gap-domain">' + esc(domainLabel(g.domain)) + '</span>' : '';
+    const barsHtml = isV3
+      ? '<div class="sgt-cmp-bars">'
+        + '<div class="sgt-cmp-line">'
+        + '<span class="sgt-cmp-tag">You</span>'
+        + '<div class="sgt-cmp-track"><div class="sgt-cmp-fill sgt-cmp-fill--you" style="width:' + userPct + '%"></div></div>'
+        + '<span class="sgt-cmp-val">' + userPct + '</span>'
+        + '</div>'
+        + '<div class="sgt-cmp-line">'
+        + '<span class="sgt-cmp-tag">Target</span>'
+        + '<div class="sgt-cmp-track"><div class="sgt-cmp-fill sgt-cmp-fill--target" style="width:' + targetPct + '%"></div></div>'
+        + '<span class="sgt-cmp-val">' + targetPct + '</span>'
+        + '</div>'
+        + '</div>'
+      : '';
+    const metaHtml = isV3
+      ? '<div class="sgt-gap-meta">' + (g.progress || 0) + '% · gap of ' + (g.gap || 0) + '</div>'
+      : '<div class="sgt-gap-meta">' + (g.progress || 0) + '% · ' + ((g.linkedStepIds || []).length) + ' linked steps</div>';
+    const manualHtml = '<label class="sgt-gap-manual">'
+      + '<input type="checkbox" class="sgt-gap-check" data-gap-id="' + escAttr(g.id) + '"'
+      + (g.manualComplete ? ' checked' : '') + '>'
+      + '<span>Mark complete</span></label>';
+    return domainHtml
+      + barsHtml
+      + metaHtml
+      + gapChecklistHtml(g)
+      + manualHtml
+      + gapLogsHtml(g)
+      + renderLogControls(g.id);
+  }
+
+  function renderGapCollapsedRow(g, isOpen) {
+    const status = g.status || 'open';
+    const pct = g.progress || 0;
+    const openCls = isOpen ? ' sgt-gap-row--open' : '';
+    return '<div class="sgt-gap-row' + openCls + '" data-gap-id="' + escAttr(g.id) + '">'
+      + '<button type="button" class="sgt-gap-row-head" data-gap-toggle="' + escAttr(g.id) + '" aria-expanded="' + (isOpen ? 'true' : 'false') + '">'
+      + '<span class="sgt-gap-row-label">' + esc(displayGapLabel(g.label)) + '</span>'
+      + '<div class="sgt-bar-wrap sgt-bar-wrap--slim"><div class="sgt-bar" style="width:' + pct + '%"></div></div>'
+      + '<span class="sgt-gap-row-pct">' + pct + '%</span>'
+      + '<span class="sgt-gap-status sgt-gap-status--' + esc(status) + '">' + esc(statusLabel(g)) + '</span>'
+      + '<span class="sgt-gap-chevron" aria-hidden="true">▾</span>'
+      + '</button>'
+      + '<div class="sgt-gap-expand"' + (isOpen ? '' : ' hidden') + '>' + renderGapExpandBody(g) + '</div>'
+      + '</div>';
+  }
+
+  // Secondary, compact "Skill gaps" section for the focus view: each gap is a
+  // single row (label + slim bar + percent + chevron); expanding a row reveals
+  // its checklist, You/Target bars, logs, and log controls. Replaces the old
+  // stack of full-size gap cards plus the separate duplicated log-progress list.
+  // Readiness meter: gaps are pure MEASUREMENT now — You/Target bars that move
+  // as waypoint steps get completed. No per-gap checklists, logs, or manual
+  // toggles; the semester plan and steps column own the actions.
+  function renderGapMeterRow(g) {
+    const userPct = Math.max(0, Math.min(100, Math.round(g.user || 0)));
+    const targetPct = Math.max(0, Math.min(100, Math.round(g.target || 0)));
+    return '<div class="sgt-gap-meter" data-gap-id="' + escAttr(g.id) + '">'
+      + '<div class="sgt-gap-meter-head">'
+      + '<span class="sgt-gap-meter-label">' + esc(displayGapLabel(g.label)) + '</span>'
+      + '<span class="sgt-gap-meter-status">' + esc(statusLabel(g)) + '</span>'
+      + '</div>'
+      + '<div class="sgt-cmp-bars">'
+      + '<div class="sgt-cmp-line">'
+      + '<span class="sgt-cmp-tag">You</span>'
+      + '<div class="sgt-cmp-track"><div class="sgt-cmp-fill sgt-cmp-fill--you" style="width:' + userPct + '%"></div></div>'
+      + '<span class="sgt-cmp-val">' + userPct + '</span>'
+      + '</div>'
+      + '<div class="sgt-cmp-line">'
+      + '<span class="sgt-cmp-tag">Target</span>'
+      + '<div class="sgt-cmp-track"><div class="sgt-cmp-fill sgt-cmp-fill--target" style="width:' + targetPct + '%"></div></div>'
+      + '<span class="sgt-cmp-val">' + targetPct + '</span>'
+      + '</div>'
+      + '</div>'
+      + '</div>';
+  }
+
+  function renderGapSection(gaps, expandedId) {
+    if (!gaps.length) return '';
+    return '<h3 class="sgt-section-title sgt-section-title--gaps">Readiness</h3>'
+      + '<p class="sgt-gaps-hint">These move on their own as you complete steps.</p>'
+      + '<div class="sgt-gaps sgt-gaps--meter">'
+      + gaps.map(renderGapMeterRow).join('')
+      + '</div>';
+  }
+
   function renderStepPreview(waypoint, skillGaps, editable, opts) {
     const wp = waypoint || {};
     const steps = (wp.steps || []).slice(0, editable ? 99 : 3);
     const gaps = skillGaps || [];
-    // Coordinate (v3) gaps already carry their own "Mark complete" toggle inside
-    // their gap card once it's rendered in full (non-compact) form — skip the
-    // redundant orphan row here so the same control doesn't appear twice.
-    const skipV3Orphans = !(opts && opts.compact);
-    const orphanGaps = gaps.filter(function (g) {
-      if ((g.linkedStepIds || []).length) return false;
-      if (skipV3Orphans && g.source === COORDINATE_SOURCE) return false;
-      return true;
-    });
-    if (!steps.length && !orphanGaps.length) return '';
+    if (!steps.length) return '';
     const gapByStep = {};
     gaps.forEach(function (g) {
       (g.linkedStepIds || []).forEach(function (sid) { gapByStep[sid] = displayGapLabel(g.label); });
@@ -1359,19 +1532,13 @@
     const stepRows = steps.map(function (s) {
       return '<li class="sgt-step">'
         + '<label><input type="checkbox" class="sgt-step-check" data-step-id="' + escAttr(s.id) + '"' + (s.done ? ' checked' : '') + '>'
+        + '<span class="sgt-step-tick" aria-hidden="true">✓</span>'
+        + stepKindChip(s.kind)
         + '<span>' + esc(s.text) + '</span></label>'
         + (gapByStep[s.id] ? '<span class="sgt-step-gap">' + esc(gapByStep[s.id]) + '</span>' : '')
         + '</li>';
     }).join('');
-    const orphanRows = orphanGaps.map(function (g) {
-      const label = displayGapLabel(g.label);
-      return '<li class="sgt-step sgt-step--gap-only">'
-        + '<label><input type="checkbox" class="sgt-gap-check" data-gap-id="' + escAttr(g.id) + '"'
-        + (g.manualComplete ? ' checked' : '') + '>'
-        + '<span>Mark ' + esc(label) + ' complete</span></label>'
-        + '</li>';
-    }).join('');
-    return '<ul class="sgt-steps">' + stepRows + orphanRows + '</ul>';
+    return '<ul class="sgt-steps">' + stepRows + '</ul>';
   }
 
   function renderHomeLogControls(gaps) {
@@ -1451,14 +1618,39 @@
         const gapId = btn.getAttribute('data-gap-id');
         const logId = btn.getAttribute('data-log-id');
         if (!onPersist || !t || !gapId || !logId) return;
-        onPersist(removeLog(t, gapId, logId));
+        const updated = removeLog(t, gapId, logId);
+        onPersist(updated);
+        syncGapVectorAfterLogChange(updated, gapId, opts);
+      });
+    });
+
+    root.querySelectorAll('.sgt-log-promote').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const t = currentTree();
+        const gapId = btn.getAttribute('data-gap-id');
+        const logId = btn.getAttribute('data-log-id');
+        if (!t || !gapId || !logId) return;
+        const gap = ((t.focusTracker || {}).skillGaps || []).find(function (g) { return g && g.id === gapId; });
+        if (!gap) return;
+        const logs = gap.logs || [];
+        let text = '';
+        for (let i = 0; i < logs.length; i++) {
+          const l = logs[i];
+          const id = l.id || ('log-legacy-' + gapId + '-' + i);
+          if (id === logId) { text = l.text || ''; break; }
+        }
+        if (global.FWArtifacts && typeof FWArtifacts.promoteFromNote === 'function') {
+          FWArtifacts.promoteFromNote(gapId, text, gap.dimIndex, logId);
+        }
       });
     });
 
     function persistWithLog(gapId, text) {
       const t = currentTree();
       if (!onPersist || !t || !gapId) return;
-      onPersist(persistLog(t, gapId, text));
+      const updated = persistLog(t, gapId, text);
+      onPersist(updated);
+      syncGapVectorAfterLogChange(updated, gapId, opts);
     }
 
     root.querySelectorAll('.sgt-log-preset').forEach(function (btn) {
@@ -1553,9 +1745,388 @@
       + '</div>';
   }
 
+  // ---- Semester plan (waypoint-plan endpoint) ---------------------------
+  // sessionStorage-cached per waypoint; one in-flight fetch per waypoint at a
+  // time so re-renders during a slow generation don't pile up requests.
+  const WP_PLAN_INFLIGHT = {};
+
+  function wpPlanCacheKey(waypointId) {
+    return 'sgt-wpplan:' + waypointId;
+  }
+
+  function readWpPlanCache(waypointId) {
+    try {
+      const raw = global.sessionStorage && sessionStorage.getItem(wpPlanCacheKey(waypointId));
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+
+  function writeWpPlanCache(waypointId, data) {
+    try {
+      if (global.sessionStorage) sessionStorage.setItem(wpPlanCacheKey(waypointId), JSON.stringify(data));
+    } catch (e) { /* storage full/unavailable — ignore */ }
+  }
+
+  function fetchWaypointPlan(waypointId, onDone) {
+    if (!waypointId) { onDone(null, 'no-waypoint'); return; }
+    const cached = readWpPlanCache(waypointId);
+    if (cached) { onDone(cached, null); return; }
+    // The focus view fully re-renders on every persist, so a second caller can
+    // arrive while the first request is in flight — queue every callback and
+    // settle them all, or the fresh skeleton's container never gets painted
+    // (the old callback targets a detached node → spinner stuck forever).
+    if (Array.isArray(WP_PLAN_INFLIGHT[waypointId])) {
+      WP_PLAN_INFLIGHT[waypointId].push(onDone);
+      return;
+    }
+    WP_PLAN_INFLIGHT[waypointId] = [onDone];
+    function settle(data, err) {
+      const cbs = WP_PLAN_INFLIGHT[waypointId] || [];
+      WP_PLAN_INFLIGHT[waypointId] = false;
+      cbs.forEach(function (cb) {
+        try { cb(data, err); } catch (_) { /* one bad container must not starve the rest */ }
+      });
+    }
+    try {
+      fetch('/career-roadmap', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'waypoint-plan', nodeId: waypointId }),
+      }).then(function (r) {
+        if (!r.ok) return Promise.reject(new Error('status-' + r.status));
+        return r.json();
+      }).then(function (data) {
+        if (data && data.plan) {
+          writeWpPlanCache(waypointId, data);
+          settle(data, null);
+        } else {
+          settle(null, 'empty');
+        }
+      }).catch(function (err) {
+        settle(null, (err && err.message) || 'fetch-failed');
+      });
+    } catch (e) {
+      settle(null, 'exception');
+    }
+  }
+
+  function planItemHtml(item) {
+    if (!item) return '';
+    const chip = stepKindChip(item.kind);
+    const marker = item.stepId
+      ? '<button type="button" class="sgt-plan-item-track" data-track-step-id="' + escAttr(item.stepId) + '">↳ tracked step</button>'
+      : '';
+    return '<li class="sgt-plan-item">'
+      + '<div class="sgt-plan-item-head">' + chip + '<span class="sgt-plan-item-text">' + esc(item.text || '') + '</span></div>'
+      + (item.method ? '<p class="sgt-plan-item-how">' + esc(item.method) + '</p>' : '')
+      + '<div class="sgt-plan-item-links">'
+      + marker
+      + '<button type="button" class="sgt-plan-item-deeper" data-item-text="' + escAttr(item.text || '') + '">Go deeper</button>'
+      + '</div>'
+      + '<div class="sgt-plan-item-detail" hidden></div>'
+      + '</li>';
+  }
+
+  // "Go deeper" on a plan item: fetch a mentor-voice elaboration for that
+  // exact item, then let the user ask follow-up questions about it inline.
+  function bindPlanDeepDives(container, waypointId) {
+    container.querySelectorAll('.sgt-plan-item-deeper').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const li = btn.closest('.sgt-plan-item');
+        const detail = li && li.querySelector('.sgt-plan-item-detail');
+        if (!detail) return;
+        if (!detail.hidden) { detail.hidden = true; btn.textContent = 'Go deeper'; return; }
+        detail.hidden = false;
+        btn.textContent = 'Close';
+        if (detail.getAttribute('data-loaded')) return;
+        const itemText = btn.getAttribute('data-item-text') || '';
+        detail.innerHTML = '<p class="sgt-elab-loading">Thinking about this one…</p>';
+        fetchStepElaboration(waypointId, itemText, '', function (reply, err) {
+          if (!detail.isConnected) return;
+          if (!reply) {
+            detail.innerHTML = '<p class="sgt-plan-error">Could not load — try again in a moment.</p>';
+            detail.removeAttribute('data-loaded');
+            return;
+          }
+          detail.setAttribute('data-loaded', '1');
+          detail.innerHTML = '<p class="sgt-elab-text">' + esc(reply) + '</p>'
+            + '<div class="sgt-elab-ask">'
+            + '<input type="text" class="sgt-elab-input" maxlength="280" placeholder="Ask a follow-up about this…">'
+            + '<button type="button" class="sgt-elab-send">Ask</button>'
+            + '</div>'
+            + '<div class="sgt-elab-thread"></div>';
+          bindElabFollowUps(detail, waypointId, itemText);
+        });
+      });
+    });
+  }
+
+  function bindElabFollowUps(detail, waypointId, itemText) {
+    const input = detail.querySelector('.sgt-elab-input');
+    const send = detail.querySelector('.sgt-elab-send');
+    const thread = detail.querySelector('.sgt-elab-thread');
+    if (!input || !send || !thread) return;
+    function ask() {
+      const q = String(input.value || '').trim();
+      if (!q) return;
+      input.value = '';
+      const restoreSend = global.FWButtonBusy ? FWButtonBusy.start(send) : function () {};
+      const qEl = document.createElement('p');
+      qEl.className = 'sgt-elab-q';
+      qEl.textContent = q;
+      thread.appendChild(qEl);
+      const aEl = document.createElement('p');
+      aEl.className = 'sgt-elab-a sgt-elab-loading';
+      aEl.textContent = '…';
+      thread.appendChild(aEl);
+      fetchStepElaboration(waypointId, itemText, q, function (reply) {
+        restoreSend();
+        if (!aEl.isConnected) return;
+        aEl.classList.remove('sgt-elab-loading');
+        aEl.textContent = reply || 'Could not answer right now — try again.';
+      });
+    }
+    send.addEventListener('click', ask);
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); ask(); }
+    });
+  }
+
+  function fetchStepElaboration(waypointId, itemText, question, onDone) {
+    try {
+      fetch('/career-roadmap', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'step-elaborate',
+          nodeId: waypointId || '',
+          itemText: itemText,
+          question: question || '',
+        }),
+      }).then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
+        onDone(data && data.reply ? data.reply : null);
+      }).catch(function () { onDone(null); });
+    } catch (e) { onDone(null); }
+  }
+
+  function planPhaseHtml(phase) {
+    if (!phase) return '';
+    const items = (phase.items || []).map(planItemHtml).join('');
+    return '<div class="sgt-plan-phase">'
+      + '<div class="sgt-plan-phase-head">'
+      + (phase.weeks ? '<span class="sgt-plan-phase-weeks">' + esc(phase.weeks) + '</span>' : '')
+      + '<h4 class="sgt-plan-phase-title">' + esc(phase.title || '') + '</h4>'
+      + '</div>'
+      + (phase.focus ? '<p class="sgt-plan-phase-focus">' + esc(phase.focus) + '</p>' : '')
+      + (items ? '<ul class="sgt-plan-items">' + items + '</ul>' : '')
+      + '</div>';
+  }
+
+  function planCadenceHtml(cadence) {
+    if (!cadence || !cadence.length) return '';
+    return '<div class="sgt-plan-cadence">' + cadence.map(function (c) {
+      return '<span class="sgt-plan-cadence-pill">' + esc(c.label || '') + (c.freq ? ' · ' + esc(c.freq) : '') + '</span>';
+    }).join('') + '</div>';
+  }
+
+  function planBodyHtml(plan) {
+    if (!plan) return '';
+    const phases = (plan.phases || []).map(planPhaseHtml).join('');
+    return (plan.overview ? '<p class="sgt-plan-overview">' + esc(plan.overview) + '</p>' : '')
+      + (phases ? '<div class="sgt-plan-timeline">' + phases + '</div>' : '')
+      + planCadenceHtml(plan.cadence)
+      + (plan.protocol ? '<div class="sgt-plan-protocol"><p class="sgt-plan-protocol-label">Rule of the road</p><p class="sgt-plan-protocol-text">' + esc(plan.protocol) + '</p></div>' : '')
+      + ((plan.baseCase || plan.aspirational) ? '<div class="sgt-plan-targets">'
+        + (plan.baseCase ? '<div class="sgt-plan-target"><p class="sgt-plan-target-label">Base case</p><p class="sgt-plan-target-text">' + esc(plan.baseCase) + '</p></div>' : '')
+        + (plan.aspirational ? '<div class="sgt-plan-target sgt-plan-target--stretch"><p class="sgt-plan-target-label">Stretch</p><p class="sgt-plan-target-text">' + esc(plan.aspirational) + '</p></div>' : '')
+        + '</div>' : '');
+  }
+
+  function renderPlanLoading() {
+    return '<div class="sgt-plan-skeleton" role="status" aria-busy="true">'
+      + '<p class="sgt-plan-skeleton-copy">Building your semester plan…</p>'
+      + '<span class="fw-skeleton sgt-plan-skel-line" aria-hidden="true"></span>'
+      + '<span class="fw-skeleton sgt-plan-skel-line" aria-hidden="true"></span>'
+      + '<span class="fw-skeleton sgt-plan-skel-line sgt-plan-skel-line--short" aria-hidden="true"></span>'
+      + '</div>';
+  }
+
+  function renderPlanError() {
+    return '<p class="sgt-plan-error">Plan unavailable — <button type="button" class="sgt-plan-retry">retry</button></p>';
+  }
+
+  // Fetches (or reads cached) plan for the given waypoint and paints it into
+  // the .sgt-plan container inside el. Fire-and-forget — never blocks or
+  // throws into the caller; a failure just leaves a quiet retry link.
+  function loadPlanInto(el, waypointId, waypoint) {
+    const container = el.querySelector('.sgt-plan');
+    if (!container || !waypointId) return;
+    // Plans persist on the roadmap node itself — render instantly, no fetch.
+    const nodePlan = waypoint && waypoint.semesterPlan && waypoint.semesterPlan.plan;
+    if (nodePlan) {
+      container.innerHTML = planBodyHtml(nodePlan);
+      bindPlanTrackLinks(el, container);
+      bindPlanDeepDives(container, waypointId);
+      return;
+    }
+    container.innerHTML = renderPlanLoading();
+    try {
+      fetchWaypointPlan(waypointId, function (data, err) {
+        // The panel may have re-rendered (different waypoint) by the time this
+        // callback fires — bail if our container is no longer in the DOM.
+        if (!container.isConnected) return;
+        if (data && data.plan) {
+          container.innerHTML = planBodyHtml(data.plan);
+          bindPlanTrackLinks(el, container);
+      bindPlanDeepDives(container, waypointId);
+        } else {
+          container.innerHTML = renderPlanError();
+          const retryBtn = container.querySelector('.sgt-plan-retry');
+          if (retryBtn) retryBtn.addEventListener('click', function () { loadPlanInto(el, waypointId); });
+        }
+      });
+    } catch (e) {
+      if (container.isConnected) container.innerHTML = renderPlanError();
+    }
+  }
+
+  // Clicking a "tracked step" marker scrolls to and briefly flashes the
+  // matching step checkbox in the steps column, if one exists. Pure UX
+  // affordance — no-op (not an error) when no match is found.
+  function bindPlanTrackLinks(el, container) {
+    container.querySelectorAll('[data-track-step-id]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const stepId = btn.getAttribute('data-track-step-id');
+        let target = stepId && el.querySelector('.sgt-step-check[data-step-id="' + CSS.escape(stepId) + '"]');
+        if (!target) return;
+        const row = target.closest('.sgt-step');
+        if (row && row.scrollIntoView) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (row) {
+          row.classList.add('sgt-step--flash');
+          setTimeout(function () { row.classList.remove('sgt-step--flash'); }, 1200);
+        }
+      });
+    });
+  }
+
+  // ---- Inline Marco on the focus waypoint --------------------------------
+  // A compact thread pinned to the current waypoint. Messages go through the
+  // existing /career-roadmap chat action (which can patch the roadmap), with
+  // the waypoint named so Marco's answer and any plan edits stay scoped to
+  // it. Threads live for the session (module map) so the full re-render that
+  // follows every persist doesn't eat the conversation.
+  var MARCO_THREADS = {};
+
+  function renderMarcoInline(wp) {
+    var thread = MARCO_THREADS[wp.id] || [];
+    var msgs = thread.map(function (m) {
+      return '<p class="sgt-marco-msg sgt-marco-msg--' + (m.role === 'user' ? 'user' : 'marco') + '">' + esc(m.text) + '</p>';
+    }).join('');
+    return '<div class="sgt-marco">'
+      + '<h3 class="sgt-section-title">Talk to Marco about this waypoint</h3>'
+      + '<p class="sgt-marco-hint">Ask why it\'s here, swap a step, or tell him what changed — he can edit the plan.</p>'
+      + '<div class="sgt-marco-thread">' + msgs + '</div>'
+      + '<div class="sgt-marco-row">'
+      + '<input type="text" class="sgt-marco-input" maxlength="500" placeholder="e.g. I already took this course — replace the step">'
+      + '<button type="button" class="sgt-marco-send">Send</button>'
+      + '</div>'
+      + '</div>';
+  }
+
+  function bindMarcoInline(el, wp, opts) {
+    var box = el.querySelector('.sgt-marco');
+    if (!box) return;
+    var input = box.querySelector('.sgt-marco-input');
+    var send = box.querySelector('.sgt-marco-send');
+    var threadEl = box.querySelector('.sgt-marco-thread');
+    if (!input || !send || !threadEl) return;
+    threadEl.scrollTop = threadEl.scrollHeight;
+
+    function push(role, text) {
+      var thread = MARCO_THREADS[wp.id] = MARCO_THREADS[wp.id] || [];
+      thread.push({ role: role, text: String(text || '').slice(0, 900) });
+      if (thread.length > 12) thread.splice(0, thread.length - 12);
+      var p = document.createElement('p');
+      p.className = 'sgt-marco-msg sgt-marco-msg--' + (role === 'user' ? 'user' : 'marco');
+      p.textContent = text;
+      threadEl.appendChild(p);
+      threadEl.scrollTop = threadEl.scrollHeight;
+      return p;
+    }
+
+    function sendMsg() {
+      var msg = String(input.value || '').trim();
+      if (!msg || send.disabled) return;
+      input.value = '';
+      var restoreSend = global.FWButtonBusy ? FWButtonBusy.start(send) : function () {};
+      push('user', msg);
+      var pending = push('marco', '…');
+      pending.classList.add('sgt-marco-loading');
+      var tree = opts.getTree ? opts.getTree() : null;
+      fetch('/career-roadmap', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'chat',
+          // /career-roadmap validates careerSlug/careerName before the chat
+          // branch — omitting them is a guaranteed 400 ("Could not reach Marco").
+          careerSlug: (tree && tree.targetCareerSlug) || '',
+          careerName: (tree && tree.targetCareerName) || '',
+          // Scoped surface: the server pins edits to THIS waypoint's own
+          // content (steps + semester plan) — structure is out of bounds.
+          scope: 'waypoint',
+          waypointId: wp.id,
+          userMessage: '[About my current waypoint "' + String(wp.title || wp.shortTitle || '').slice(0, 90) + '"] ' + msg,
+          currentRoadmap: tree,
+        }),
+      }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d }; }); })
+        .then(function (res) {
+          restoreSend();
+          var reply = (res.d && res.d.reply) || (res.ok ? 'Done.' : 'Could not reach Marco — try again in a moment.');
+          // Update the module thread's last entry, then repaint or re-render.
+          var thread = MARCO_THREADS[wp.id] || [];
+          if (thread.length) thread[thread.length - 1] = { role: 'marco', text: String(reply).slice(0, 900) };
+          if (res.d && res.d.roadmap && typeof opts.onPersist === 'function') {
+            // Persist triggers a full re-render; the thread map repaints it.
+            opts.onPersist(res.d.roadmap);
+            return;
+          }
+          if (pending.isConnected) {
+            pending.classList.remove('sgt-marco-loading');
+            pending.textContent = reply;
+            threadEl.scrollTop = threadEl.scrollHeight;
+          }
+        })
+        .catch(function () {
+          restoreSend();
+          var thread = MARCO_THREADS[wp.id] || [];
+          if (thread.length) thread[thread.length - 1] = { role: 'marco', text: 'Could not reach Marco — try again in a moment.' };
+          if (pending.isConnected) {
+            pending.classList.remove('sgt-marco-loading');
+            pending.textContent = 'Could not reach Marco — try again in a moment.';
+          }
+        });
+    }
+
+    send.addEventListener('click', sendMsg);
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); sendMsg(); }
+    });
+  }
+
   function renderFocusView(el, tree, waypoint, opts) {
     if (!el) return;
     opts = opts || {};
+    // Re-renders (after a checkbox/gap persist) must not yank the view back
+    // to the top. The focus view is an INNER scroller (.roadmap-focus-view is
+    // overflow-y:auto), so el.scrollTop is the scroll that matters — window
+    // scroll is captured too for layouts where the page itself scrolls.
+    // First render of the view (empty container) keeps default behavior.
+    var restoreScrollY = el.childElementCount ? window.scrollY : null;
+    var restorePanelScroll = el.childElementCount ? el.scrollTop : null;
     const activeKey = activeBranchKey(tree);
     // Branch-aware focus: on a secondary branch the card follows that branch's
     // next-undone waypoint, not the main pinned one.
@@ -1564,13 +2135,9 @@
     const gaps = (tree.focusTracker && tree.focusTracker.skillGaps) || [];
     const editable = !!(opts.editable && wp);
     const switcherHtml = branchSwitcherHtml(tree);
-
-    const logsHtml = gaps.length
-      ? '<h3 class="sgt-section-title">Log progress</h3>'
-        + gaps.map(function (g) {
-          return '<div class="sgt-log-block"><span class="sgt-log-gap-label">' + esc(displayGapLabel(g.label)) + '</span>' + renderLogControls(g.id) + '</div>';
-        }).join('')
-      : '';
+    // Which gap row is expanded. Stored on the container element itself so it
+    // survives the full innerHTML rebuild that follows every onPersist call.
+    const expandedGapId = el._sgtExpandedGapId || (gaps[0] && gaps[0].id) || '';
 
     el.innerHTML = ''
       + '<div class="roadmap-focus-inner">'
@@ -1579,19 +2146,35 @@
       + switcherHtml
       + '<p class="sgt-eyebrow">Current focus</p>'
       + '<h2 class="sgt-focus-title">' + esc(wp ? (wp.title || wp.shortTitle) : 'Your focus') + '</h2>'
+      + (tree && tree.targetCareerName
+        ? '<p class="sgt-focus-target">Toward <a href="career.html?slug=' + escAttr(tree.targetCareerSlug || '') + '">'
+          + esc(tree.targetCareerName) + '</a>'
+          + (tree.fitContext && tree.fitContext.preparedness != null
+            ? ' · Readiness ' + esc(String(Math.round(tree.fitContext.preparedness))) + '%'
+            : '')
+          + '</p>'
+        : '')
       + (wp && wp.whyItMatters ? '<p class="sgt-focus-why">' + esc(wp.whyItMatters) + '</p>' : '')
       + '</div>'
+      + (wp ? '<div class="sgt-plan"></div>' : '')
       + '<div class="sgt-focus-layout">'
-      + '<div class="sgt-focus-col sgt-focus-col--gaps">'
-      + '<div class="sgt-gaps">' + renderGapRows(gaps, { compact: false }) + '</div>'
-      + '</div>'
       + '<div class="sgt-focus-col sgt-focus-col--steps">'
       + '<h3 class="sgt-section-title">Waypoint steps</h3>'
-      + (renderStepPreview(wp, gaps, editable) || '<p class="sgt-empty">No waypoint steps yet — track progress with the checklist and notes on the left.</p>')
-      + logsHtml
+      + (renderStepPreview(wp, gaps, editable) || '<p class="sgt-empty">No steps on this waypoint yet — ask Marco below to add some.</p>')
+      + '</div>'
+      + '<div class="sgt-focus-col sgt-focus-col--gaps">'
+      + renderGapSection(gaps, expandedGapId)
       + '</div>'
       + '</div>'
+      + (wp && editable ? renderMarcoInline(wp) : '')
       + '</div>';
+
+    if (restoreScrollY !== null) window.scrollTo(0, restoreScrollY);
+    if (restorePanelScroll !== null) el.scrollTop = restorePanelScroll;
+
+    if (wp && wp.id && editable) bindMarcoInline(el, wp, opts);
+
+    if (wp && wp.id) loadPlanInto(el, wp.id, wp);
 
     const back = el.querySelector('.sgt-back-map');
     if (back && opts.onBack) back.addEventListener('click', opts.onBack);
@@ -1616,33 +2199,22 @@
       runAdvance: opts.runAdvance,
     });
 
-    // Live coordinate recompute + AI checklist upgrade. Runs off the render path
-    // so a slow vector fetch never blocks the panel. Persists via onPersist, which
-    // re-renders through the panel controller.
+    // Live coordinate recompute, off the render path so a slow vector fetch
+    // never blocks the panel. (The per-gap AI-checklist upgrade is retired —
+    // gaps are a readiness meter now; steps and the semester plan own actions.)
     if (opts.onPersist && global.FWOnetVectors
       && typeof FWOnetVectors.objectiveVsCareerDimensions === 'function') {
       const getTree = opts.getTree || function () { return tree; };
-      // onPersist carrying getTree lets requestAiChecklists read the freshest tree
-      // when its network response lands, avoiding a stale-overwrite race.
       const persist = function (t) { opts.onPersist(t); };
       persist.getTree = getTree;
-
-      const upgradeChecklists = function () {
-        const cur = getTree();
-        if (isV3Tracker(cur.focusTracker)) requestAiChecklists(cur, persist);
-      };
       const needsRecompute = !isV3Tracker(tree.focusTracker)
         || (tree.focusTracker && tree.focusTracker.needsRecompute);
-
       if (needsRecompute) {
         recomputeCoordinateGaps(getTree(), {}).then(function (updated) {
           if (updated && isV3Tracker(updated.focusTracker) && updated !== getTree()) {
             persist(updated);
           }
-          upgradeChecklists();
         });
-      } else {
-        upgradeChecklists();
       }
     }
   }
@@ -1657,6 +2229,7 @@
     appendLog: appendLog,
     persistLog: persistLog,
     removeLog: removeLog,
+    syncGapVectorAfterLogChange: syncGapVectorAfterLogChange,
     toggleWaypointStep: toggleWaypointStep,
     toggleGapManualComplete: toggleGapManualComplete,
     toggleChecklistItem: toggleChecklistItem,

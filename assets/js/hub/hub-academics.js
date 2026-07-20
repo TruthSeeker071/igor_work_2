@@ -1,13 +1,15 @@
 /**
- * Career Hub — "Academics" assessment panel.
+ * Academic Profile — embeddable assessment step (sibling of hub-refine.js).
  *
- * A second right-side slide-in panel (sibling of hub-refine.js) focused on the
- * user's academic profile: GPA, classes they liked / disliked (and why), their
- * major(s)/minor(s) and how locked-in that is, intended grad-school plans, and an
- * optional unofficial transcript.
+ * Lives in the POST-SIGNUP quiz flow (quiz.html mounts it via
+ * FWHubAcademics.mount right after the Sharpen Matches step, plus a
+ * standalone quiz.html#academics entry). Covers the user's academic profile:
+ * GPA, classes they liked / disliked (and why), their major(s)/minor(s) and
+ * how locked-in that is, intended grad-school plans, and an optional
+ * unofficial transcript.
  *
  * The class year is NOT re-asked — the initial quiz already captured it. We read
- * it (plus GPA / school) from fw_hub_quiz_v1.profile (written by qzBuildHubPayload)
+ * it (plus GPA / school) from the quiz profile (written by qzBuildHubPayload)
  * and surface it in the panel header ("We've got you as a Junior at UCLA …").
  *
  * Scored signals (liked classes +, disliked classes −, grad-school plans) reshape
@@ -15,7 +17,7 @@
  * panel. GPA / major / major-lock / transcript are stored as profile data only.
  *
  * LocalStorage: fw_hub_academics_v1 (answers), and a compact subset mirrored into
- * fw_hub_quiz_v1.academics so it syncs to D1 via the existing /profile/quiz PUT.
+ * the quiz blob's academics so it syncs to D1 via the existing /profile/quiz PUT.
  *
  * Self-contained on purpose: it does NOT load the full quiz app. Class-text scoring
  * uses a compact keyword→industry map adapted from the quiz's resume keyword parser.
@@ -26,10 +28,9 @@
   if (!window.FWHubCareers) return;
   var FWH = window.FWHubCareers;
 
-  var QUIZ_KEY    = (FWH.HUB_QUIZ_KEY) || 'fw_hub_quiz_v1';
   var BASE_KEY    = 'fw_hub_base_scores_v1';        // shared with hub-refine.js
   var ANS_KEY     = 'fw_hub_academics_v1';
-  var UPDATED_KEY = 'fw_hub_academics_updated_v1';
+  var UPDATED_KEY = 'fw_hub_academics_updated_v1'; // portal checklist reads this
 
   // Industry universe — same derivation as hub-refine.js.
   var IND_KEYS = (typeof QZ_IND !== 'undefined' && QZ_IND)
@@ -123,8 +124,15 @@
   function readJson(key) { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (_) { return null; } }
   function writeJson(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (_) {} }
 
-  function quizBlob() { return readJson(QUIZ_KEY) || {}; }
-  function profile() { var q = quizBlob(); return (q && q.profile) || {}; }
+  function quizBlob() {
+    return ((window.FWUser && typeof FWUser.getBlob === 'function') ? FWUser.getBlob() : null) || {};
+  }
+  // Identity via FWUser: same keys as the old quiz.profile read, plus school
+  // coalesced with the blob-root copy (the dossier-synced one).
+  function profile() {
+    var u = window.FWUser && typeof FWUser.get === 'function' ? FWUser.get() : null;
+    return (u && u.identity) || {};
+  }
 
   var answers = readJson(ANS_KEY) || {}; // { gpa, liked, disliked, major, majorLock, grad, transcript }
 
@@ -139,8 +147,6 @@
       if (typeof pg === 'number') answers.gpa = pg;
     }
   })();
-
-  var open = false;
 
   // ── GPA helpers (ported verbatim from quiz-app.js) ──────────────────────────
   function gpaLetter(v) {
@@ -282,9 +288,10 @@
     if (window.FWOnetVectors && typeof FWOnetVectors.persistQuizVectors === 'function') {
       quiz = FWOnetVectors.persistQuizVectors(quiz, { sync: true });
     } else {
-      writeJson(QUIZ_KEY, quiz);
+      if (window.FWUser) FWUser.putBlob(quiz);
     }
     writeJson(ANS_KEY, answers);
+    writeJson(UPDATED_KEY, true);
     if (window.FWOnetHub && typeof FWOnetHub.refreshPersonalityFromQuiz === 'function') {
       FWOnetHub.refreshPersonalityFromQuiz();
       if (typeof FWOnetHub.invalidateViewport === 'function') FWOnetHub.invalidateViewport();
@@ -379,48 +386,55 @@
     return '<div class="hr-q' + (isAnswered(q) ? ' answered' : '') + '">' + head + body + '</div>';
   }
 
-  function panelHtml() {
-    var done = answeredCount();
-    return ''
-      + '<div class="hr-head">'
-      +   '<div class="hr-head-title">Academics</div>'
-      +   '<button class="hr-close" data-act="close" aria-label="Close">✕</button>'
-      + '</div>'
-      + '<div class="hr-sub">' + headerSub() + '</div>'
-      + '<div class="hr-prog"><div class="hr-prog-fill" style="width:' + Math.round(done / REQUIRED.length * 100) + '%"></div></div>'
-      + '<div class="hr-prog-lbl">' + done + ' of ' + REQUIRED.length + ' answered</div>'
-      + '<div class="hr-body">' + Qs.map(questionHtml).join('') + '</div>'
-      + '<div class="hr-foot">'
-      +   '<button class="hr-update" data-act="update"' + (done ? '' : ' disabled') + '>Update my matches</button>'
-      + '</div>';
+  // ── Embeddable mount (quiz flow) ────────────────────────────────────────────
+  // The Academics panel used to be a Career Hub slide-in; it now lives in the
+  // post-signup quiz flow right after Sharpen Matches (and standalone via
+  // quiz.html#academics). Same answers, scoring, and persistence — only the
+  // hosting changed, mirroring hub-refine.js's embed pattern.
+
+  // Supplemental styles for the widgets refine's shared .hr-embed CSS lacks
+  // (free-text fields, GPA readout, transcript upload). Scoped under .hr-embed.
+  var ACADEMICS_EMBED_CSS = ''
+    + '.hr-embed .hr-sub{font-size:.92rem;opacity:.8;margin:0 0 4px}'
+    + '.hr-embed .hr-textarea,.hr-embed .hr-text{width:100%;margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid rgb(var(--border,127 127 127)/0.6);background:rgb(var(--surface,255 255 255)/0.6);color:inherit;font:inherit;font-size:.92rem;resize:vertical}'
+    + '.hr-embed .hr-textarea:focus,.hr-embed .hr-text:focus{outline:none;border-color:rgb(var(--primary,237 106 44)/0.6)}'
+    + '.hr-embed .hr-gpa-display{display:flex;align-items:baseline;gap:10px;margin-top:8px}'
+    + '.hr-embed .hr-gpa-num{font-size:1.6rem;font-weight:700}'
+    + '.hr-embed .hr-gpa-letter{font-size:.95rem;font-weight:600;opacity:.7}'
+    + '.hr-embed .hr-gpa-feedback{min-height:20px;font-size:.85rem;margin:2px 0 4px}'
+    + '.hr-embed .hr-gpa-feedback.elite{color:#eab308}'
+    + '.hr-embed .hr-gpa-feedback.great{color:rgb(var(--primary,237 106 44))}'
+    + '.hr-embed .hr-upload{display:flex;flex-direction:column;gap:2px;margin-top:10px;padding:14px;border:1px dashed rgb(var(--border,127 127 127)/0.7);border-radius:10px;cursor:pointer}'
+    + '.hr-embed .hr-upload input[type=file]{display:none}'
+    + '.hr-embed .hr-upload-label{font-size:.92rem;font-weight:600}'
+    + '.hr-embed .hr-upload-hint{font-size:.78rem;opacity:.6}'
+    + '.hr-embed .hr-upload-status{min-height:18px;font-size:.85rem;margin-top:6px}'
+    + '.hr-embed .hr-upload-status.ok{color:rgb(var(--primary,237 106 44))}'
+    + '.hr-embed .hr-paste{margin-top:8px}';
+
+  function ensureAcademicsEmbedCss() {
+    if (window.FWHubRefine && typeof FWHubRefine.ensureEmbedCss === 'function') {
+      FWHubRefine.ensureEmbedCss();
+    }
+    if (document.getElementById('hra-embed-css')) return;
+    var st = document.createElement('style');
+    st.id = 'hra-embed-css';
+    st.textContent = ACADEMICS_EMBED_CSS;
+    document.head.appendChild(st);
   }
 
-  var toggleBtn, panel, toast;
+  var mountEl = null;
+  var mountOpts = {};
 
   function refreshProgress() {
-    if (!panel) return;
+    if (!mountEl) return;
     var done = answeredCount();
-    var fill = panel.querySelector('.hr-prog-fill');
-    var lbl = panel.querySelector('.hr-prog-lbl');
-    var upd = panel.querySelector('.hr-update');
+    var fill = mountEl.querySelector('.hr-prog-fill');
+    var lbl = mountEl.querySelector('.hr-prog-lbl');
     if (fill) fill.style.width = Math.round(done / REQUIRED.length * 100) + '%';
     if (lbl) lbl.textContent = done + ' of ' + REQUIRED.length + ' answered';
-    if (upd) upd.disabled = !done;
-    if (toggleBtn) {
-      var updated = !!readJson(UPDATED_KEY);
-      toggleBtn.classList.toggle('hr-toggle-hint', !updated && done < REQUIRED.length);
-    }
+    if (typeof mountOpts.onProgress === 'function') mountOpts.onProgress(done, REQUIRED.length);
   }
-
-  function showToast(msg) {
-    if (!toast) return;
-    toast.textContent = msg;
-    toast.classList.add('show');
-    clearTimeout(toast._t);
-    toast._t = setTimeout(function () { toast.classList.remove('show'); }, 2200);
-  }
-
-  function rerenderBody() { if (panel) { panel.querySelector('.hr-body').innerHTML = Qs.map(questionHtml).join(''); refreshProgress(); } }
 
   function markAnswered(el, on) {
     var qd = el.closest('.hr-q'); if (qd) qd.classList.toggle('answered', on);
@@ -430,8 +444,6 @@
     var el = e.target.closest('[data-act]');
     if (!el) return;
     var act = el.getAttribute('data-act');
-    if (act === 'close') { setOpen(false); return; }
-    if (act === 'update') { writeJson(UPDATED_KEY, true); applyAndPersist(); showToast('Matches updated'); return; }
     if (act === 'mc') {
       var qi = +el.getAttribute('data-qi'), i = +el.getAttribute('data-i'), q = Qs[qi];
       answers[q.id] = i;
@@ -449,7 +461,7 @@
 
     if (act === 'gpa') {
       var v = (+el.value) / 10; answers.gpa = v;
-      var num = panel.querySelector('[data-gpa-num]'), let_ = panel.querySelector('[data-gpa-letter]'), fbEl = panel.querySelector('[data-gpa-fb]');
+      var num = mountEl.querySelector('[data-gpa-num]'), let_ = mountEl.querySelector('[data-gpa-letter]'), fbEl = mountEl.querySelector('[data-gpa-fb]');
       if (num) num.textContent = v.toFixed(2);
       if (let_) let_.textContent = gpaLetter(v);
       var fb = gpaFeedback(v);
@@ -492,50 +504,38 @@
     if (status) { status.className = 'hr-upload-status ok'; status.textContent = '✓ ' + f.name + ' added'; }
   }
 
-  function setOpen(v) {
-    open = v;
-    if (open && window.FWHubDashboard && typeof FWHubDashboard.closePanel === 'function') {
-      FWHubDashboard.closePanel();
+  function mount(container, opts) {
+    if (!container) return;
+    ensureAcademicsEmbedCss();
+    mountEl = container;
+    mountOpts = opts || {};
+    container.classList.add('hr-embed');
+    var done = answeredCount();
+    container.innerHTML = ''
+      + '<div class="hr-sub">' + headerSub() + '</div>'
+      + '<div class="hr-prog"><div class="hr-prog-fill" style="width:' + Math.round(done / REQUIRED.length * 100) + '%"></div></div>'
+      + '<div class="hr-prog-lbl">' + done + ' of ' + REQUIRED.length + ' answered</div>'
+      + '<div class="hr-body">' + Qs.map(questionHtml).join('') + '</div>';
+    if (!container._fwAcadBound) {
+      container._fwAcadBound = true;
+      container.addEventListener('click', onPanelClick);
+      container.addEventListener('input', onPanelInput);
+      container.addEventListener('change', onPanelChange);
     }
-    if (open && window.FWHubRefine && typeof FWHubRefine.close === 'function') FWHubRefine.close();
-    panel.classList.toggle('open', open);
-    toggleBtn.classList.toggle('open', open);
-    toggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
-  }
-
-  function build() {
-    // Academics is reached from a "Next: Academic profile" button inside the
-    // "Sharpen your matches" panel — not its own topbar toggle. We keep a detached
-    // button element so the shared setOpen()/refreshProgress() code can update it
-    // harmlessly, but it is intentionally never added to the DOM.
-    toggleBtn = document.createElement('button');
-    toggleBtn.className = 'hr-toggle hr-toggle--academics';
-    toggleBtn.setAttribute('aria-expanded', 'false');
-
-    panel = document.createElement('aside');
-    panel.className = 'hr-panel hr-panel--academics';
-    panel.innerHTML = panelHtml();
-    panel.addEventListener('click', onPanelClick);
-    panel.addEventListener('input', onPanelInput);
-    panel.addEventListener('change', onPanelChange);
-
-    toast = document.createElement('div');
-    toast.className = 'hr-toast';
-
-    document.body.appendChild(panel);
-    document.body.appendChild(toast);
-
     refreshProgress();
-
-    window.FWHubAcademics = {
-      open: function () { setOpen(true); },
-      close: function () { setOpen(false); }
-    };
-
-    var params = new URLSearchParams(window.location.search);
-    if (params.get('academics') === 'open' || window.location.hash === '#academics') setOpen(true);
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', build);
-  else build();
+  window.FWHubAcademics = {
+    mount: mount,
+    // Persists academics through the canonical writers
+    // (sector-fit-sheet patches + persistQuizVectors sync).
+    commit: function () { applyAndPersist(); },
+    answeredCount: answeredCount,
+    total: REQUIRED.length,
+    isComplete: function () { return answeredCount() >= REQUIRED.length; },
+    // Legacy hub panel API — the slide-in is gone; harmless no-ops so old
+    // callers (hub-dashboard openPanel chain) never throw.
+    open: function () {},
+    close: function () {}
+  };
 })();

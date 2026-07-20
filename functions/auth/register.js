@@ -20,17 +20,18 @@ import {
   SESSION_DAYS,
   checkRateLimit,
   clientIp,
-  saveQuizProfile,
   quizProfileToSeed,
 } from '../_lib/auth.js';
+import { saveUserBlob, normalizeUser, denormalizeUser } from '../_lib/user.js';
+import { consumePendingGrant } from '../_lib/admin.js';
 
 export async function onRequestOptions(context) {
-  return authPreflight(originFromEnv(context.env));
+  return authPreflight(originFromEnv(context.env, context.request));
 }
 
 export async function onRequestPost(context) {
   const { request, env } = context;
-  const origin = originFromEnv(env);
+  const origin = originFromEnv(env, request);
 
   let payload;
   try {
@@ -61,11 +62,19 @@ export async function onRequestPost(context) {
     const passwordHash = await hashPassword(password);
     await createUser(env, email, passwordHash);
 
+    // A comp granted before this email had an account is pending in
+    // comp_grants; apply it now that the users row exists. Never throws — a
+    // comp that fails to land stays pending and an admin can re-apply it, but
+    // it must not fail the signup itself.
+    await consumePendingGrant(env, email);
+
+    // The slim register payload may arrive v1 (old tabs) or v2 (post-rollout
+    // quiz); normalize once and work on the v1 view everywhere below.
     const quizProfile = payload.quizProfile && typeof payload.quizProfile === 'object'
-      ? payload.quizProfile
+      ? denormalizeUser(normalizeUser(payload.quizProfile))
       : null;
     if (quizProfile) {
-      await saveQuizProfile(env, email, quizProfile);
+      await saveUserBlob(env, email, quizProfile);
     }
 
     const seed = buildSeedDossier(quizProfileToSeed(quizProfile || payload.quizResults || {}));

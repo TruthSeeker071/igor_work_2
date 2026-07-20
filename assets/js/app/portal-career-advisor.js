@@ -27,11 +27,18 @@
     }
   }
 
+  // Server copy is only echoed when it reads as product copy (WS3) — dev-speak
+  // like 'Invalid JSON body.' falls through to the contextual line.
+  function trusted(data, fallback) {
+    var msg = data && typeof data.error === 'string' ? data.error.trim() : '';
+    return (global.FWErr && FWErr.looksLikeCopy(msg)) ? msg : fallback;
+  }
+
   function mapError(status, data) {
     if (status === 401) return 'Sign in to use the career switch advisor.';
-    if (status === 429) return data.error || 'Too many requests. Try again in a few minutes.';
-    if (status === 502) return data.error || 'Advisor is busy, try again shortly.';
-    return data.error || 'Something went wrong. Try again.';
+    if (status === 429) return trusted(data, 'Too many requests. Try again in a few minutes.');
+    if (status === 502) return trusted(data, 'Advisor is busy, try again shortly.');
+    return trusted(data, 'Something went wrong. Try again.');
   }
 
   function applySwitchPlaceholder(input) {
@@ -190,6 +197,36 @@
     wrap.scrollTop = wrap.scrollHeight;
   }
 
+  // Pillar W provenance UX: quiet "as of <date>" + source links when the
+  // reply used live web evidence. DOM-built; titles/urls are untrusted.
+  function appendSourcesLine(data) {
+    if (!data || !data.grounded) return;
+    const wrap = document.getElementById('portal-career-chat-messages');
+    if (!wrap) return;
+    const sources = Array.isArray(data.groundedSources) ? data.groundedSources : [];
+    if (!sources.length) return; // no bare "Current as of" chip with nothing to cite
+    const asOf = String(data.groundedAt || '').slice(0, 10);
+    const line = document.createElement('div');
+    line.className = 'career-chat-sources';
+    if (asOf) {
+      const chip = document.createElement('span');
+      chip.textContent = 'Current as of ' + asOf;
+      line.appendChild(chip);
+    }
+    sources.slice(0, 4).forEach((s) => {
+      const url = String((s && s.url) || '');
+      if (!/^https?:\/\//i.test(url)) return;
+      const a = document.createElement('a');
+      a.href = url;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.textContent = String((s && s.title) || url).slice(0, 60);
+      line.appendChild(a);
+    });
+    wrap.appendChild(line);
+    wrap.scrollTop = wrap.scrollHeight;
+  }
+
   function showTyping() {
     const wrap = document.getElementById('portal-career-chat-messages');
     if (!wrap || document.getElementById('portal-career-chat-typing')) return;
@@ -258,7 +295,7 @@
 
     input.disabled = true;
     const sendBtn = document.getElementById('portal-career-chat-send');
-    if (sendBtn) sendBtn.disabled = true;
+    const restoreSend = global.FWButtonBusy ? FWButtonBusy.start(sendBtn) : function () {};
     state.sending = true;
 
     state.history.push({ role: 'user', content: text });
@@ -284,15 +321,18 @@
       const reply = data.reply || 'Done.';
       state.history.push({ role: 'assistant', content: reply });
       appendMsg('assistant', reply);
+      appendSourcesLine(data);
       if (state.history.length > 12) state.history = state.history.slice(-12);
       applyAdvisorResponse(data);
     } catch (err) {
       hideTyping();
-      appendMsg('assistant', err.message || 'Something went wrong. Try again.');
+      appendMsg('assistant', global.FWErr
+        ? FWErr.forUser(err, 'Something went wrong. Try again.')
+        : 'Something went wrong. Try again.');
     } finally {
       state.sending = false;
       input.disabled = false;
-      if (sendBtn) sendBtn.disabled = false;
+      restoreSend();
       input.focus();
     }
   }

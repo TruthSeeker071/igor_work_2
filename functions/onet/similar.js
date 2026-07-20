@@ -8,7 +8,7 @@ import { SIMILARITY_ADJACENT, SIMILARITY_CROSS_SECTOR } from '../_lib/onet/const
 
 export async function onRequest(context) {
   const { request, env } = context;
-  const origin = originFromEnv(env);
+  const origin = originFromEnv(env, request);
   if (request.method === 'OPTIONS') return preflightResponse(origin);
 
   const baseUrl = new URL(request.url).origin;

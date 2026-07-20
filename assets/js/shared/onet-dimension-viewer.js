@@ -151,18 +151,38 @@
     }).join('');
   }
 
+  // "Your strengths" combines personality with background (objective) evidence
+  // using the standardized project weighting: 0.75*personality + 0.25*objective
+  // per dimension. Blend only when the objective vector is actually populated —
+  // mirrors overallFitScore's null handling so accounts without a resume or
+  // academics keep showing their raw quiz personality instead of a scaled-down
+  // (0.75x) version.
+  function blendStrengthsForDisplay(personality, objective) {
+    if (!personality || !personality.values) return personality;
+    var objVals = objective && objective.values ? objective.values : null;
+    var active = objVals && window.FWOnetVectors
+      && typeof FWOnetVectors.isObjectiveVectorActive === 'function'
+      && FWOnetVectors.isObjectiveVectorActive(objVals);
+    if (!active) return personality;
+    var blended = personality.values.map(function (p, i) {
+      return Math.round(0.75 * (Number(p) || 0) + 0.25 * (Number(objVals[i]) || 0));
+    });
+    return Object.assign({}, personality, { values: blended });
+  }
+
   function mountPortalViewer(rootId) {
     var root = document.getElementById(rootId);
     if (!root) return;
     var vecs = readVectorsFromQuiz();
     if (!vecs.personality) {
-      root.innerHTML = '<p class="onet-dim-empty">Complete the quiz to see O*NET dimension scores.</p>';
+      root.innerHTML = '<p class="onet-dim-empty">Complete the quiz to see your strengths.</p>';
       return;
     }
+    var display = blendStrengthsForDisplay(vecs.personality, vecs.objective);
     loadRegistry().then(function (reg) {
-      renderDimensionBars(root, vecs.personality, reg, null);
+      renderDimensionBars(root, display, reg, null);
     }).catch(function () {
-      root.innerHTML = '<p class="onet-dim-empty">Dimension data unavailable.</p>';
+      root.innerHTML = '<p class="onet-dim-empty">Your strengths are unavailable right now.</p>';
     });
   }
 

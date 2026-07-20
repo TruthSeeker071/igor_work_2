@@ -64,6 +64,12 @@ async function main() {
   assert(!flat.includes('cafe uno'), 'unpicked bullet-bearing experience item is omitted');
   console.log('PASS education preserved, unpicked experience omitted');
 
+  // 1c. The omission must not be silent: rebuildFromPicks names the dropped
+  // experience entry in .omittedRoles so the server/client can surface it.
+  assert(Array.isArray(sections.omittedRoles) && sections.omittedRoles.length === 1, `omittedRoles should name exactly 1 dropped entry (got ${JSON.stringify(sections.omittedRoles)})`);
+  assert(sections.omittedRoles[0] === 'Barista', `omittedRoles should name the omitted role (got ${JSON.stringify(sections.omittedRoles)})`);
+  console.log('PASS silently-dropped experience entry surfaced in omittedRoles');
+
   // 2. All-fabricated picks → null (caller falls back to base, no invented items).
   const none = rebuildFromPicks(base, map, [{ ref: 'zzz', text: 'made up' }]);
   assert(none === null, 'all-fabricated picks should yield null');

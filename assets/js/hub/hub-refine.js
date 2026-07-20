@@ -1,17 +1,17 @@
 /**
- * Career Hub — "Sharpen your matches" refine panel.
+ * "Sharpen your matches" — deeper personality questions.
  *
- * The initial quiz is intentionally short (7 questions → fast email capture).
- * The remaining personality questions live HERE, in a collapsible panel on the
- * right of the Career Hub. Answering them and pressing "Update my matches"
- * recomputes industry scores and re-applies them to the map (FWHubCareers
- * mutates each career.fitScore; the dashboard's RAF loop redraws automatically).
+ * Historically a collapsible drawer on the Career Hub; now an embeddable
+ * question set that lives in the POST-SIGNUP quiz flow (quiz.html mounts it
+ * between the signup confetti and the academics + resume steps, and at
+ * quiz.html#sharpen for returning users). No longer loaded on dashboard.html:
+ * hub-academics.js — the only consumer of `FWHubRefine.delta()` in its score
+ * recompute (accumulating-math invariant) — moved into the quiz flow too, so
+ * both now live on quiz.html only.
  *
- * LocalStorage: fw_hub_refine_v1 (refine answers), fw_hub_base_scores_v1 ({ raw } pre-refine scores).
- *
- * Self-contained on purpose: it does NOT load the full quiz app. The refine
- * questions carry their own (compact) industry-scoring maps, adapted from the
- * quiz's QZ_Qs scoring.
+ * LocalStorage: fw_hub_refine_v1 (answers), fw_hub_base_scores_v1 ({ raw }
+ * pre-refine scores), fw_hub_refine_updated_v1 — unchanged, so existing
+ * users' answers survive the move.
  */
 (function () {
   'use strict';
@@ -20,12 +20,9 @@
   var FWH = window.FWHubCareers;
 
   var BASE_KEY  = 'fw_hub_base_scores_v1';
-  var QUIZ_KEY  = (FWH.HUB_QUIZ_KEY) || 'fw_hub_quiz_v1';
-  var ANS_KEY   = 'fw_hub_refine_v1';
+    var ANS_KEY   = 'fw_hub_refine_v1';
   var UPDATED_KEY = 'fw_hub_refine_updated_v1';
 
-  // Industry universe — prefer the canonical QZ_IND if quiz-data.js is loaded,
-  // else fall back to the keys referenced by the career→industry map.
   var IND_KEYS = (typeof QZ_IND !== 'undefined' && QZ_IND)
     ? Object.keys(QZ_IND)
     : (function () {
@@ -35,7 +32,7 @@
         return Object.keys(set);
       })();
 
-  // ── Refine questions (compact, with scoring maps from the quiz) ──────────
+  // ── Questions (compact, with scoring maps from the quiz) ──────────────────
   var Qs = [
     { id: 'subjects', type: 'tags', q: 'What subjects light you up?', sub: 'Tap everything that excites you.',
       tags: [
@@ -79,6 +76,14 @@
         { t: 'Fast-moving company', s: { tech: 2, marketing: 2, startups: 2 } },
         { t: 'Bold founder / builder', s: { startups: 4, creative: 1, tech: 1 } }
       ] },
+    { id: 'lead', type: 'mc', q: 'In a group project, you naturally end up:',
+      opts: [
+        { t: 'Leading — setting direction and making the calls', s: { business: 3, law: 2, government: 1, hr: 1 } },
+        { t: 'Organizing — plans, timelines, keeping it on track', s: { operations: 3, business: 2, finance: 1 } },
+        { t: 'Going deep — owning the hardest technical piece', s: { tech: 3, science: 3, engineering: 2 } },
+        { t: 'Connecting — keeping the team talking and together', s: { social: 3, education: 2, healthcare: 2, hr: 2 } },
+        { t: 'Presenting — telling the story and selling the work', s: { marketing: 3, media: 2, creative: 2 } }
+      ] },
     { id: 'hours', type: 'slider', q: 'How many hours are you willing to work?', ll: 'Light', ml: '9–5', rl: '80+',
       score: function (v) { var x = v / 100; return { finance: x * 3, law: x * 3, startups: x * 3, business: x * 2, healthcare: x * 1, education: (1 - x) * 3, government: (1 - x) * 2, trades: (1 - x) * 1, social: (1 - x) * 2 }; } },
     { id: 'intensity', type: 'slider', q: 'What work intensity energizes you?', ll: 'Calm & steady', rl: 'Pressure-cooker',
@@ -86,7 +91,11 @@
     { id: 'creative', type: 'slider', q: 'Where do you sit: structured vs. creative?', ll: 'Highly structured', rl: 'Highly creative',
       score: function (v) { var c = v / 100; return { creative: c * 3, startups: c * 2, marketing: c * 2, law: (1 - c) * 3, finance: (1 - c) * 2, engineering: (1 - c) * 2 }; } },
     { id: 'social', type: 'slider', q: 'Where do you sit: solo vs. team?', ll: 'Solo worker', rl: 'Team player',
-      score: function (v) { var x = v / 100; return { business: x * 3, healthcare: x * 2, social: x * 2, education: x * 1, marketing: x * 1, tech: (1 - x) * 2, science: (1 - x) * 3 }; } }
+      score: function (v) { var x = v / 100; return { business: x * 3, healthcare: x * 2, social: x * 2, education: x * 1, marketing: x * 1, tech: (1 - x) * 2, science: (1 - x) * 3 }; } },
+    { id: 'risk', type: 'slider', q: 'How much career risk feels right?', ll: 'Security first', rl: 'Big swings',
+      score: function (v) { var x = v / 100; return { startups: x * 4, finance: x * 2, creative: x * 1.5, media: x * 1, government: (1 - x) * 3, education: (1 - x) * 2, healthcare: (1 - x) * 1.5, operations: (1 - x) * 1 }; } },
+    { id: 'detail', type: 'slider', q: 'Big picture or fine detail?', ll: 'Fine detail', rl: 'Big picture',
+      score: function (v) { var x = v / 100; return { business: x * 2, marketing: x * 2, startups: x * 2, media: x * 1, engineering: (1 - x) * 3, science: (1 - x) * 2, finance: (1 - x) * 2, law: (1 - x) * 1 }; } }
     ];
 
   var TOTAL = Qs.length;
@@ -95,8 +104,7 @@
   function readJson(key) { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (_) { return null; } }
   function writeJson(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (_) {} }
 
-  var answers = readJson(ANS_KEY) || {}; // { subjects:[i], workday:i, ..., risk:0-100 }
-  var open = false;
+  var answers = readJson(ANS_KEY) || {};
 
   function isAnswered(q) {
     var a = answers[q.id];
@@ -138,7 +146,7 @@
   function baseScores() {
     var cached = readJson(BASE_KEY);
     if (cached && cached.raw && typeof cached.raw === 'object') return cached.raw;
-    var quiz = readJson(QUIZ_KEY);
+    var quiz = ((window.FWUser && FWUser.getBlob) ? FWUser.getBlob() : null);
     var raw = (quiz && quiz.scoresRaw) ? quiz.scoresRaw : null;
     var fromNormalizedFallback = false;
     if (!raw && quiz && quiz.scores) {
@@ -154,7 +162,7 @@
     if (cached && typeof cached === 'object' && !cached.raw) {
       try { localStorage.removeItem(BASE_KEY); } catch (_) {}
     }
-    var quiz = readJson(QUIZ_KEY);
+    var quiz = ((window.FWUser && FWUser.getBlob) ? FWUser.getBlob() : null);
     if (quiz && quiz.scoresRaw) {
       var again = readJson(BASE_KEY);
       if (!again || !again.raw || again.fromNormalizedFallback) {
@@ -173,9 +181,12 @@
       intensity: typeof answers.intensity === 'number' ? answers.intensity : null,
       creative: typeof answers.creative === 'number' ? answers.creative : null,
       social: typeof answers.social === 'number' ? answers.social : null,
+      risk: typeof answers.risk === 'number' ? answers.risk : null,
+      detail: typeof answers.detail === 'number' ? answers.detail : null,
       workday: typeof answers.workday === 'number' ? answers.workday : null,
       problem: typeof answers.problem === 'number' ? answers.problem : null,
       path: typeof answers.path === 'number' ? answers.path : null,
+      lead: typeof answers.lead === 'number' ? answers.lead : null,
       subjects: [],
     };
     if (subjQ && Array.isArray(answers.subjects)) {
@@ -202,7 +213,7 @@
     var onetActive = window.FWOnetHub && FWOnetHub.isReady && FWOnetHub.isReady();
     if (!onetActive && typeof FWH.applyQuizScores === 'function') FWH.applyQuizScores(norm);
 
-    var quiz = readJson(QUIZ_KEY) || {};
+    var quiz = ((window.FWUser && FWUser.getBlob) ? FWUser.getBlob() : null) || {};
     var oldScores = (window.FWSectorFitSheet && typeof FWSectorFitSheet.getCanonicalScores === 'function')
       ? FWSectorFitSheet.getCanonicalScores(quiz)
       : Object.assign({}, quiz.scores || {});
@@ -219,9 +230,10 @@
     if (window.FWOnetVectors && typeof FWOnetVectors.persistQuizVectors === 'function') {
       quiz = FWOnetVectors.persistQuizVectors(quiz, { sync: true });
     } else {
-      writeJson(QUIZ_KEY, quiz);
+      if (window.FWUser) FWUser.putBlob(quiz);
     }
     writeJson(ANS_KEY, answers);
+    writeJson(UPDATED_KEY, true);
     if (window.FWOnetHub && typeof FWOnetHub.refreshPersonalityFromQuiz === 'function') {
       FWOnetHub.refreshPersonalityFromQuiz();
       if (typeof FWOnetHub.invalidateViewport === 'function') FWOnetHub.invalidateViewport();
@@ -229,7 +241,7 @@
     try { window.dispatchEvent(new CustomEvent('marco-refresh')); } catch (_) {}
   }
 
-  // ── Rendering ──────────────────────────────────────────────────────────────
+  // ── Embedded rendering ─────────────────────────────────────────────────────
   function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
   function questionHtml(q, qi) {
@@ -239,13 +251,13 @@
       var picked = answers[q.id] || [];
       body = '<div class="hr-tags">' + q.tags.map(function (t, i) {
         var sel = picked.indexOf(i) !== -1 ? ' sel' : '';
-        return '<button class="hr-tag' + sel + '" data-qi="' + qi + '" data-i="' + i + '" data-act="tag">' + esc(t.t) + '</button>';
+        return '<button type="button" class="hr-tag' + sel + '" data-qi="' + qi + '" data-i="' + i + '" data-act="tag">' + esc(t.t) + '</button>';
       }).join('') + '</div>';
     } else if (q.type === 'mc') {
       var sel2 = answers[q.id];
       body = '<div class="hr-opts">' + q.opts.map(function (o, i) {
         var s = sel2 === i ? ' sel' : '';
-        return '<button class="hr-opt' + s + '" data-qi="' + qi + '" data-i="' + i + '" data-act="mc">' + esc(o.t) + '</button>';
+        return '<button type="button" class="hr-opt' + s + '" data-qi="' + qi + '" data-i="' + i + '" data-act="mc">' + esc(o.t) + '</button>';
       }).join('') + '</div>';
     } else if (q.type === 'slider') {
       var v = typeof answers[q.id] === 'number' ? answers[q.id] : 50;
@@ -258,147 +270,104 @@
     return '<div class="hr-q' + (isAnswered(q) ? ' answered' : '') + '">' + head + body + '</div>';
   }
 
-  function panelHtml() {
-    var done = answeredCount();
-    return ''
-      + '<div class="hr-head">'
-      +   '<div class="hr-head-title">Sharpen your matches</div>'
-      +   '<button class="hr-close" data-act="close" aria-label="Close">✕</button>'
-      + '</div>'
-      + '<div class="hr-sub">Answer a few more — your career map updates instantly.</div>'
-      + '<div class="hr-prog"><div class="hr-prog-fill" style="width:' + Math.round(done / TOTAL * 100) + '%"></div></div>'
-      + '<div class="hr-prog-lbl">' + done + ' of ' + TOTAL + ' answered</div>'
-      + '<div class="hr-body">' + Qs.map(questionHtml).join('') + '</div>'
-      + '<div class="hr-foot">'
-      +   '<button class="hr-update" data-act="update"' + (done ? '' : ' disabled') + '>Update my matches</button>'
-      // Revealed only after the first "Update my matches" — keeps the initial view
-      // focused on the 8 questions instead of overwhelming with a second CTA.
-      +   '<button class="hr-next-academics' + (readJson(UPDATED_KEY) ? '' : ' hr-hidden') + '" data-act="academics">Next: Academic profile <span aria-hidden="true">→</span></button>'
-      + '</div>';
+  // Minimal self-injected styles so the embed works on pages that don't load
+  // hub-dashboard.css (the quiz). Scoped under .hr-embed.
+  var EMBED_CSS = ''
+    + '.hr-embed{text-align:left;max-width:680px;margin:0 auto}'
+    + '.hr-embed .hr-prog{height:6px;border-radius:3px;background:rgb(var(--border,127 127 127)/0.35);overflow:hidden;margin:14px 0 4px}'
+    + '.hr-embed .hr-prog-fill{height:100%;border-radius:3px;background:rgb(var(--primary,237 106 44));transition:width .35s cubic-bezier(.22,1,.36,1)}'
+    + '.hr-embed .hr-prog-lbl{font-size:12px;opacity:.65;margin-bottom:18px}'
+    + '.hr-embed .hr-q{margin:0 0 26px;padding:18px 20px;border:1px solid rgb(var(--border,127 127 127)/0.5);border-radius:14px;background:rgb(var(--surface,255 255 255)/0.6);transition:border-color .25s,box-shadow .25s}'
+    + '.hr-embed .hr-q.answered{border-color:rgb(var(--primary,237 106 44)/0.45);box-shadow:0 2px 14px rgb(var(--primary,237 106 44)/0.08)}'
+    + '.hr-embed .hr-q-title{font-weight:600;font-size:1.02rem;margin-bottom:4px}'
+    + '.hr-embed .hr-q-sub{font-size:.85rem;opacity:.65;margin-bottom:8px}'
+    + '.hr-embed .hr-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}'
+    + '.hr-embed .hr-tag{padding:7px 12px;border-radius:999px;border:1px solid rgb(var(--border,127 127 127)/0.6);background:transparent;color:inherit;font-size:.85rem;cursor:pointer;transition:transform .15s,border-color .2s,background .2s}'
+    + '.hr-embed .hr-tag:hover{transform:translateY(-1px)}'
+    + '.hr-embed .hr-tag.sel{border-color:rgb(var(--primary,237 106 44));background:rgb(var(--primary,237 106 44)/0.14)}'
+    + '.hr-embed .hr-opts{display:flex;flex-direction:column;gap:8px;margin-top:10px}'
+    + '.hr-embed .hr-opt{padding:11px 14px;border-radius:10px;border:1px solid rgb(var(--border,127 127 127)/0.6);background:transparent;color:inherit;text-align:left;font-size:.92rem;cursor:pointer;transition:transform .15s,border-color .2s,background .2s}'
+    + '.hr-embed .hr-opt:hover{transform:translateY(-1px)}'
+    + '.hr-embed .hr-opt.sel{border-color:rgb(var(--primary,237 106 44));background:rgb(var(--primary,237 106 44)/0.14)}'
+    + '.hr-embed .hr-slider{width:100%;margin-top:10px;accent-color:rgb(var(--primary,237 106 44))}'
+    + '.hr-embed .hr-slider-labels{display:flex;justify-content:space-between;font-size:.78rem;opacity:.65;margin-top:10px}';
+
+  function ensureEmbedCss() {
+    if (document.getElementById('hr-embed-css')) return;
+    var st = document.createElement('style');
+    st.id = 'hr-embed-css';
+    st.textContent = EMBED_CSS;
+    document.head.appendChild(st);
   }
 
-  var toggleBtn, panel, toast;
-
-  function refreshProgress() {
-    if (!panel) return;
-    var done = answeredCount();
-    var fill = panel.querySelector('.hr-prog-fill');
-    var lbl = panel.querySelector('.hr-prog-lbl');
-    var upd = panel.querySelector('.hr-update');
-    if (fill) fill.style.width = Math.round(done / TOTAL * 100) + '%';
-    if (lbl) lbl.textContent = done + ' of ' + TOTAL + ' answered';
-    if (upd) upd.disabled = !done;
-    if (toggleBtn) {
-      var updated = !!readJson(UPDATED_KEY);
-      var pending = !updated && done < TOTAL;
-      toggleBtn.classList.toggle('hr-toggle-hint', pending);
-    }
-  }
-
-  function showToast(msg) {
-    if (!toast) return;
-    toast.textContent = msg;
-    toast.classList.add('show');
-    clearTimeout(toast._t);
-    toast._t = setTimeout(function () { toast.classList.remove('show'); }, 2200);
-  }
-
-  function rerenderBody() { if (panel) { panel.querySelector('.hr-body').innerHTML = Qs.map(questionHtml).join(''); refreshProgress(); } }
-
-  function onPanelClick(e) {
-    var el = e.target.closest('[data-act]');
-    if (!el) return;
-    var act = el.getAttribute('data-act');
-    if (act === 'close') { setOpen(false); return; }
-    if (act === 'academics') { if (window.FWHubAcademics) FWHubAcademics.open(); else setOpen(false); return; }
-    if (act === 'update') {
-      writeJson(UPDATED_KEY, true); applyAndPersist(); showToast('Matches updated');
-      var nextBtn = panel.querySelector('.hr-next-academics');
-      if (nextBtn) nextBtn.classList.remove('hr-hidden');   // reveal the Academics CTA
-      return;
-    }
-    if (act === 'tag') {
-      var qi = +el.getAttribute('data-qi'), i = +el.getAttribute('data-i'), q = Qs[qi];
-      var arr = Array.isArray(answers[q.id]) ? answers[q.id].slice() : [];
-      var pos = arr.indexOf(i);
-      if (pos !== -1) arr.splice(pos, 1); else arr.push(i);
-      answers[q.id] = arr;
-      el.classList.toggle('sel');
-      el.closest('.hr-q').classList.toggle('answered', arr.length > 0);
-      writeJson(ANS_KEY, answers); refreshProgress();
-      return;
-    }
-    if (act === 'mc') {
-      var qi2 = +el.getAttribute('data-qi'), i2 = +el.getAttribute('data-i'), q2 = Qs[qi2];
-      answers[q2.id] = i2;
-      var opts = el.parentNode.querySelectorAll('.hr-opt');
-      for (var k = 0; k < opts.length; k++) opts[k].classList.toggle('sel', opts[k] === el);
-      el.closest('.hr-q').classList.add('answered');
-      writeJson(ANS_KEY, answers); refreshProgress();
-      return;
-    }
-  }
-
-  function onPanelInput(e) {
-    var el = e.target.closest('[data-act="slider"]');
-    if (!el) return;
-    var qi = +el.getAttribute('data-qi'), q = Qs[qi];
-    answers[q.id] = +el.value;
-    el.classList.add('hr-slider-on');
-    el.closest('.hr-q').classList.add('answered');
-    writeJson(ANS_KEY, answers); refreshProgress();
-  }
-
-  function setOpen(v) {
-    open = v;
-    if (open && window.FWHubDashboard && typeof FWHubDashboard.closePanel === 'function') {
-      FWHubDashboard.closePanel();
-    }
-    if (open && window.FWHubAcademics && typeof FWHubAcademics.close === 'function') FWHubAcademics.close();
-    panel.classList.toggle('open', open);
-    toggleBtn.classList.toggle('open', open);
-    toggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
-  }
-
-  function build() {
+  function mount(container, opts) {
+    opts = opts || {};
     migrateLegacyBase();
-
-    toggleBtn = document.createElement('button');
-    toggleBtn.className = 'hr-toggle';
-    toggleBtn.setAttribute('aria-expanded', 'false');
-    toggleBtn.innerHTML = '<span class="hr-toggle-label">Sharpen matches</span>';
-    toggleBtn.addEventListener('click', function () { setOpen(!open); });
-
-    panel = document.createElement('aside');
-    panel.className = 'hr-panel';
-    panel.innerHTML = panelHtml();
-    panel.addEventListener('click', onPanelClick);
-    panel.addEventListener('input', onPanelInput);
-
-    toast = document.createElement('div');
-    toast.className = 'hr-toast';
-
-    var slot = document.getElementById('hub-refine-slot');
-    (slot || document.body).appendChild(toggleBtn);
-    document.body.appendChild(panel);
-    document.body.appendChild(toast);
-
-    refreshProgress();
-
-    window.FWHubRefine = {
-      open: function () { setOpen(true); },
-      close: function () { setOpen(false); },
-      // Exposed so the academics panel can fold this delta in and the two panels'
-      // contributions union (instead of clobbering the shared fw_hub_quiz_v1.scores).
-      delta: function () { return refineDelta(); }
-    };
-
-    var params = new URLSearchParams(window.location.search);
-    if (params.get('refine') === 'open' || window.location.hash === '#refine') {
-      setOpen(true);
+    ensureEmbedCss();
+    container.classList.add('hr-embed');
+    function progHtml() {
+      var done = answeredCount();
+      return '<div class="hr-prog"><div class="hr-prog-fill" style="width:' + Math.round(done / TOTAL * 100) + '%"></div></div>'
+        + '<div class="hr-prog-lbl">' + done + ' of ' + TOTAL + ' answered</div>';
     }
+    container.innerHTML = '<div class="hr-prog-wrap">' + progHtml() + '</div>'
+      + '<div class="hr-body">' + Qs.map(questionHtml).join('') + '</div>';
+
+    function refresh() {
+      var wrap = container.querySelector('.hr-prog-wrap');
+      if (wrap) wrap.innerHTML = progHtml();
+      if (typeof opts.onProgress === 'function') opts.onProgress(answeredCount(), TOTAL);
+    }
+
+    container.addEventListener('click', function (e) {
+      var el = e.target.closest('[data-act]');
+      if (!el) return;
+      var act = el.getAttribute('data-act');
+      if (act === 'tag') {
+        var qi = +el.getAttribute('data-qi'), i = +el.getAttribute('data-i'), q = Qs[qi];
+        var arr = Array.isArray(answers[q.id]) ? answers[q.id].slice() : [];
+        var pos = arr.indexOf(i);
+        if (pos !== -1) arr.splice(pos, 1); else arr.push(i);
+        answers[q.id] = arr;
+        el.classList.toggle('sel');
+        el.closest('.hr-q').classList.toggle('answered', arr.length > 0);
+        writeJson(ANS_KEY, answers); refresh();
+      } else if (act === 'mc') {
+        var qi2 = +el.getAttribute('data-qi'), i2 = +el.getAttribute('data-i'), q2 = Qs[qi2];
+        answers[q2.id] = i2;
+        var mcOpts = el.parentNode.querySelectorAll('.hr-opt');
+        for (var k = 0; k < mcOpts.length; k++) mcOpts[k].classList.toggle('sel', mcOpts[k] === el);
+        el.closest('.hr-q').classList.add('answered');
+        writeJson(ANS_KEY, answers); refresh();
+      }
+    });
+    container.addEventListener('input', function (e) {
+      var el = e.target.closest('[data-act="slider"]');
+      if (!el) return;
+      var qi = +el.getAttribute('data-qi'), q = Qs[qi];
+      answers[q.id] = +el.value;
+      el.classList.add('hr-slider-on');
+      el.closest('.hr-q').classList.add('answered');
+      writeJson(ANS_KEY, answers); refresh();
+    });
+    refresh();
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', build);
-  else build();
+  window.FWHubRefine = {
+    mount: mount,
+    // Persists the sharpened scores through the canonical writers
+    // (sector-fit-sheet patches + persistQuizVectors sync).
+    commit: function () { applyAndPersist(); },
+    answeredCount: answeredCount,
+    total: TOTAL,
+    isComplete: function () { return answeredCount() >= TOTAL; },
+    // hub-academics.js folds this delta into its own recompute — keep exported.
+    delta: function () { return refineDelta(); },
+    // hub-academics.js's embed shares the .hr-embed base styles — keep exported.
+    ensureEmbedCss: ensureEmbedCss,
+    // Legacy drawer API — the drawer is gone; keep harmless no-ops so old
+    // callers (hub-dashboard closePanel chain, academics setOpen) never throw.
+    open: function () {},
+    close: function () {}
+  };
 })();

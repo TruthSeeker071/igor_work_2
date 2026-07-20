@@ -10,8 +10,8 @@
 // Ephemeral chat state also lives in KV under the prefixes below.
 
 import { loadDossier } from '../_lib.js';
+import { loadUserBlob } from './user.js';
 import {
-  loadQuizProfile,
   loadRoadmap,
   loadCareerAnalyses,
   ANALYSIS_FRESH_MS,
@@ -48,7 +48,7 @@ export function createProfileCache(env, email) {
   let dossierP;
   let roadmapP;
   return {
-    getQuiz: () => quizP ??= loadQuizProfile(env, email).catch(() => null),
+    getQuiz: () => quizP ??= loadUserBlob(env, email).catch(() => null),
     getDossier: () => dossierP ??= loadDossier(env, email).catch(() => ''),
     getRoadmap: () => roadmapP ??= loadRoadmap(env, email).catch(() => null),
   };
@@ -57,7 +57,7 @@ export function createProfileCache(env, email) {
 // Load every profile sub-resource for a session email in parallel.
 export async function loadFullProfile(env, email) {
   const [quiz, dossier, roadmap, analyses] = await Promise.all([
-    loadQuizProfile(env, email).catch(() => null),
+    loadUserBlob(env, email).catch(() => null),
     loadDossier(env, email).catch(() => null),
     loadRoadmap(env, email).catch(() => null),
     loadCareerAnalyses(env, email).catch(() => []),

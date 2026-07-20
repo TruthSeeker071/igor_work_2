@@ -20,14 +20,25 @@
     return normalizeSlug(a) === normalizeSlug(b);
   }
 
+  // Tier boundaries are canonical in FWOnetMath.fitTier (calibrated to the
+  // mean-centered cosine scale); this only owns the color per tier name.
+  const RARITY_COLORS = {
+    mythic: '#FFD24A', legendary: '#F2A82E', epic: '#BD4AE8',
+    rare: '#3FAEF0', uncommon: '#5ED152', common: '#9AA0AD',
+  };
+  function localFitTier(s) {
+    s = Number(s) || 0;
+    if (s >= 66) return { tier: 'mythic' };
+    if (s >= 56) return { tier: 'legendary' };
+    if (s >= 46) return { tier: 'epic' };
+    if (s >= 34) return { tier: 'rare' };
+    if (s >= 20) return { tier: 'uncommon' };
+    return { tier: 'common' };
+  }
   function fitRarity(score) {
-    const s = Number(score) || 0;
-    if (s >= 90) return { tier: 'mythic', base: '#FFD24A' };
-    if (s >= 76) return { tier: 'legendary', base: '#F2A82E' };
-    if (s >= 61) return { tier: 'epic', base: '#BD4AE8' };
-    if (s >= 41) return { tier: 'rare', base: '#3FAEF0' };
-    if (s >= 21) return { tier: 'uncommon', base: '#5ED152' };
-    return { tier: 'common', base: '#9AA0AD' };
+    const t = (global.FWOnetMath && FWOnetMath.fitTier)
+      ? FWOnetMath.fitTier(score) : localFitTier(score);
+    return { tier: t.tier, base: RARITY_COLORS[t.tier] || RARITY_COLORS.common };
   }
 
   function quizData() {
@@ -103,8 +114,12 @@
     if (!q || !q.scores || !global.FWOnetVectors
       || typeof FWOnetVectors.rankOnetCareersFromVectors !== 'function') return;
     FWOnetVectors.rankOnetCareersFromVectors({ scores: q.scores, limit: limit || 12 })
-      .then(function () {
-        if (global.FWPortal && typeof FWPortal.refreshPortalCareerUi === 'function') {
+      .then(function (ranked) {
+        // Only re-render when the build actually produced data. Refreshing on
+        // a failed build re-enters this kick from the render pass — an
+        // infinite render→fetch loop whenever the vector endpoint is down.
+        if (ranked && ranked.length
+          && global.FWPortal && typeof FWPortal.refreshPortalCareerUi === 'function') {
           FWPortal.refreshPortalCareerUi();
         }
       })
@@ -435,12 +450,26 @@
             roadmapRetargeted: !!(data && data.roadmapRetargeted),
             source: opts.source,
           });
-          if (data && data.roadmapRetargeted) {
+          var pivot = data && data.pivot;
+          // Any real pivot (a career-vs-career transfer %) opens the summary
+          // modal — the per-coordinate breakdown is enrichment shown when the
+          // objective vector is populated, but the modal renders fine without it
+          // (it has its own empty-breakdown fallback). Gating the whole modal on
+          // a breakdown meant users with an empty objective vector only ever saw
+          // a toast and never the pivot surface at all.
+          var hasPivot = !!(pivot && pivot.transferPct != null);
+          // The modal already tells the user their roadmap was reordered, so the
+          // retarget toast is only for the no-pivot case (e.g. first focus).
+          if (data && data.roadmapRetargeted && !hasPivot) {
+            var toastMsg = 'Your plan now targets ' + opts.name + '.';
             if (global.FWFwToast && typeof FWFwToast.show === 'function') {
-              FWFwToast.show('Your plan now targets ' + opts.name + '.');
+              FWFwToast.show(toastMsg);
             } else if (global.FWRoadmap && typeof FWRoadmap.showToast === 'function') {
-              FWRoadmap.showToast('Your plan now targets ' + opts.name + '.');
+              FWRoadmap.showToast(toastMsg);
             }
+          }
+          if (hasPivot) {
+            try { showPivotSummary(pivot, current && current.name, opts.name); } catch (_) {}
           }
           return data;
         });
@@ -475,9 +504,103 @@
     return doSwitch(payload);
   }
 
+  // ── Pivot summary surface ─────────────────────────────────────────────────
+  // Renders the quantified pivot breakdown returned by recordCareerFocus so a
+  // career switch shows what carries over vs. what's new — not just a toast %.
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function injectPivotCss() {
+    if (document.getElementById('fw-pv-css')) return;
+    var el = document.createElement('style');
+    el.id = 'fw-pv-css';
+    el.textContent = ''
+      + '.fw-pv-overlay{position:fixed;inset:0;z-index:1250;background:rgba(8,10,18,.72);display:flex;align-items:center;justify-content:center;padding:18px;opacity:0;transition:opacity .25s ease;}'
+      + '.fw-pv-overlay.show{opacity:1;}'
+      + '.fw-pv-modal{background:var(--surface-solid,#141821);color:inherit;border:1px solid rgba(255,255,255,.1);border-radius:16px;max-width:520px;width:100%;max-height:88vh;overflow-y:auto;padding:24px 24px 22px;position:relative;transform:translateY(12px) scale(.98);transition:transform .25s ease;}'
+      + '.fw-pv-overlay.show .fw-pv-modal{transform:none;}'
+      + '.fw-pv-close{position:absolute;top:10px;right:14px;background:none;border:none;color:inherit;font-size:22px;cursor:pointer;opacity:.7;line-height:1;}'
+      + '.fw-pv-close:hover{opacity:1;}'
+      + '.fw-pv-eye{font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.6;margin-bottom:4px;}'
+      + '.fw-pv-title{margin:0 0 14px;font-size:19px;font-weight:700;line-height:1.25;}'
+      + '.fw-pv-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:2px;}'
+      + '.fw-pv-stats-solo{grid-template-columns:1fr;}'
+      + '.fw-pv-stat{border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:12px 14px;}'
+      + '.fw-pv-stat-num{font-size:25px;font-weight:700;line-height:1;}'
+      + '.fw-pv-stat-lbl{font-size:11.5px;opacity:.72;margin-top:6px;line-height:1.35;}'
+      + '.fw-pv-group{margin-top:15px;}'
+      + '.fw-pv-group-head{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;margin-bottom:8px;}'
+      + '.fw-pv-dot{width:9px;height:9px;border-radius:50%;flex:none;}'
+      + '.fw-pv-chips{display:flex;flex-wrap:wrap;gap:6px;}'
+      + '.fw-pv-chip{font-size:12px;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);}'
+      + '.fw-pv-transfers .fw-pv-dot{background:#4caf72;}'
+      + '.fw-pv-partial .fw-pv-dot{background:#e0a93a;}'
+      + '.fw-pv-newgap .fw-pv-dot{background:#5b9bf0;}'
+      + '.fw-pv-note{margin:15px 0 0;font-size:12.5px;opacity:.7;line-height:1.45;}'
+      + '.fw-pv-cta{margin-top:18px;width:100%;padding:11px;border-radius:10px;border:none;background:rgb(var(--primary));color:#fff;font-size:14px;font-weight:600;cursor:pointer;}'
+      + '.fw-pv-cta:hover{filter:brightness(1.06);}';
+    (document.head || document.documentElement).appendChild(el);
+  }
+
+  var PIVOT_GROUPS = [
+    { key: 'transfers', cls: 'fw-pv-transfers', label: 'Directly transferable', help: 'carry these straight over' },
+    { key: 'partial',   cls: 'fw-pv-partial',   label: 'Partially transferable', help: 'a head start to build on' },
+    { key: 'new_gap',   cls: 'fw-pv-newgap',    label: 'New strengths to build',  help: 'the focus of your new plan' },
+  ];
+
+  function showPivotSummary(pivot, fromName, toName) {
+    if (!pivot || !document.body) return;
+    var breakdown = Array.isArray(pivot.breakdown) ? pivot.breakdown : [];
+    injectPivotCss();
+    var overlay = document.createElement('div');
+    overlay.className = 'fw-pv-overlay';
+    var groupsHtml = PIVOT_GROUPS.map(function (g) {
+      var items = breakdown.filter(function (b) { return b.status === g.key; });
+      if (!items.length) return '';
+      return '<div class="fw-pv-group ' + g.cls + '">'
+        + '<div class="fw-pv-group-head"><span class="fw-pv-dot"></span>' + g.label
+        + ' <span style="opacity:.55;font-weight:400">· ' + esc(g.help) + '</span></div>'
+        + '<div class="fw-pv-chips">'
+        + items.map(function (b) { return '<span class="fw-pv-chip">' + esc(b.name) + '</span>'; }).join('')
+        + '</div></div>';
+    }).join('');
+    var overlapHtml = pivot.objectiveOverlapPct != null
+      ? '<div class="fw-pv-stat"><div class="fw-pv-stat-num">' + pivot.objectiveOverlapPct + '%</div>'
+        + '<div class="fw-pv-stat-lbl">of your background already lines up with this path</div></div>'
+      : '';
+    overlay.innerHTML = '<div class="fw-pv-modal" role="dialog" aria-modal="true" aria-label="Career pivot summary">'
+      + '<button type="button" class="fw-pv-close" aria-label="Close">&times;</button>'
+      + '<div class="fw-pv-eye">Your pivot</div>'
+      + '<h3 class="fw-pv-title">' + esc(fromName || 'Your last focus') + ' &rarr; ' + esc(toName || 'new target') + '</h3>'
+      + '<div class="fw-pv-stats' + (overlapHtml ? '' : ' fw-pv-stats-solo') + '">'
+      + '<div class="fw-pv-stat"><div class="fw-pv-stat-num">' + (pivot.transferPct != null ? pivot.transferPct + '%' : '—') + '</div>'
+      + '<div class="fw-pv-stat-lbl">of what you\'ve built carries over to ' + esc(toName || 'the new role') + '</div></div>'
+      + overlapHtml
+      + '</div>'
+      + (groupsHtml || '<p class="fw-pv-note">Your new plan is being tuned to this target.</p>')
+      + '<p class="fw-pv-note">Your roadmap has been reordered to close the biggest gaps first.</p>'
+      + '<button type="button" class="fw-pv-cta">Got it</button>'
+      + '</div>';
+    document.body.appendChild(overlay);
+    requestAnimationFrame(function () { overlay.classList.add('show'); });
+    function closePv() {
+      overlay.classList.remove('show');
+      document.removeEventListener('keydown', onPvKey);
+      setTimeout(function () { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 250);
+    }
+    function onPvKey(e) { if (e.key === 'Escape') closePv(); }
+    overlay.querySelector('.fw-pv-close').addEventListener('click', closePv);
+    overlay.querySelector('.fw-pv-cta').addEventListener('click', closePv);
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) closePv(); });
+    document.addEventListener('keydown', onPvKey);
+  }
+
   global.FWCareerTarget = {
     formatFitPercent: formatFitPercent,
     fitRarity: fitRarity,
+    showPivotSummary: showPivotSummary,
     resolveTargetCareer: resolveTargetCareer,
     rankedCareerMatches: rankedCareerMatches,
     rankedCareerMatchesAsync: rankedCareerMatchesAsync,

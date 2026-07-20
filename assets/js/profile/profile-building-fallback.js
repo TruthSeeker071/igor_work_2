@@ -108,7 +108,6 @@
     var ctx = {};
     if (!quiz) return ctx;
     if (quiz.name) ctx.userName = quiz.name;
-    if (quiz.archetype) ctx.archetype = quiz.archetype;
     var zoneLabels = topIndustryLabelsFromZoneFits(3);
     if (zoneLabels.length) {
       ctx.topIndustries = zoneLabels;

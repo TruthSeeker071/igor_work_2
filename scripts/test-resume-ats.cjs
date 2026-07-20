@@ -141,6 +141,43 @@ async function main() {
     assert.deepStrictEqual(result.resume, sample, 'normalized resume must deep-equal the fixture');
   });
 
+  // (f) "never invent a number" server-side backstop (fix plan 2.2):
+  // a fabricated stat with no trace in the evidence corpus is stripped and
+  // converted into a clarifying question, never shipped verbatim.
+  const builderMod = await import(path.join(REPO, 'functions/resume-builder.js'));
+  group('enforceTraceableNumbers strips fabricated stats into questions', () => {
+    const corpus = 'Ran the poker club newsletter. Organized weekly sessions for members. GPA 3.8.';
+    const out = builderMod.enforceTraceableNumbers([
+      { text: 'Grew newsletter readership 400% to 5,000 subscribers', dims: [], evidence: 'dossier' },
+      { text: 'Maintained a 3.8 GPA while running weekly sessions', dims: [], evidence: 'dossier' },
+    ], corpus);
+    const joined = out.bullets.map((b) => b.text).join(' | ');
+    assert.ok(!joined.includes('400'), 'fabricated 400% removed');
+    assert.ok(!joined.includes('5,000') && !joined.includes('5000'), 'fabricated subscriber count removed');
+    assert.ok(joined.includes('3.8'), 'traceable GPA kept');
+    assert.ok(out.questions.length >= 1 && out.questions[0].includes('?'), 'fabricated stat became a clarifying question');
+    const prose = builderMod.stripUntracedNumbersFromText('Improved outcomes by 60% across 12 projects with a 3.8 GPA', corpus);
+    assert.ok(!prose.includes('60') && !prose.includes('12'), 'summary numbers also stripped');
+    assert.ok(prose.includes('3.8'), 'traceable summary number kept');
+  });
+
+  // (g) PUT path keeps previously-validated sim_trial bullets (fix plan 2.4):
+  // trialRolesLc === null means "no re-check" (the PUT case), not "strip all".
+  group('sanitizeBullets: null trialRolesLc round-trips sim_trial bullets; list still guards generation', () => {
+    const bullets = [
+      { text: 'Flew the Quant Trader simulation and balanced a live book', dims: [], evidence: 'sim_trial' },
+      { text: 'Analyzed member survey data for the poker club', dims: [], evidence: 'dossier' },
+    ];
+    const onPut = builderMod.sanitizeBullets(bullets, [], null);
+    assert.strictEqual(onPut.length, 2, 'PUT (null) keeps previously-validated sim_trial bullets');
+    assert.strictEqual(onPut[0].evidence, 'sim_trial');
+    const onGenerate = builderMod.sanitizeBullets(bullets, [], ['quant trader']);
+    assert.strictEqual(onGenerate.length, 2, 'generation keeps sim_trial bullets naming a real sim');
+    const fabricated = builderMod.sanitizeBullets(bullets, [], ['other sim']);
+    assert.strictEqual(fabricated.length, 1, 'generation drops sim_trial bullets naming no supplied sim');
+    assert.strictEqual(fabricated[0].evidence, 'dossier');
+  });
+
   if (failures > 0) {
     console.error(`\n${failures} group(s) failed.`);
     process.exit(1);

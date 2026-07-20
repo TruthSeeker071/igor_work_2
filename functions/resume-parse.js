@@ -12,11 +12,14 @@ import {
 import {
   authPreflight,
   authJsonResponse,
+  authErrorResponse,
   optionalSession,
+  checkRateLimit,
+  clientIp,
 } from './_lib/auth.js';
 import { maybeSyncRoadmap } from './_lib/roadmap-sync.js';
+import { loadUserBlob, saveUserBlob } from './_lib/user.js';
 import { maybePatchSectorFitForUser } from './_lib/sector-fit-sheet.js';
-import { loadQuizProfile, saveQuizProfile } from './_lib/auth.js';
 import { applyResumeToObjective } from './_lib/onet/resume-map.js';
 import { patchObjectiveFromResume, mergeObjectiveAiPatch } from './_lib/onet/objective-patch.js';
 import { patchPersonalityFromResume } from './_lib/onet/personality-patch.js';
@@ -183,7 +186,7 @@ function bleedPersonalityAfterObjective(quiz, beforeObjectiveValues) {
 
 async function runResumeEnrichment(env, email, { resumeText, summary, highlights, origin, skipPersonalityEnrichment }) {
   if (skipPersonalityEnrichment) return;
-  const baseUrl = originFromEnv(env);
+  const baseUrl = origin && origin !== '*' ? origin : originFromEnv(env);
   let dossierUpdated = false;
 
   try {
@@ -229,12 +232,12 @@ async function runResumeEnrichment(env, email, { resumeText, summary, highlights
 }
 
 export async function onRequestOptions(context) {
-  return authPreflight(originFromEnv(context.env));
+  return authPreflight(originFromEnv(context.env, context.request));
 }
 
 export async function onRequest(context) {
   const { request, env, waitUntil } = context;
-  const origin = originFromEnv(env);
+  const origin = originFromEnv(env, request);
 
   if (request.method === 'OPTIONS') return authPreflight(origin);
   if (request.method !== 'POST') return authJsonResponse(405, { error: 'Method not allowed' }, origin);
@@ -244,6 +247,16 @@ export async function onRequest(context) {
     payload = await request.json();
   } catch {
     return authJsonResponse(400, { error: 'Invalid JSON body.' }, origin);
+  }
+
+  // Anonymous by design (the quiz flow runs before signup) and each request
+  // can fan out to several Gemini calls including file extraction, so
+  // throttle per-IP before any model work. 20/hour tolerates a campus NAT
+  // while capping anonymous cost abuse.
+  try {
+    await checkRateLimit(env, `resume-parse:${clientIp(request)}`, { max: 20 });
+  } catch (err) {
+    return authErrorResponse(err, origin);
   }
 
   let resumeText = String(payload.resumeText || '').trim().slice(0, MAX_RESUME_CHARS);
@@ -341,8 +354,8 @@ export async function onRequest(context) {
 
     if (email) {
       if (!rulesOnly) dossier = (await loadDossier(env, email)) || '';
-      const baseUrl = originFromEnv(env);
-      const quiz = (await loadQuizProfile(env, email)) || {};
+      const baseUrl = originFromEnv(env, request);
+      const quiz = (await loadUserBlob(env, email)) || {};
       const zoneRes = await fetch(new URL('/data/onet/artifacts/zone-centroids.json', baseUrl).toString());
       const zoneCentroids = zoneRes.ok ? await zoneRes.json() : null;
       if (zoneCentroids) ensureUserVectors(quiz, zoneCentroids);
@@ -410,7 +423,7 @@ export async function onRequest(context) {
         }
       }
 
-      await saveQuizProfile(env, email, quiz);
+      await saveUserBlob(env, email, quiz);
       objectiveVector = quiz.objectiveVector;
       objectiveAiPatchOut = quiz.objectiveAiPatch || null;
       personalityVector = quiz.personalityVector;

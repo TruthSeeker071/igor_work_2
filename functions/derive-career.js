@@ -28,16 +28,17 @@ import {
   stripVectors,
 } from './_lib/derive-career.js';
 import { getDerivedCareers } from './_lib/onet/store.js';
+import { requirePlan } from './_lib/entitlements.js';
 
 const SOC_RE = /^\d{2}-\d{4}\.\d{2}$/;
 
 export async function onRequestOptions(context) {
-  return authPreflight(originFromEnv(context.env));
+  return authPreflight(originFromEnv(context.env, context.request));
 }
 
 export async function onRequest(context) {
   const { request, env } = context;
-  const origin = originFromEnv(env);
+  const origin = originFromEnv(env, request);
   const url = new URL(request.url);
   const baseUrl = url.origin;
 
@@ -72,6 +73,17 @@ export async function onRequest(context) {
       }
 
       const { email } = await requireSession(request, env);
+      // Free/paid merge §1: every derived career is a live Gemini generation —
+      // the natural cost boundary between the free map and Flight Plan.
+      const ent = await requirePlan(env, email, 'premium');
+      if (!ent.ok) {
+        return authJsonResponse(402, {
+          error: 'AI-derived careers are a Flight Plan feature.',
+          upgrade: true,
+          feature: 'derive-career',
+          fragments: [],
+        }, origin);
+      }
       await checkRateLimit(env, `derive:${email}`, { max: RATE_LIMIT_DERIVE_MAX });
 
       const rows = await generateFragmentsForBase(env, context, { baseSoc, email, baseUrl });

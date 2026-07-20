@@ -37,8 +37,8 @@
 
   .coach-updating { display: none; align-items: center; gap: 12px; padding: 14px 28px; background: linear-gradient(90deg, rgba(26,86,219,0.06), rgba(59,130,246,0.06)); border-top: 1px solid var(--border-light); border-bottom: 1px solid var(--border-light); color: var(--q-blue); font-size: 0.875rem; font-weight: 500; }
   .coach-updating.vis { display: flex; }
-  .coach-spinner { width: 16px; height: 16px; border: 2px solid rgba(26,86,219,0.2); border-top-color: var(--q-blue); border-radius: 50%; animation: coach-spin 0.8s linear infinite; }
-  @keyframes coach-spin { to { transform: rotate(360deg); } }
+  /* Size only — .fw-spinner (flightway-theme.css) supplies ring + animation. */
+  .coach-spinner { width: 16px; height: 16px; }
 
   .coach-input-row { display: flex; gap: 10px; padding: 16px 22px 18px; border-top: 1px solid var(--border-light); background: var(--surface-solid); align-items: flex-end; }
   .coach-input { flex: 1; resize: none; min-height: 44px; max-height: 140px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; font-family: inherit; font-size: 1rem; color: var(--text-solid); background: var(--bg-solid); outline: none; transition: border-color var(--transition), background var(--transition); }
@@ -160,7 +160,10 @@
   .role-card:hover .arrow { color: var(--text-solid); gap: 10px; }
 
   section { padding: 120px 40px; }
-  .section-inner { max-width: 1100px; margin: 0 auto; }
+  /* min(px, vw) instead of a bare px cap: vw scales with the CSS-pixel viewport,
+     which grows as the browser zooms out, so the content keeps filling the
+     window at any zoom level instead of staying pinned to a fixed width. */
+  .section-inner { max-width: min(1400px, 94vw); margin: 0 auto; }
   .section-tag { font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.18em; color: var(--text-tertiary); font-weight: 500; margin-bottom: 16px; }
   .section-title { font-family: var(--font-display); font-size: clamp(2rem, 4vw, 3rem); font-weight: 600; line-height: 1.15; letter-spacing: -0.025em; margin-bottom: 20px; max-width: 600px; }
   .section-desc { font-size: 1rem; color: var(--text-secondary); max-width: 500px; line-height: 1.7; font-weight: 300; margin-bottom: 60px; }
@@ -221,7 +224,7 @@
   .testimonial-role { font-size: 0.8125rem; color: var(--text-tertiary); }
 
   footer { padding: 60px clamp(16px, 4vw, 40px); border-top: 1px solid var(--border-light); }
-  .footer-inner { max-width: 1100px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+  .footer-inner { max-width: min(1400px, 94vw); margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
   .footer-left .logo { margin-bottom: 8px; display: block; }
   .footer-left p { font-size: 0.8125rem; color: var(--text-tertiary); }
   .footer-links { display: flex; gap: 28px; }
@@ -237,7 +240,6 @@
   .career-back-link { margin-bottom: 0 !important; padding: 10px 18px; background: transparent; border: 1px solid var(--border-light); border-radius: var(--radius-sm); font-weight: 500; text-decoration: none; }
   .career-back-link:hover { border-color: var(--border); color: var(--text-solid); }
   .career-eyebrow-tag { display: inline-block; white-space: nowrap; }
-  .career-onet-badge { display: inline-block; margin-left: 2px; padding: 2px 8px; border-radius: 999px; font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: rgb(var(--primary)); background: rgba(var(--primary), 0.12); border: 1px solid rgb(var(--primary) / 0.25); vertical-align: middle; }
   .career-hero-eyebrow { margin-bottom: 16px; }
   .career-ai-derived { display: inline-block; margin: 4px 0 10px; padding: 3px 10px; border-radius: 999px; font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: rgb(var(--primary)); background: rgba(var(--primary), 0.12); border: 1px solid rgb(var(--primary) / 0.25); }
   .career-ai-derived[hidden] { display: none !important; }
@@ -253,7 +255,8 @@
   .career-proxy-note { max-width: 720px; margin: 0 auto 12px; padding: 10px 14px 10px 16px; font-size: 0.8125rem; color: var(--text-secondary); line-height: 1.5; text-align: left; border-left: 3px solid #f59e0b; background: rgba(245, 158, 11, 0.08); border-radius: 0 10px 10px 0; }
   .career-proxy-note[hidden] { display: none !important; }
   .skill-pill--loading { opacity: 0.65; font-style: italic; }
-  .skill-pill--skeleton { min-width: 88px; height: 38px; border-color: transparent; background: linear-gradient(90deg, var(--border-light) 0%, rgba(var(--primary), 0.08) 50%, var(--border-light) 100%); background-size: 200% 100%; animation: career-shimmer 1.4s infinite; color: transparent; pointer-events: none; }
+  /* Size only — .fw-skeleton (flightway-theme.css) supplies the shimmer. */
+  .skill-pill--skeleton { min-width: 88px; height: 38px; border-color: transparent; color: transparent; pointer-events: none; }
   .career-onet-block { padding-top: 0; }
   .onet-profile-card { background: var(--surface-solid); border: 1px solid var(--border-light); border-radius: var(--radius); padding: 24px 28px; box-shadow: var(--shadow-sm); }
   .onet-profile-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
@@ -276,7 +279,7 @@
   .career-personal-retry:hover { background: rgba(248, 113, 113, 0.15); }
   @keyframes career-shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
   .fit-analysis-card { background: transparent; border: 1px solid var(--border-light); border-radius: var(--radius); padding: 32px; max-width: 800px; }
-  .fit-analysis-stack { display: flex; flex-direction: column; gap: 16px; max-width: 800px; height: auto; min-height: 0; overflow: visible; }
+  .fit-analysis-stack { display: flex; flex-direction: column; gap: 16px; max-width: min(1400px, 94vw); height: auto; min-height: 0; overflow: visible; }
   .fit-panel { background: var(--surface-solid); border: 1px solid var(--border-light); border-radius: var(--radius); padding: 24px 28px; box-shadow: var(--shadow-sm); height: auto; min-height: 0; overflow: visible; }
   .fit-panel--ai { height: auto; overflow: visible; }
   .fit-panel[hidden] { display: none !important; }
@@ -306,42 +309,9 @@
   .fit-metric-chip-label { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); }
   .fit-metric-chip-value { font-size: 1rem; font-weight: 700; color: var(--text-primary); }
   .fit-subsection { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border-light); }
-  .fit-subsection--cta { border-top: none; padding-top: 4px; }
   .fit-subsection-title { font-size: 0.8125rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); margin: 0 0 12px; }
   .fit-strength-list { display: flex; flex-wrap: wrap; gap: 8px; }
   .fit-strength-pill { display: inline-block; padding: 6px 12px; border-radius: 999px; font-size: 0.8125rem; font-weight: 500; background: rgba(var(--primary), 0.08); border: 1px solid rgb(var(--primary) / 0.15); color: var(--text-primary); }
-  .fit-gap-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-  @media (max-width: 640px) { .fit-gap-grid { grid-template-columns: 1fr; } }
-  .fit-gap-card {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-    padding: 12px 14px;
-    border-radius: var(--radius-sm);
-    background: rgba(var(--primary), 0.06);
-    border: 1px solid rgb(var(--primary) / 0.18);
-    min-width: 0;
-  }
-  .fit-gap-name {
-    font-size: 0.8125rem;
-    font-weight: 600;
-    line-height: 1.4;
-    color: var(--text-primary);
-  }
-  .fit-gap-domain {
-    font-size: 0.6875rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: rgb(var(--primary));
-  }
-  .fit-gap-val {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--text-tertiary);
-    margin-top: 2px;
-  }
   .fit-gaps-track { margin-top: 14px; }
   .fit-track-roadmap-btn {
     display: inline-flex;
@@ -357,16 +327,16 @@
   .fit-quiz-note { font-size: 0.8125rem; color: var(--text-tertiary); line-height: 1.5; margin: 4px 0 0; }
   .day-schedule-note { font-size: 0.8125rem; color: var(--text-tertiary); margin-top: 14px; line-height: 1.5; }
   .timeline-item--skeleton .timeline-content { position: relative; overflow: hidden; min-height: 72px; }
-  .timeline-skeleton-title, .timeline-skeleton-desc { border-radius: 6px; background: linear-gradient(90deg, var(--border-light) 0%, rgba(var(--primary), 0.08) 50%, var(--border-light) 100%); background-size: 200% 100%; animation: career-shimmer 1.4s infinite; }
+  /* Size only — .fw-skeleton (flightway-theme.css) supplies the shimmer. */
+  .timeline-skeleton-title, .timeline-skeleton-desc { border-radius: 6px; }
   .timeline-skeleton-title { height: 14px; width: 55%; margin-bottom: 10px; }
   .timeline-skeleton-desc { height: 36px; width: 92%; }
-  .fit-roadmap-cta { margin-top: 18px; }
   .dual-fit-bars { margin: 12px 0 16px; }
   .dual-fit-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 0.875rem; }
   .dual-fit-label { color: var(--text-secondary); }
   .dual-fit-pct { font-weight: 600; }
   .dual-fit-bar-bg { height: 6px; background: var(--border-light); border-radius: 999px; overflow: hidden; margin-bottom: 12px; }
-  .dual-fit-bar-fill { height: 100%; border-radius: 999px; transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1); }
+  .dual-fit-bar-fill { height: 100%; border-radius: 999px; transition: width 0.45s var(--fw-ease-standard); }
   .dual-fit-bar-fill--personality { background: rgb(var(--primary)); }
   .dual-fit-bar-fill--objective { background: rgb(var(--primary) / 0.82); }
   .dual-fit-bar-fill--readiness { background: rgb(var(--primary) / 0.55); }
@@ -377,60 +347,10 @@
   .career-related-chip:hover { border-color: rgb(var(--primary) / 0.4); box-shadow: var(--shadow-sm); }
   .career-related-chip-name { font-weight: 600; font-size: 0.875rem; }
   .career-related-chip-badge { font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); }
-  .bring-summary { max-width: 800px; font-size: 1rem; color: var(--text-secondary); line-height: 1.75; margin: 0 0 18px; }
-  .bring-chips { display: flex; flex-wrap: wrap; gap: 12px; max-width: 800px; }
-  .bring-chip {
-    flex: 1 1 220px;
-    min-width: 200px;
-    padding: 14px 16px;
-    border-radius: var(--radius);
-    border: 1px solid var(--border-light);
-    background: rgb(var(--primary) / 0.05);
-    color: var(--text-primary);
-    font-size: 0.875rem;
-    line-height: 1.5;
-    transition: border-color 0.18s, box-shadow 0.18s, transform 0.18s;
-  }
-  .bring-chip:hover { border-color: rgb(var(--primary) / 0.4); box-shadow: var(--shadow-sm); transform: translateY(-1px); }
-  [data-theme="dark"] .bring-chip { background: rgb(var(--primary) / 0.1); }
-  .entry-intro { max-width: 800px; font-size: 1rem; color: var(--text-secondary); line-height: 1.75; margin: 0 0 20px; }
-  .entry-steps { list-style: none; margin: 0; padding: 0; max-width: 800px; display: flex; flex-direction: column; gap: 12px; }
-  .entry-step {
-    display: flex;
-    gap: 16px;
-    align-items: flex-start;
-    padding: 18px 20px;
-    border-radius: var(--radius);
-    border: 1px solid var(--border-light);
-    background: var(--surface-solid);
-    box-shadow: var(--shadow-sm);
-    transition: border-color 0.18s, box-shadow 0.18s, transform 0.18s;
-  }
-  .entry-step:hover { border-color: rgb(var(--primary) / 0.35); box-shadow: var(--shadow-md); transform: translateY(-1px); }
-  .entry-step-num {
-    flex-shrink: 0;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    background: rgb(var(--primary));
-    color: rgb(var(--primary-fg));
-    font-weight: 700;
-    font-size: 0.875rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 0 0 4px rgb(var(--primary) / 0.12);
-  }
-  .entry-step-body { min-width: 0; padding-top: 2px; }
-  .entry-step-body h5 { font-size: 1rem; font-weight: 600; margin: 2px 0 4px; color: var(--text-primary); }
-  .entry-step-body p { font-size: 0.875rem; color: var(--text-secondary); line-height: 1.6; margin: 0; }
-  .entry-gap-tag { display: inline-block; margin-top: 10px; padding: 3px 10px; border-radius: 999px; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.02em; background: rgb(var(--primary) / 0.1); color: rgb(var(--primary)); border: 1px solid rgb(var(--primary) / 0.18); }
-  [data-theme="dark"] .entry-gap-tag { background: rgb(var(--primary) / 0.2); }
-  [data-theme="dark"] .entry-step { background: rgb(var(--primary) / 0.04); }
   .career-resp-list { max-width: 720px; margin: 0; padding-left: 1.25rem; color: var(--text-secondary); line-height: 1.8; }
   .career-resp-list li { margin-bottom: 8px; }
   .career-hero .tagline { font-size: 1.125rem; color: var(--text-secondary); font-weight: 300; max-width: 560px; margin: 0 auto 48px; line-height: 1.7; }
-  .metrics-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; max-width: 1100px; margin: 0 auto; }
+  .metrics-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; max-width: min(1400px, 94vw); margin: 0 auto; }
   .metric-card { background: transparent; border: 1px solid var(--border-light); border-radius: var(--radius); padding: 32px 24px; text-align: center; transition: all var(--transition); }
   .metric-card:hover { border-color: var(--border); box-shadow: var(--shadow-sm); }
   .metric-label { font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--text-tertiary); font-weight: 500; margin-bottom: 12px; }
@@ -438,11 +358,12 @@
   .metric-sub { font-size: 0.75rem; color: var(--text-tertiary); }
   .scale-bar-container { margin-top: 12px; }
   .scale-bar { height: 6px; background: var(--border-light); border-radius: 999px; overflow: hidden; margin-bottom: 6px; }
-  .scale-bar-fill { height: 100%; border-radius: 999px; background: var(--accent); transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); }
+  .scale-bar-fill { height: 100%; border-radius: 999px; background: var(--accent); transition: width 1s var(--fw-ease-standard); }
   .scale-bar-labels { display: flex; justify-content: space-between; font-size: 0.6875rem; color: var(--text-tertiary); }
   .overview-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 48px; align-items: start; }
   .overview-text h3 { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; margin-bottom: 16px; }
   .overview-text p { font-size: 1rem; color: var(--text-secondary); line-height: 1.8; margin-bottom: 16px; }
+  .overview-resp { margin-top: 8px; padding-top: 20px; border-top: 1px solid var(--border-light); }
   .overview-sidebar { background: transparent; border: 1px solid var(--border-light); border-radius: var(--radius); padding: 32px; }
   .overview-sidebar h4 { font-size: 0.875rem; font-weight: 600; margin-bottom: 20px; }
   .sidebar-item { display: grid; grid-template-columns: minmax(6.5rem, 38%) 1fr; gap: 8px 16px; align-items: start; padding: 14px 0; border-bottom: 1px solid var(--border-light); font-size: 0.875rem; }
@@ -458,11 +379,11 @@
   .career-loading-card { text-align: center; max-width: 360px; padding: 40px 32px; border-radius: var(--radius); background: var(--surface-solid); border: 1px solid var(--border-light); box-shadow: var(--shadow-lg); }
   .career-loading-card h2 { font-family: var(--font-display); font-size: 1.5rem; margin: 16px 0 8px; }
   .career-loading-card p { font-size: 0.875rem; color: var(--text-secondary); line-height: 1.55; }
-  .career-loading-spinner { width: 40px; height: 40px; margin: 0 auto; border: 3px solid var(--border-light); border-top-color: rgb(var(--primary)); border-radius: 50%; animation: career-spin 0.85s linear infinite; }
-  @keyframes career-spin { to { transform: rotate(360deg); } }
-  .closer-look-card { background: transparent; border: 1px solid var(--border-light); border-radius: var(--radius); padding: 28px 32px; max-width: 800px; }
-  .fit-deeper-wrap { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--border-light); }
-  .fit-deeper-title { font-family: var(--font-display); font-size: 1.125rem; font-weight: 600; margin-bottom: 12px; }
+  /* Size only — .fw-skeleton supplies the shimmer. */
+  .career-loading-skeleton { display: flex; flex-direction: column; gap: 10px; margin-top: 22px; text-align: left; }
+  .career-skel-line { display: block; height: 12px; width: 100%; border-radius: 6px; }
+  .career-skel-line--short { width: 64%; }
+  .career-skel-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
   #page-career {
     background: transparent;
     padding: clamp(96px, 12vw, 110px) clamp(16px, 4vw, 24px) 80px;
@@ -472,9 +393,6 @@
   #page-career section,
   #page-career .career-section,
   #page-career .career-fit-section { background: transparent; }
-  #page-career .career-section .section-inner,
-  #page-career .career-fit-section .section-inner { max-width: 1100px; margin: 0 auto; }
-  .closer-look-card p { font-size: 0.875rem; color: var(--text-secondary); line-height: 1.7; margin-bottom: 14px; }
   .closer-insights, .closer-considerations {
     margin: 0 0 12px;
     padding-left: 1.2rem;
@@ -538,20 +456,147 @@
   .skills-pills { display: flex; flex-wrap: wrap; gap: 10px; }
   .skill-pill { position: relative; overflow: hidden; padding: 10px 20px; background: transparent; border: 1px solid rgb(var(--primary) / 0.35); border-radius: 999px; font-size: 0.8125rem; font-weight: 500; color: rgb(var(--primary)); transition: border-color var(--transition), color var(--transition); }
   .skill-pill:hover { border-color: rgb(var(--primary)); color: rgb(var(--primary)); }
-  .skill-pill-fill { position: absolute; left: 0; top: 0; bottom: 0; width: var(--skill-fill, 0%); background: rgba(var(--primary), 0.18); border-radius: inherit; transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); pointer-events: none; }
+  .skill-pill-fill { position: absolute; left: 0; top: 0; bottom: 0; width: var(--skill-fill, 0%); background: rgba(var(--primary), 0.18); border-radius: inherit; transition: width 0.8s var(--fw-ease-standard); pointer-events: none; }
   .skill-pill-label { position: relative; z-index: 1; }
-  .ai-outlook-card { background: transparent; border: 1px solid var(--border-light); border-radius: var(--radius); padding: 48px; max-width: 800px; }
-  .ai-outlook-card h4 { font-size: 1.125rem; font-weight: 600; margin-bottom: 8px; }
-  .ai-outlook-card > p { font-size: 0.875rem; color: var(--text-secondary); line-height: 1.7; margin-bottom: 24px; }
-  .ai-bar-big { height: 10px; background: var(--border-light); border-radius: 999px; overflow: hidden; margin-bottom: 8px; }
-  .ai-bar-big-fill { height: 100%; border-radius: 999px; transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1); }
   .ai-bar-low { background: #4ade80; } .ai-bar-med { background: #facc15; } .ai-bar-high { background: #f87171; }
-  .ai-bar-labels { display: flex; justify-content: space-between; font-size: 0.6875rem; color: var(--text-tertiary); margin-bottom: 24px; }
-  .ai-task-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-light); font-size: 0.875rem; }
-  .ai-task-row:last-child { border-bottom: none; }
-  .ai-task-label { color: var(--text-secondary); }
-  .ai-task-risk { font-weight: 600; font-size: 0.8125rem; padding: 4px 12px; border-radius: 999px; }
-  .risk-low { background: #ecfdf5; color: #16a34a; } .risk-med { background: #fefce8; color: #ca8a04; } .risk-high { background: #fef2f2; color: #dc2626; }
+
+  /* Career deep-dive: dense card layout (overrides the airy generic `section` rule) */
+  #page-career .career-hero { padding: 48px 24px 28px; }
+  #page-career .career-hero .tagline { margin: 0 auto 24px; }
+  #page-career .metrics-row { gap: 12px; }
+  #page-career .metric-card { padding: 20px 18px; }
+  #page-career section,
+  #page-career .career-fit-section { padding: 0; }
+  #page-career .career-section,
+  #page-career .career-fit-section { margin-bottom: 16px; }
+  #page-career .career-section .section-inner,
+  #page-career .career-fit-section .section-inner { padding: 0; }
+  #page-career .career-section .section-tag,
+  #page-career .career-fit-header .section-tag { display: none; }
+  #page-career .career-section .section-title,
+  #page-career .career-fit-header .section-title { font-size: 1.125rem; margin-bottom: 10px; max-width: none; }
+  .career-card, #page-career .career-section > .section-inner {
+    background: var(--surface-solid);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    box-shadow: var(--elev-1);
+    position: relative;
+    overflow: hidden;
+  }
+  /* P10/P11 — career dossier cards get the shared hover lift + elevation
+     (was inert with a flat --shadow-sm; dark-theme elevation now reads). */
+  .career-card {
+    transition: transform var(--fw-dur-fast) var(--fw-ease-out),
+                box-shadow var(--fw-dur-fast) var(--fw-ease-out);
+  }
+  .career-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--elev-2);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .career-card { transition: box-shadow var(--fw-dur-fast) linear; }
+    .career-card:hover { transform: none; }
+  }
+  /* §6.3 — progressive disclosure for dense dossier modules (O*NET profile +
+     compare). The .career-disclosure IS the card, so neutralize the section-inner
+     card underneath it to avoid nesting two cards. Native <details>: keyboard +
+     screen-reader accessible, collapsed by default, no JS state. */
+  #page-career .career-section.career-section--disclosure > .section-inner {
+    background: none; border: none; box-shadow: none; padding: 0;
+  }
+  #page-career .career-section.career-section--disclosure > .section-inner::before { content: none; }
+  .career-disclosure {
+    background: var(--surface-solid);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius);
+    box-shadow: var(--elev-1);
+    overflow: hidden;
+  }
+  .career-disclosure-summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 24px;
+    user-select: none;
+    transition: background var(--fw-dur-fast) var(--fw-ease-out);
+  }
+  .career-disclosure-summary::-webkit-details-marker { display: none; }
+  .career-disclosure-summary:hover { background: var(--surface-2); }
+  .career-disclosure-summary .career-card-title { margin: 0; }
+  .career-disclosure-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: rgb(var(--primary));
+  }
+  .career-disclosure-hint::after {
+    content: '▾';
+    font-size: 0.6875rem;
+    transition: transform var(--fw-dur-fast) var(--fw-ease-out);
+  }
+  .career-disclosure[open] .career-disclosure-hint::after { transform: rotate(180deg); }
+  .career-disclosure .cd-hide { display: none; }
+  .career-disclosure[open] .cd-show { display: none; }
+  .career-disclosure[open] .cd-hide { display: inline; }
+  .career-disclosure-body { padding: 0 24px 22px; }
+  @media (prefers-reduced-motion: reduce) {
+    .career-disclosure-summary, .career-disclosure-hint::after { transition: none; }
+  }
+  .career-card::before, #page-career .career-section > .section-inner::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, rgb(var(--primary)), rgb(var(--primary) / 0.3));
+  }
+  .career-card-title { font-family: var(--font-display); font-size: 1rem; font-weight: 600; margin: 0 0 12px; }
+  /* Sections that already contain their own card (O*NET blocks, fit stack) stay transparent to avoid a card-in-card look */
+  #page-career .career-onet-block > .section-inner,
+  #page-career .career-fit-section > .section-inner {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+  }
+  #page-career .career-onet-block > .section-inner::before,
+  #page-career .career-fit-section > .section-inner::before { display: none; }
+  #page-career .career-overview-section > .section-inner {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+  }
+  #page-career .career-overview-section > .section-inner::before { display: none; }
+  #page-career .overview-grid { gap: 24px; }
+  #page-career .overview-text.career-card,
+  #page-career .overview-sidebar.career-card { padding: 20px 24px; margin: 0; }
+  #page-career .overview-sidebar h4 { margin-bottom: 12px; }
+  #page-career .overview-text h3 { margin-bottom: 10px; }
+  #page-career .fit-analysis-stack { flex-direction: row; flex-wrap: wrap; gap: 16px; }
+  #page-career .fit-panel { flex: 1 1 320px; }
+  #page-career .career-pair-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: min(1400px, 94vw); margin: 0 auto 16px; }
+  #page-career .career-pair-grid .career-section { margin-bottom: 0; }
+  #page-career .timeline { max-width: none; }
+  #page-career .timeline-item { margin-bottom: 12px; }
+  #page-career .timeline-content { padding: 12px 16px; }
+  #page-career .career-day-cta { margin-top: 16px; text-align: center; }
+  #page-career .career-day-cta .cta-btn { font-size: 0.875rem; padding: 12px 28px; }
+  #page-career .cta-section { padding: 32px 24px 8px; }
+  #page-career .cta-section .section-title { text-align: center; margin: 0 auto 18px; }
+  #page-career .cta-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+  @media (max-width: 900px) {
+    #page-career .career-pair-grid { grid-template-columns: 1fr; }
+    #page-career .fit-analysis-stack { flex-direction: column; }
+  }
 
   @media (max-width: 900px) {
     .role-cards, .session-types { grid-template-columns: 1fr; }
@@ -764,8 +809,8 @@
 
   #page-quiz .opts { display: flex; flex-direction: column; gap: 10px; }
   #page-quiz .opt { display: flex; align-items: center; gap: 14px; padding: 15px 18px; border: 2px solid var(--border); border-radius: 12px; background: #fff; cursor: pointer; transition: all 0.18s; text-align: left; width: 100%; font-family: inherit; }
-  #page-quiz .opt:hover { border-color: var(--q-lblue); background: var(--accent-light); }
-  #page-quiz .opt.sel { border-color: var(--q-blue); box-shadow: 0 0 0 1px var(--q-blue) inset; background: var(--accent-light); }
+  #page-quiz .opt:hover { border-color: var(--q-lblue); background: #eff6ff; }
+  #page-quiz .opt.sel { border-color: var(--q-blue); background: #eff6ff; }
   #page-quiz .opt-letter { width: 30px; height: 30px; border-radius: 50%; background: var(--q-s2); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: var(--text-tertiary); flex-shrink: 0; transition: all 0.18s; }
   #page-quiz .opt.sel .opt-letter { background: var(--q-blue); color: #fff; }
   #page-quiz .opt-text { font-size: 1rem; font-weight: 700; color: var(--text-solid); line-height: 1.4; }
@@ -896,7 +941,7 @@
 
   .qz-combo-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.65); display: flex; align-items: center; justify-content: center; z-index: 2000; opacity: 0; transition: opacity 0.3s; pointer-events: none; padding: 20px; }
   .qz-combo-overlay.vis { opacity: 1; pointer-events: all; }
-  .qz-combo-modal { background: #fff; border-radius: 24px; padding: 46px 36px; max-width: 400px; width: 100%; text-align: center; transform: scale(.85); transition: transform 0.3s cubic-bezier(.34,1.56,.64,1); }
+  .qz-combo-modal { background: #fff; border-radius: 24px; padding: 46px 36px; max-width: 400px; width: 100%; text-align: center; transform: scale(.85); transition: transform 0.3s var(--fw-ease-spring); }
   .qz-combo-overlay.vis .qz-combo-modal { transform: scale(1); }
   .qz-combo-lbl { font-family: var(--font-display); font-size: 3rem; font-weight: 700; margin-bottom: 6px; letter-spacing: -1.5px; }
   .qz-combo-title { font-size: 1.25rem; font-weight: 700; color: var(--text-solid); margin-bottom: 10px; }
@@ -965,10 +1010,6 @@
     text-decoration: none;
   }
   .career-personal-hub-link:hover { text-decoration: underline; }
-  #page-quiz .archetype-card { padding: 28px; border-radius: 16px; background: linear-gradient(135deg,var(--q-blue),var(--q-purple)); color: #fff; margin-bottom: 24px; text-align: center; }
-  #page-quiz .arche-eye { font-size: 0.6875rem; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; opacity: .85; margin-bottom: 8px; }
-  #page-quiz .arche-name { font-family: var(--font-display); font-size: 2.25rem; font-weight: 700; margin-bottom: 10px; letter-spacing: -.5px; }
-  #page-quiz .arche-blurb { font-size: 0.875rem; line-height: 1.65; opacity: .95; }
   #page-quiz .ind-card { padding: 20px; border-radius: 12px; margin-bottom: 14px; border: 2px solid var(--border); background: var(--surface-solid); transition: all 0.18s; }
   #page-quiz .ind-card.top { border-color: var(--q-blue); background: linear-gradient(135deg, var(--bg-alt), var(--surface-solid)); }
   #page-quiz .ind-head { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
@@ -1274,9 +1315,6 @@
   .portal-eyebrow { font-size: 0.8125rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: rgb(var(--primary)); }
   .portal-title { font-family: inherit; font-size: clamp(1.9rem, 4.5vw, 2.6rem); line-height: 1.15; margin: 6px 0 0; color: var(--text-solid); }
   .portal-email { color: var(--text-secondary); font-size: 1rem; margin: 4px 0 0; }
-  .portal-archetype { display: inline-flex; flex-direction: column; gap: 2px; padding: 10px 18px; border-radius: 12px; background: var(--bg-alt); border: 1px solid var(--border-light); }
-  .portal-archetype-eye { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); }
-  .portal-archetype-name { font-size: 1rem; font-weight: 700; color: rgb(var(--primary)); }
   .portal-greeting-cta-row { margin-top: 4px; }
   .portal-pb-tertiary { padding: 8px 0; background: none; border: none; color: rgb(var(--hint-dot)); font-size: 0.875rem; font-weight: 600; cursor: pointer; font-family: inherit; text-decoration: underline; text-underline-offset: 3px; }
   .portal-pb-tertiary:hover { color: rgb(var(--primary)); }
@@ -1368,18 +1406,9 @@
   .portal-target-dual-fit .dual-fit-tradeoff,
   .portal-target-dual-fit .dual-fit-readiness-note { font-size: 0.6875rem; }
   .portal-target-dual-fit-loading { display: flex; flex-direction: column; gap: 10px; }
-  .portal-target-dual-fit-skeleton {
-    height: 5px;
-    border-radius: 999px;
-    background: linear-gradient(90deg, var(--border-light) 25%, rgb(var(--primary) / 0.12) 50%, var(--border-light) 75%);
-    background-size: 200% 100%;
-    animation: portal-dual-fit-shimmer 1.2s ease-in-out infinite;
-  }
+  /* Size only — .fw-skeleton (flightway-theme.css) supplies the shimmer. */
+  .portal-target-dual-fit-skeleton { height: 5px; border-radius: 999px; }
   .portal-target-dual-fit-skeleton--short { width: 72%; }
-  @keyframes portal-dual-fit-shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-  }
   .portal-target-dual-fit-error {
     margin: 0;
     font-size: 0.8125rem;
@@ -2265,23 +2294,8 @@
   }
 
   /* ─────────────── CAREER ROADMAP ─────────────── */
-  :root,
-  [data-theme="dark"] {
-    --hub-canvas-bg: rgb(var(--bg));
-    --hub-panel-bg: rgb(var(--panel));
-    --hub-control-bg: rgb(var(--control));
-    --hub-border: rgb(var(--border-strong));
-    --hub-text: rgb(var(--text));
-    --hub-text-muted: rgb(var(--text-muted));
-  }
-  [data-theme="light"] {
-    --hub-canvas-bg: rgb(var(--bg));
-    --hub-panel-bg: rgb(var(--panel));
-    --hub-control-bg: rgb(var(--control));
-    --hub-border: rgb(var(--border-strong));
-    --hub-text: rgb(15 15 15);
-    --hub-text-muted: rgb(100 100 100);
-  }
+  /* --hub-* chrome tokens are single-sourced in flightway-theme.css; the roadmap
+     tree consumes the shared defaults (theme-aware canvas in light mode). */
   #page-roadmap {
     padding: 0;
     min-height: 100dvh;
@@ -2354,6 +2368,23 @@
     backdrop-filter: blur(8px);
   }
   .roadmap-hud-left { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1 1 200px; }
+  .roadmap-hud--compact .roadmap-hud-topline { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; }
+  .roadmap-hud--compact .roadmap-hud-title { font-size: clamp(1rem, 1.6vw, 1.2rem); }
+  .roadmap-hud--compact .roadmap-hud-progress { gap: 6px; }
+  .roadmap-hud--compact .roadmap-hud-fit { display: flex; flex-wrap: wrap; align-items: center; column-gap: 18px; row-gap: 2px; }
+  .roadmap-hud--compact .roadmap-hud-fit .dual-fit-bars { margin: 0; display: contents; }
+  .roadmap-hud--compact .roadmap-hud-fit .dual-fit-row { margin: 0; gap: 5px; font-size: 0.6875rem; order: 1; }
+  .roadmap-hud--compact .roadmap-hud-fit .dual-fit-row--readiness { margin: 0; order: 1; }
+  .roadmap-hud--compact .roadmap-hud-fit .dual-fit-label { white-space: nowrap; }
+  .roadmap-hud--compact .roadmap-hud-fit .dual-fit-pct { font-size: 0.6875rem; }
+  .roadmap-hud--compact .roadmap-hud-fit .dual-fit-bar-bg { width: 56px; height: 4px; margin: 0 0 0; order: 1; align-self: center; }
+  .roadmap-hud--compact .roadmap-hud-fit .dual-fit-readiness-note { display: none; }
+  .roadmap-hud--compact .roadmap-hud-fit .dual-fit-tradeoff {
+    flex-basis: 100%;
+    order: 2;
+    margin: 2px 0 0;
+    font-size: 0.75rem;
+  }
   .roadmap-hud-title {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     font-size: clamp(1.1rem, 2vw, 1.35rem);
@@ -2501,15 +2532,14 @@
     margin: 0 auto;
     padding: 48px 32px 40px;
   }
-  .roadmap-generating-spinner {
-    width: 44px;
-    height: 44px;
-    margin: 0 auto 20px;
-    border: 3px solid var(--border-light);
-    border-top-color: rgb(var(--primary));
-    border-radius: 50%;
-    animation: career-spin 0.85s linear infinite;
-  }
+  /* Skeleton of the plan being written — waypoint dot + title + body per row.
+     Size only; .fw-skeleton (flightway-theme.css) supplies the shimmer. */
+  .roadmap-generating-skeleton { display: flex; flex-direction: column; gap: 14px; margin-top: 26px; text-align: left; }
+  .roadmap-skel-item { display: flex; align-items: flex-start; gap: 14px; opacity: 0.85; }
+  .roadmap-skel-dot { flex: none; width: 22px; height: 22px; border-radius: 50%; margin-top: 2px; }
+  .roadmap-skel-lines { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+  .roadmap-skel-title { height: 14px; width: 58%; border-radius: 6px; }
+  .roadmap-skel-desc { height: 30px; width: 92%; border-radius: 6px; }
   .roadmap-generating-eyebrow {
     font-size: 0.6875rem;
     font-weight: 700;
@@ -2614,7 +2644,7 @@
     border-left: 1px solid var(--hub-border);
     box-shadow: -8px 0 40px rgb(0 0 0 / 0.18);
     transform: translateX(100%);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.3s var(--fw-ease-standard);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -2712,7 +2742,7 @@
     border: 2px solid rgb(var(--text) / 0.25);
     border-top-color: currentColor;
     border-radius: 50%;
-    animation: coach-spin 0.8s linear infinite;
+    animation: fw-spin 0.8s linear infinite;
     flex-shrink: 0;
   }
   .roadmap-detail-error { margin: 0 0 12px; padding: 10px 12px; border-radius: 10px; background: rgba(220, 60, 60, 0.12); color: #c53030; font-size: 0.875rem; }
@@ -2780,7 +2810,9 @@
   }
   @media (max-width: 768px) {
     .roadmap-tree-detail { width: 100%; }
-    #page-roadmap #roadmap-body { padding-top: 64px; }
+    /* Mobile nav wraps to two rows (~96px tall) — clear it or the picker
+       heading slides under the fixed header. */
+    #page-roadmap #roadmap-body { padding-top: 112px; }
     .roadmap-hud { padding: 10px 12px; }
     .roadmap-hud-title { font-size: 1.125rem; }
   }
@@ -2833,38 +2865,6 @@
 .resume-ingest-status { font-size: 0.8125rem; color: var(--text-secondary); margin: 8px 0 0; }
 .resume-ingest-status--err { color: #dc2626; }
 .resume-ingest-current { font-size: 0.875rem; color: var(--text-secondary); margin: 0 0 12px; padding: 10px 12px; border-radius: 10px; background: rgb(var(--surface-2)); }
-
-body.portal-resume-drawer-open { overflow: hidden; }
-.portal-resume-backdrop {
-  position: fixed; inset: 0; z-index: 1190;
-  background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(3px);
-}
-.portal-resume-backdrop[hidden] { display: none !important; }
-.portal-resume-drawer {
-  position: fixed; top: 0; right: 0; bottom: 0; z-index: 1200;
-  width: min(440px, 100%); display: flex; flex-direction: column;
-  background: var(--surface-solid); border-left: 1px solid var(--border-light);
-  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.2);
-}
-.portal-resume-drawer[hidden] { display: none !important; }
-.portal-resume-drawer-head {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 16px 18px; border-bottom: 1px solid var(--border-light); flex-shrink: 0;
-}
-.portal-resume-drawer-title { margin: 0; font-size: 1.125rem; font-weight: 700; }
-.portal-resume-drawer-close {
-  width: 36px; height: 36px; border: none; border-radius: 10px;
-  background: transparent; cursor: pointer; font-size: 1.125rem;
-}
-.portal-resume-drawer-body { flex: 1; overflow-y: auto; padding: 16px 18px 24px; }
-.portal-resume-intro { margin: 0 0 16px; line-height: 1.5; color: var(--text-secondary); font-size: 0.875rem; }
-.portal-resume-drawer-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
-.portal-resume-skip-btn {
-  background: transparent; border: 1px solid var(--border-light); border-radius: 12px;
-  padding: 10px 14px; font-family: inherit; cursor: pointer; color: var(--text-secondary);
-}
-.portal-resume-status { font-size: 0.8125rem; color: var(--text-secondary); margin-top: 10px; }
-
 
 /* ── FWConfirm — shared styled confirm dialog (fw-confirm.js) ─────────────── */
 .fw-confirm-modal {
@@ -3048,139 +3048,304 @@ body.portal-resume-drawer-open { overflow: hidden; }
 .dim-group-body { padding: 16px; }
 .dim-group-body[hidden] { display: none; }
 
-/* ── UI overhaul Phase 3a — quiz per wireframes 1a/1b (tokens only) ── */
-@media (min-width: 0px) {
-  #page-quiz .opt { min-height: 64px; }
-  #page-quiz .qz-btn-next {
-    background: rgb(var(--primary));
-    min-height: 56px;
-    border-radius: 12px;
-    font-size: var(--text-base);
-  }
-  #page-quiz .qz-btn-next:disabled { background: var(--border); }
-  #page-quiz .qz-btn-back { min-height: 48px; min-width: 48px; }
-  #page-quiz .qz-reassure {
-    margin: 12px 0 0;
-    text-align: center;
-    font-size: var(--text-xs);
-    color: var(--text-tertiary);
-  }
-  #page-quiz .qz-whyrail { display: none; }
+/* Clarifying-questions wizard (roadmap.js `fw-qwiz*`) */
+.fw-qwiz-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
-@media (max-width: 768px) {
-  #page-quiz .qz-nav-buttons {
-    position: sticky;
-    bottom: calc(12px + env(safe-area-inset-bottom));
-    background: rgb(var(--bg) / 0.92);
-    backdrop-filter: blur(6px);
-    border-radius: 16px;
-    padding: 8px;
-  }
-  #page-quiz .qz-btn-next { flex: 1; }
+.fw-qwiz-overlay[hidden] { display: none !important; }
+.fw-qwiz {
+  width: min(520px, 100%);
+  padding: 28px 26px;
+  border-radius: 16px;
+  background: var(--surface-solid);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-lg);
+  animation: fw-qwiz-in 0.28s ease both;
 }
-@media (min-width: 900px) {
-  #page-quiz .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  #page-quiz .opts .opt:last-child:nth-child(odd) { grid-column: 1 / -1; }
+@keyframes fw-qwiz-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
-@media (min-width: 1240px) {
-  #qz-quiz { position: relative; }
-  #page-quiz .qz-whyrail {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    position: absolute;
-    left: 100%;
-    top: 110px;
-    width: 250px;
-    margin-left: 28px;
-    padding: 18px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: rgb(var(--surface));
-  }
-  #page-quiz .qz-whyrail h3 {
-    margin: 0;
-    font-size: var(--text-xs);
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--text-tertiary);
-  }
-  #page-quiz .qz-whyrail p { margin: 0; font-size: var(--text-sm); color: var(--text-secondary); line-height: var(--line-relaxed); }
+@media (prefers-reduced-motion: reduce) {
+  .fw-qwiz { animation: none; }
+}
+.fw-qwiz-eyebrow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgb(var(--primary));
+  margin: 0 0 8px;
+}
+.fw-qwiz-progress {
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+  margin: 0 0 4px;
+}
+.fw-qwiz-question {
+  font-family: var(--font-display);
+  font-size: clamp(1.15rem, 2.2vw, 1.4rem);
+  color: var(--text-solid);
+  margin: 0 0 20px;
+  line-height: 1.35;
+}
+.fw-qwiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.fw-qwiz-option {
+  width: 100%;
+  text-align: left;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  background: var(--surface-solid);
+  color: var(--text-solid);
+  font-size: 0.875rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+}
+.fw-qwiz-option:hover {
+  border-color: rgb(var(--primary));
+  background: var(--accent-light);
+  transform: translateY(-1px);
+}
+.fw-qwiz-option:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(var(--primary), 0.35);
+}
+.fw-qwiz-option--other {
+  border-style: dashed;
+  color: var(--text-secondary);
+}
+.fw-qwiz-other {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.fw-qwiz-other-input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-light);
+  background: var(--surface-solid);
+  color: var(--text-solid);
+  font-size: 0.875rem;
+  font-family: inherit;
+}
+.fw-qwiz-other[hidden] { display: none !important; }
+.fw-qwiz-foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+.fw-qwiz-skip {
+  border: none;
+  background: none;
+  color: var(--text-tertiary);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  padding: 4px 2px;
+}
+.fw-qwiz-skip:hover {
+  color: var(--text-secondary);
+  text-decoration: underline;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fw-qwiz-option { transition: none; }
 }
 
-/* ── UI overhaul Phase 3b — portal per wireframes 1c/1d (tokens only) ── */
-@media (min-width: 0px) {
-  #page-portal .portal-target-row {
-    border: 2px solid var(--border-strong);
-    border-radius: var(--radius);
-    background: rgb(var(--surface));
-    padding: var(--space-4);
-  }
-  #page-portal .portal-target-fit {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 52px;
-    min-height: 52px;
-    border: 5px solid rgb(var(--primary));
-    border-radius: 50%;
-    font-weight: 700;
-    font-size: var(--text-sm);
-  }
-  #page-portal .portal-target-cta-row { margin-top: var(--space-3); }
-  #page-portal .portal-target-deepdive {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 48px;
-    width: 100%;
-    border: 1.5px solid var(--border-strong);
-    border-radius: 12px;
-    background: rgb(var(--surface));
-    color: rgb(var(--text));
-    font-weight: 600;
-    font-size: var(--text-sm);
-    text-decoration: none;
-    transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
-  }
-  #page-portal .portal-target-deepdive:hover { background: var(--accent-light); border-color: rgb(var(--primary)); }
-  #page-portal .portal-retake { color: inherit; text-decoration: underline; }
-}
-@media (min-width: 1024px) {
-  #page-portal .portal-wrap {
-    display: grid;
-    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-    gap: var(--space-5);
-    align-items: start;
-  }
-  #page-portal .portal-head { grid-column: 1; }
-  #page-portal #portal-prompt-banner { grid-column: 2; grid-row: 1 / span 2; }
-  #page-portal #portal-empty-quiz { grid-column: 1 / -1; }
-  #page-portal .portal-actions { grid-column: 1; }
-  #page-portal .portal-profile-entry { grid-column: 2; }
-  #page-portal .portal-snapshot { grid-column: 1 / -1; }
-  #page-portal .dim-profile-section { grid-column: 1 / -1; }
-  #page-portal .portal-footer { grid-column: 1 / -1; }
-  #page-portal .portal-target-deepdive { width: auto; padding: 0 var(--space-5); }
+/* ---- Portal home streamlining: compact readiness summary + flight-plan polish ---- */
+.portal-readiness-headline { margin: 0 0 12px; color: var(--text-solid); font-size: 1rem; font-weight: 600; }
+.portal-readiness-pct { display: inline-block; margin-left: 6px; padding: 2px 10px; border-radius: 999px; font-size: 0.8125rem; font-weight: 700; color: rgb(var(--primary)); background: rgba(var(--primary), 0.12); border: 1px solid rgb(var(--primary) / 0.25); }
+.portal-readiness-row { margin: 0 0 14px; }
+.portal-readiness-label { display: block; margin: 0 0 6px; color: var(--text-solid); font-size: 0.875rem; font-weight: 600; }
+/* Two full-width tracks (You / Target), not overlaid slivers — a low "You"
+   value used to render as an invisible fraction-of-a-pixel fill with no
+   number anywhere to confirm it was even there. */
+.portal-readiness-bars { display: flex; flex-direction: column; gap: 5px; }
+.portal-readiness-line { display: flex; align-items: center; gap: 8px; }
+.portal-readiness-tag { flex: 0 0 40px; font-size: 0.6875rem; font-weight: 700; color: var(--text-secondary); }
+.portal-readiness-track { flex: 1; height: 6px; border-radius: 999px; background: rgb(var(--surface-2)); overflow: hidden; }
+.portal-readiness-fill { display: block; height: 100%; border-radius: 999px; }
+.portal-readiness-fill--you { background: rgb(var(--primary)); }
+.portal-readiness-fill--target { background: rgb(var(--primary) / 0.3); }
+.portal-readiness-val { flex: 0 0 24px; text-align: right; font-size: 0.8125rem; font-weight: 700; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.portal-readiness-more { margin: 0 0 4px; color: var(--text-tertiary); font-size: 0.8125rem; }
+.portal-readiness-link { display: inline-block; margin-top: 10px; color: var(--text-solid); font-size: 0.875rem; font-weight: 600; text-decoration: none; }
+.portal-readiness-link:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+.fw-fp-head-txt { flex: 1; min-width: 0; }
+.fw-fp-week { margin: 2px 0 0; font-size: 0.75rem; color: var(--text-secondary); opacity: 0.85; }
+.fw-fp-chip { flex: none; align-self: flex-start; padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; color: rgb(var(--primary)); background: rgba(var(--primary), 0.12); border: 1px solid rgb(var(--primary) / 0.25); white-space: nowrap; }
+.fw-fp-checkwrap { flex: none; display: inline-flex; cursor: pointer; }
+.fw-fp-txt { text-decoration: none; color: inherit; min-width: 0; }
+.fw-fp-txt:hover .fw-fp-label { text-decoration: underline; text-underline-offset: 2px; }
+.fw-fp-foot { margin-top: 4px; }
+.fw-fp-weeks {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
-/* ── UI overhaul Phase 3c — career deep dive per wireframes 1e/1f ── */
-@media (min-width: 0px) {
-  .fw-sticky-cta {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 56px;
-    border-radius: 12px;
-    background: rgb(var(--primary));
-    color: rgb(var(--primary-fg));
-    font-weight: 700;
-    font-size: var(--text-base);
-    text-decoration: none;
-    box-shadow: var(--shadow-btn);
-  }
-  .fw-sticky-cta:hover { background: rgb(var(--primary-hover)); }
-  /* Fit panel head reads as the flagship block */
-  .fit-panel-head { font-size: var(--text-xl); }
+/* ── Depth & motion pass (site-wide fluidity) ─────────────────────────────
+   Entrance choreography + hover lift + readiness-bar life.
+   Fully disabled under prefers-reduced-motion. */
+
+/* Boot veil: opaque cover while a page's first renders settle (FWPageVeil).
+   The 6s CSS failsafe animation force-reveals even if the script never runs. */
+.fw-page-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(var(--bg));
+  transition: opacity 0.45s var(--fw-ease-out), visibility 0.45s;
+  animation: fw-veil-failsafe 0s linear 6s forwards;
+}
+.fw-page-veil.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+/* Boot skeleton — a generic page silhouette (nav strip, title, two content
+   blocks) injected by page-veil.js. Size only — .fw-skeleton supplies the
+   shimmer. Deliberately quiet: it is a placeholder, not a focal point. */
+.fw-veil-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: min(640px, 84vw);
+  opacity: 0.7;
+}
+.fw-veil-bar { display: block; width: 100%; }
+.fw-veil-bar--nav { height: 40px; border-radius: 12px; }
+.fw-veil-bar--title { width: 55%; height: 28px; margin-top: 12px; }
+.fw-veil-bar--block { height: 116px; border-radius: 12px; }
+@keyframes fw-veil-failsafe { to { opacity: 0; visibility: hidden; } }
+
+@keyframes fw-rise-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fw-bar-shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(340%); }
+}
+/* Entrance choreography plays exactly once, at veil reveal (fw-revealed) —
+   and is off again after settle (fw-settled). Unscoped, every innerHTML
+   rebuild during boot replayed the staggered rise-in, which is what made
+   the cards/bars flash on and off while the page loaded. */
+body.fw-revealed:not(.fw-settled) .portal-card,
+body.fw-revealed:not(.fw-settled) .portal-panel,
+body.fw-revealed:not(.fw-settled) .portal-snapshot,
+body.fw-revealed:not(.fw-settled) .portal-profile-entry {
+  animation: fw-rise-in .55s var(--fw-ease-out) backwards;
+}
+.portal-actions .portal-card:nth-child(1) { animation-delay: .04s; }
+.portal-actions .portal-card:nth-child(2) { animation-delay: .09s; }
+.portal-actions .portal-card:nth-child(3) { animation-delay: .14s; }
+.portal-actions .portal-card:nth-child(4) { animation-delay: .19s; }
+.portal-actions .portal-card:nth-child(5) { animation-delay: .24s; }
+.portal-actions .portal-card:nth-child(6) { animation-delay: .29s; }
+.portal-actions .portal-card:nth-child(7) { animation-delay: .34s; }
+.portal-snapshot { animation-delay: .18s; }
+.portal-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+  border-color: rgb(var(--primary) / .35);
+}
+.portal-card:hover .portal-card-icon { transform: scale(1.08) rotate(-3deg); }
+.portal-card:hover .portal-card-arrow { transform: translateX(4px); color: rgb(var(--primary)); }
+.portal-card-icon { transition: transform 0.3s var(--fw-ease-out); }
+.portal-card:active { transform: translateY(-1px) scale(.985); }
+.portal-panel {
+  transition: transform 0.18s var(--fw-ease-out), box-shadow 0.18s, border-color 0.18s;
+}
+.portal-panel:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+/* Readiness meters: fills glide to their width and carry a slow light sweep. */
+.portal-readiness-fill {
+  position: relative;
+  overflow: hidden;
+  transition: width 0.9s var(--fw-ease-out);
+}
+.portal-readiness-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 30%;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / .35), transparent);
+  animation: fw-bar-shimmer 3.2s ease-in-out 1.2s infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  body.fw-revealed:not(.fw-settled) .portal-card,
+  body.fw-revealed:not(.fw-settled) .portal-panel,
+  body.fw-revealed:not(.fw-settled) .portal-snapshot,
+  body.fw-revealed:not(.fw-settled) .portal-profile-entry { animation: none; }
+  .portal-readiness-fill { transition: none; }
+  .portal-readiness-fill::after { animation: none; content: none; }
+  .portal-card:hover, .portal-panel:hover { transform: none; }
+  .fw-page-veil { transition: none; }
+}
+
+/* ── Motion pass 2 (reveal choreography + press feedback) ─────────────────
+   Roadmap and coach get the same one-shot entrance the portal has: plays at
+   veil reveal, disabled after settle so re-renders never replay it.
+   Press feedback is transform-only — no layout shift, compositor-friendly. */
+body.fw-revealed:not(.fw-settled) #roadmap-head {
+  animation: fw-rise-in .5s var(--fw-ease-out) backwards;
+}
+body.fw-revealed:not(.fw-settled) #roadmap-body {
+  animation: fw-rise-in .55s var(--fw-ease-out) .08s backwards;
+}
+body.fw-revealed:not(.fw-settled) .coach-shell {
+  animation: fw-rise-in .5s var(--fw-ease-out) backwards;
+}
+/* Career dossier (career.html) gets the same one-shot rise-in on veil reveal.
+   Its inner .fade-in elements reveal via the IntersectionObserver as before. */
+body.fw-revealed:not(.fw-settled) #career-content {
+  animation: fw-rise-in .5s var(--fw-ease-out) backwards;
+}
+
+#page-quiz .qz-btn {
+  transition: transform 0.18s var(--fw-ease-out), box-shadow 0.18s, background 0.18s, border-color 0.18s;
+}
+#page-quiz .qz-btn:hover:not(:disabled) { transform: translateY(-1px); }
+#page-quiz .qz-btn:active:not(:disabled) { transform: translateY(0) scale(.97); }
+#page-quiz .qz-btn-primary:hover:not(:disabled) { box-shadow: 0 6px 18px rgb(var(--primary) / .3); }
+.coach-send-btn:active:not(:disabled) { transform: translateY(0) scale(.96); }
+.app-nav-tab:active { transform: scale(.95); }
+
+@media (prefers-reduced-motion: reduce) {
+  body.fw-revealed:not(.fw-settled) #roadmap-head,
+  body.fw-revealed:not(.fw-settled) #roadmap-body,
+  body.fw-revealed:not(.fw-settled) .coach-shell,
+  body.fw-revealed:not(.fw-settled) #career-content { animation: none; }
+  #page-quiz .qz-btn { transition: none; }
+  #page-quiz .qz-btn:hover:not(:disabled),
+  #page-quiz .qz-btn:active:not(:disabled),
+  .coach-send-btn:active:not(:disabled),
+  .app-nav-tab:active { transform: none; }
 }

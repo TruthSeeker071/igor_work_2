@@ -18,7 +18,12 @@ binding = "COACH_KV"
 id = "90baa154928941c3b45ff0ecb4894f05"
 
 [vars]
-SITE_URL = "https://flightway.ai"
+# Must be the host where the users in this D1 actually live — nudge-email
+# task/unsubscribe links resolve against it, and /unsubscribe is a Pages
+# Function on that project. flightway.ai (main) has neither this user base
+# nor the prototype's Functions. Update when a custom domain replaces it,
+# then `npm run deploy:cron`.
+SITE_URL = "https://flightwayjacobprototype.pages.dev"
 
 # Secrets to set in this worker (wrangler secret put ... inside workers/cron):
 #   RESEND_API_KEY   — same key as the Pages project

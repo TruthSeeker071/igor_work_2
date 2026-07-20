@@ -1,7 +1,7 @@
 /**
  * FlightWay signed-in home page (#page-portal).
  * Renders a personalized dashboard: greeting, action cards for every site
- * area, and a profile snapshot (archetype, character analysis, top industries,
+ * area, and a profile snapshot (character analysis, top industries,
  * top skills, top career matches). Data-driven so new areas/widgets are easy.
  */
 (function (global) {
@@ -26,22 +26,17 @@
     },
     {
       key: 'resume',
-      label: 'Add your resume',
-      desc: 'Upload experience to unlock objective fit scores.',
+      label: 'Resume Builder',
+      desc: 'Build a recruiter-ready resume from your real experience.',
       icon: 'file-text',
-      resumeHint: true,
-      go: function () {
-        if (global.FWPortalResume && typeof FWPortalResume.open === 'function') {
-          FWPortalResume.open();
-        }
-      },
+      go: function () { location.href = 'resume.html'; },
     },
     {
       key: 'refine',
       label: 'Sharpen matches',
       desc: 'A few more questions to fine-tune your career map.',
       icon: 'sliders-horizontal',
-      go: function () { location.href = 'dashboard.html?refine=open'; },
+      go: function () { location.href = 'quiz.html#sharpen'; },
     },
     {
       key: 'career-switch',
@@ -161,10 +156,6 @@
     location.href = (global.FWPageBoot && FWPageBoot.URLS && FWPageBoot.URLS.quiz) || 'quiz.html';
   }
 
-  function portalHasRoadmap(rm) {
-    return !!(rm && rm.targetCareerSlug && ((rm.version === 2 && rm.nodes) || (rm.phases && rm.phases.length)));
-  }
-
   function isProfileBuildingDone(pb) {
     if (!pb) return false;
     if (pb.completedAt) return true;
@@ -253,7 +244,6 @@
 
   function renderHead(head, data, email) {
     const name = (data && data.name) ? data.name : 'there';
-    const archetype = data && data.archetype;
     const pb = profileBuildingState();
     const showPbCta = !isProfileBuildingDone(pb);
     head.innerHTML =
@@ -263,7 +253,6 @@
       + '<h1 class="portal-title">Hey ' + esc(name) + '</h1>'
       + '<p class="portal-email">Built from your quiz answers &middot; <a href="quiz.html" class="portal-retake">retake quiz</a>' + (email ? ' &middot; ' + esc(email) : '') + '</p>'
       + '</div>'
-      + (archetype ? '<div class="portal-archetype" title="Your quiz archetype"><span class="portal-archetype-eye">Archetype</span><span class="portal-archetype-name">' + esc(archetype) + '</span></div>' : '')
       + '</div>'
       + (showPbCta
         ? '<div class="portal-greeting-cta-row">'
@@ -315,7 +304,7 @@
     var steps = [
       { key: 'quiz', label: 'Career quiz', done: true },
       { key: 'profile', label: 'Know-you prompts', done: profileDone },
-      { key: 'refine', label: 'Sharpen in Hub', done: refineComplete },
+      { key: 'refine', label: 'Sharpen matches', done: refineComplete },
       { key: 'academics', label: 'Add academics', done: academicsComplete },
     ];
     var next = steps.find(function (s) { return !s.done; }) || steps[1];
@@ -349,8 +338,8 @@
     if (cta) {
       cta.addEventListener('click', function () {
         if (next.key === 'profile') openProfileBuilding();
-        else if (next.key === 'refine') location.href = 'dashboard.html?refine=open';
-        else if (next.key === 'academics') location.href = 'dashboard.html?academics=open';
+        else if (next.key === 'refine') location.href = 'quiz.html#sharpen';
+        else if (next.key === 'academics') location.href = 'quiz.html#academics';
         else location.href = 'dashboard.html';
       });
     }
@@ -440,9 +429,6 @@
       var fromAnswers = FWProfileBuildingFallback.buildShortKnowYou(pb.answers, quizContextForPortal());
       if (fromAnswers) return fromAnswers;
     }
-    if (data && data.archetype) {
-      return 'Your ' + data.archetype + ' archetype shapes how we match careers and coach you.';
-    }
     return pendingAnalysisMsg();
   }
 
@@ -452,9 +438,6 @@
     }
     var fromQuiz = String((data && data.characterSummary) || '').trim();
     if (fromQuiz) return fromQuiz;
-    if (data && data.archetype) {
-      return 'As a ' + data.archetype + ', you tend toward careers that reward your natural strengths.';
-    }
     return pendingAnalysisMsg();
   }
 
@@ -617,75 +600,7 @@
           sessionStorage.setItem('fw_marco_user_prompt', 'What skill gap should I tackle next on my current roadmap waypoint?');
         } catch (_) {}
         location.href = (global.FWPageBoot && FWPageBoot.URLS.coach) || 'coach.html';
-        return;
       }
-      var ctx = global.FWPortalFocusCtx;
-      if (!ctx || !ctx.onPersist || !ctx.getTree || !global.FWSkillGapTracker) return;
-      var logPreset = e.target.closest('.sgt-log-preset');
-      if (logPreset) {
-        e.preventDefault();
-        var updatedPreset = FWSkillGapTracker.persistLog(
-          ctx.getTree(),
-          logPreset.getAttribute('data-gap-id'),
-          logPreset.getAttribute('data-log-text')
-        );
-        ctx.onPersist(updatedPreset);
-        return;
-      }
-      var logAdd = e.target.closest('.sgt-log-add');
-      if (logAdd) {
-        e.preventDefault();
-        var row = logAdd.closest('.sgt-log-row');
-        var gapId = FWSkillGapTracker.resolveLogGapId(row) || logAdd.getAttribute('data-gap-id');
-        var input = row ? row.querySelector('.sgt-log-input') : null;
-        var text = input ? input.value : '';
-        if (!String(text || '').trim()) return;
-        var updatedLog = FWSkillGapTracker.persistLog(ctx.getTree(), gapId, text);
-        ctx.onPersist(updatedLog);
-        if (input) input.value = '';
-        return;
-      }
-      var logRemove = e.target.closest('.sgt-log-remove');
-      if (logRemove) {
-        e.preventDefault();
-        var updatedRemove = FWSkillGapTracker.removeLog(
-          ctx.getTree(),
-          logRemove.getAttribute('data-gap-id'),
-          logRemove.getAttribute('data-log-id')
-        );
-        ctx.onPersist(updatedRemove);
-      }
-    });
-
-    wrap.addEventListener('change', function (e) {
-      var cb = e.target.closest('.sgt-step-check');
-      if (cb && cb.closest('#portal-skill-gap-tracker')) {
-        var ctx = global.FWPortalFocusCtx;
-        if (!ctx || !ctx.onPersist || !ctx.getTree || !global.FWSkillGapTracker) return;
-        FWSkillGapTracker.handleStepCheckboxChange(cb, ctx);
-        return;
-      }
-      var gapCb = e.target.closest('.sgt-gap-check');
-      if (!gapCb || !gapCb.closest('#portal-skill-gap-tracker')) return;
-      var gapCtx = global.FWPortalFocusCtx;
-      if (!gapCtx || !gapCtx.onPersist || !gapCtx.getTree || !global.FWSkillGapTracker) return;
-      FWSkillGapTracker.handleGapCheckboxChange(gapCb, gapCtx);
-    });
-
-    wrap.addEventListener('keydown', function (e) {
-      if (e.key !== 'Enter') return;
-      var input = e.target.closest('#portal-skill-gap-tracker .sgt-log-input');
-      if (!input) return;
-      e.preventDefault();
-      var ctx = global.FWPortalFocusCtx;
-      if (!ctx || !ctx.onPersist || !ctx.getTree || !global.FWSkillGapTracker) return;
-      var row = input.closest('.sgt-log-row');
-      var gapId = FWSkillGapTracker.resolveLogGapId(row) || input.getAttribute('data-gap-id');
-      var text = input.value;
-      if (!String(text || '').trim()) return;
-      var updated = FWSkillGapTracker.persistLog(ctx.getTree(), gapId, text);
-      ctx.onPersist(updated);
-      input.value = '';
     });
   }
 
@@ -850,8 +765,8 @@
       + '</div></div></div>'
       + '<div class="portal-drawer-section portal-drawer-section--onet" role="region" aria-labelledby="portal-drawer-onet-title">'
       + '<div class="portal-drawer-card">'
-      + '<h3 id="portal-drawer-onet-title" class="portal-drawer-section-title">O*NET dimensions</h3>'
-      + '<p class="portal-drawer-section-sub">Top personality coordinates (0–100) from your quiz profile.</p>'
+      + '<h3 id="portal-drawer-onet-title" class="portal-drawer-section-title">Your strengths</h3>'
+      + '<p class="portal-drawer-section-sub">Your strongest traits (0–100), drawn from your quiz profile.</p>'
       + '<div class="portal-drawer-card-body" id="portal-onet-dimensions"></div>'
       + '</div></div>'
       + '<div class="portal-drawer-section" role="region" aria-labelledby="portal-drawer-skills-title">'
@@ -883,6 +798,7 @@
   }
 
   function renderProfileEntry(wrap, data) {
+    notifyPageVeil();
     if (!wrap) return;
     var hasQuiz = data && data.scores && Object.keys(data.scores).length;
     if (!hasQuiz) {
@@ -911,97 +827,77 @@
     if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
   }
 
-  function mountPortalFocusPanel(roadmapForPanel, resolvedTarget, localRoadmap) {
-    const el = document.getElementById('portal-skill-gap-tracker');
-    if (!el || !resolvedTarget || !global.FWCareerTarget) return;
-    var focusTree = roadmapForPanel;
-
-    function showPortalAdvanceLoading() {
-      var loading = document.getElementById('portal-focus-loading');
-      if (loading) loading.hidden = false;
-    }
-
-    function hidePortalAdvanceLoading() {
-      var loading = document.getElementById('portal-focus-loading');
-      if (loading) loading.hidden = true;
-    }
-
-    function applyPortalFocusTree(updated) {
-      focusTree = global.FWSkillGapTracker.syncProgress(updated);
-      if (global.FWRoadmapSync && typeof FWRoadmapSync.publish === 'function') {
-        focusTree = FWRoadmapSync.publish(focusTree, { source: 'portal' });
-      } else {
-        try { localStorage.setItem('fw_roadmap_v1', JSON.stringify(focusTree)); } catch (_) {}
-        if (global.FWAuth && typeof FWAuth.saveRoadmap === 'function') {
-          FWAuth.saveRoadmap(focusTree).catch(function () {});
-        }
-      }
-      syncPortalFocusCtx();
-      FWSkillGapTracker.renderHomePanel(el, focusTree, portalFocusOpts);
-    }
-
-    function portalAdvanceCtx() {
-      var qz = profile();
-      return {
-        onPersist: applyPortalFocusTree,
-        runAdvance: function () {
-          FWSkillGapTracker.runFocusAdvance({
-            getTree: function () { return focusTree; },
-            quizScores: qz && qz.scores ? qz.scores : null,
-            showLoading: showPortalAdvanceLoading,
-            hideLoading: hidePortalAdvanceLoading,
-            onPersist: applyPortalFocusTree,
-          });
-        },
-      };
-    }
-
-    function syncPortalFocusCtx() {
-      global.FWPortalFocusCtx = {
-        getTree: function () { return focusTree; },
-        onPersist: portalFocusPersist,
-        maybeAdvanceOnComplete: function (updated) {
-          FWSkillGapTracker.maybeAdvanceOnComplete(updated, portalAdvanceCtx());
-        },
-        runAdvance: portalAdvanceCtx().runAdvance,
-      };
-    }
-
-    function portalFocusPersist(updated) {
-      if (global.FWSkillGapTracker && typeof FWSkillGapTracker.maybeAdvanceOnComplete === 'function') {
-        FWSkillGapTracker.maybeAdvanceOnComplete(updated, portalAdvanceCtx());
-        return;
-      }
-      applyPortalFocusTree(updated);
-    }
-
-    var portalFocusOpts = {
-      getTree: function () { return focusTree; },
-      onPersist: portalFocusPersist,
-    };
-
-    if (global.FWSkillGapTracker && roadmapForPanel && roadmapForPanel.focusTracker) {
-      syncPortalFocusCtx();
-      FWSkillGapTracker.renderHomePanel(el, roadmapForPanel, portalFocusOpts);
-      return;
-    }
-    if (portalHasRoadmap(localRoadmap)) {
-      el.innerHTML = '<p class="portal-character">Waypoint focus opens from your roadmap. Use the <strong>Career Roadmap</strong> card above to view progress and next steps.</p>'
-        + '<button type="button" class="cta-btn cta-btn-outline portal-empty-cta" id="portal-open-roadmap-focus">Open roadmap</button>';
-      var openRmBtn = el.querySelector('#portal-open-roadmap-focus');
-      if (openRmBtn) openRmBtn.addEventListener('click', goRoadmap);
-      return;
-    }
-    if (typeof FWCareerTarget.gapsNeedRoadmap === 'function'
-      && FWCareerTarget.gapsNeedRoadmap(resolvedTarget, localRoadmap)) {
-      el.innerHTML = '<p class="portal-character">Skill gaps appear after you build a roadmap for '
-        + esc(resolvedTarget.name) + '. Use the <strong>Career Roadmap</strong> card above.</p>';
-      return;
-    }
-    const gaps = FWCareerTarget.gapsForTarget(resolvedTarget, localRoadmap);
-    el.innerHTML = '<p class="portal-character">' + (gaps.length
-      ? 'Build a roadmap with the <strong>Career Roadmap</strong> card above to track skill gaps for ' + esc(resolvedTarget.name) + '.'
-      : 'No major skill gaps flagged from your quiz — strong alignment so far.') + '</p>';
+  // Compact readiness summary — replaces the full skill-gap tracker on the
+  // home page. Read-only: no checklists, no logging, just the target name,
+  // preparedness %, and up to 3 gap rows with a you-vs-target bar. Returns ''
+  // when there's nothing to show (no roadmap / no gaps), so the caller can
+  // skip rendering the panel entirely rather than showing a placeholder.
+  function readinessSummaryHtml(roadmapForPanel, resolvedTarget, localRoadmap) {
+    const ft = roadmapForPanel && roadmapForPanel.focusTracker;
+    const gaps = ft && Array.isArray(ft.skillGaps) ? ft.skillGaps : [];
+    if (!gaps.length) return '';
+    const targetName = (resolvedTarget && resolvedTarget.name)
+      || (roadmapForPanel && roadmapForPanel.targetCareerName)
+      || (localRoadmap && localRoadmap.targetCareerName)
+      || 'your target career';
+    const prep = roadmapForPanel && roadmapForPanel.fitContext && roadmapForPanel.fitContext.preparedness;
+    const prepHtml = (prep != null && isFinite(prep))
+      ? ' <span class="portal-readiness-pct">' + Math.round(prep) + '%</span>'
+      : '';
+    // Make forward progress legible from existing roadmap state — same
+    // done/total the roadmap's own HUD counts. Reuses the already-styled
+    // readiness row/bar classes so no CSS change is needed.
+    const prog = (global.FWRoadmapTree && typeof FWRoadmapTree.progressTree === 'function')
+      ? FWRoadmapTree.progressTree(roadmapForPanel) : null;
+    const progHtml = (prog && prog.total > 0)
+      ? '<div class="portal-readiness-row">'
+        + '<span class="portal-readiness-label">Roadmap progress</span>'
+        + '<div class="portal-readiness-bars">'
+        + '<div class="portal-readiness-line">'
+        + '<span class="portal-readiness-tag">Done</span>'
+        + '<div class="portal-readiness-track"><span class="portal-readiness-fill portal-readiness-fill--you" style="width:' + prog.pct + '%"></span></div>'
+        + '<span class="portal-readiness-val">' + prog.done + '/' + prog.total + '</span>'
+        + '</div>'
+        + '</div>'
+        + '</div>'
+      : '';
+    // A gap row with no known target level (0/missing) renders as a nonsense
+    // "You 0 / Target 0" meter — only rows with a real target get a meter.
+    const meterable = gaps.filter(function (g) { return Number(g && g.target) > 0; });
+    const shown = meterable.slice(0, 3);
+    const rows = shown.map(function (g) {
+      const label = (g && g.label) || 'Skill gap';
+      const userV = Math.max(0, Math.min(100, Math.round(Number(g && g.user) || 0)));
+      const targetV = Math.max(0, Math.min(100, Math.round(Number(g && g.target) || 0)));
+      return '<div class="portal-readiness-row">'
+        + '<span class="portal-readiness-label">' + esc(label) + '</span>'
+        + '<div class="portal-readiness-bars">'
+        + '<div class="portal-readiness-line">'
+        + '<span class="portal-readiness-tag">You</span>'
+        + '<div class="portal-readiness-track"><span class="portal-readiness-fill portal-readiness-fill--you" style="width:' + userV + '%"></span></div>'
+        + '<span class="portal-readiness-val">' + userV + '</span>'
+        + '</div>'
+        + '<div class="portal-readiness-line">'
+        + '<span class="portal-readiness-tag">Target</span>'
+        + '<div class="portal-readiness-track"><span class="portal-readiness-fill portal-readiness-fill--target" style="width:' + targetV + '%"></span></div>'
+        + '<span class="portal-readiness-val">' + targetV + '</span>'
+        + '</div>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+    const moreHtml = gaps.length > shown.length
+      ? '<p class="portal-readiness-more">+' + (gaps.length - shown.length) + ' more on the focus view</p>'
+      : '';
+    if (!rows && !progHtml) return '';
+    return '<div class="portal-panel portal-panel--wide portal-panel--focus" id="portal-focus-panel">'
+      + '<div class="portal-panel-accent" aria-hidden="true"></div>'
+      + '<h2 class="portal-panel-title">Readiness</h2>'
+      + '<p class="portal-readiness-headline">Readiness toward ' + esc(targetName) + prepHtml + '</p>'
+      + progHtml
+      + rows
+      + moreHtml
+      + '<a href="roadmap.html?focus=1" class="portal-readiness-link sgt-open-focus">Open focus view &rarr;</a>'
+      + '</div>';
   }
 
   function snapshotIsStale(data) {
@@ -1043,7 +939,6 @@
     var ctx = {};
     if (data) {
       if (data.name) ctx.userName = data.name;
-      if (data.archetype) ctx.archetype = data.archetype;
       if (global.FWHubZoneFit && typeof FWHubZoneFit.topZoneLabels === 'function') {
         var zoneLabels = FWHubZoneFit.topZoneLabels(3);
         if (zoneLabels.length) ctx.topIndustries = zoneLabels;
@@ -1073,20 +968,17 @@
     wrap.innerHTML =
       '<div class="portal-panel portal-empty">'
       + '<h2 class="portal-panel-title">Unlock your profile</h2>'
-      + '<p class="portal-empty-text">Take the ~90 second career quiz to reveal your archetype, top industries, skills, and best-fit careers.</p>'
+      + '<p class="portal-empty-text">Take the ~90 second career quiz to reveal your top industries, skills, and best-fit careers.</p>'
       + '<button type="button" class="cta-btn portal-empty-cta" id="portal-empty-quiz-cta">Take the quiz &rarr;</button>'
       + '</div>';
     const cta = wrap.querySelector('#portal-empty-quiz-cta');
     if (cta) cta.addEventListener('click', goQuiz);
   }
 
-  function showResumeHint() {
-    if (!global.FWOnetVectors) return true;
-    var quiz = profile();
-    if (quiz && quiz.objectiveSkipped) return true;
-    var vec = quiz && quiz.objectiveVector && quiz.objectiveVector.values;
-    if (!vec) return true;
-    return !FWOnetVectors.isObjectiveVectorActive(vec);
+  function reinjectPortalActionExtras() {
+    // renderActions wipes #portal-actions; re-mount FW2 inject cards that live there.
+    try { if (global.FWSimPortalCard && typeof FWSimPortalCard.inject === 'function') FWSimPortalCard.inject(); } catch (_) {}
+    try { if (global.FWResumeBuilder && typeof FWResumeBuilder.inject === 'function') FWResumeBuilder.inject(); } catch (_) {}
   }
 
   function renderActions(wrap) {
@@ -1094,8 +986,7 @@
     wrap.innerHTML = AREAS.map(function (a) {
       const muted = a.muted ? ' portal-card--muted' : '';
       const accent = a.accent === 'sky' ? ' portal-card--accent-sky' : '';
-      const hint = (a.hint && showProfileHint(pb)) || (a.resumeHint && showResumeHint())
-        ? ' portal-card-hint' : '';
+      const hint = a.hint && showProfileHint(pb) ? ' portal-card-hint' : '';
       return '<button type="button" class="portal-card' + muted + accent + hint + '" data-portal-area="' + esc(a.key) + '">'
         + '<span class="portal-card-icon"><i data-lucide="' + esc(a.icon) + '"></i></span>'
         + '<span class="portal-card-body">'
@@ -1111,6 +1002,7 @@
         if (area && typeof area.go === 'function') area.go();
       });
     });
+    reinjectPortalActionExtras();
     if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
   }
 
@@ -1127,6 +1019,7 @@
   }
 
   function renderSnapshot(wrap, data, snapshot) {
+    notifyPageVeil();
     const hasQuiz = data && data.scores && Object.keys(data.scores).length;
     if (!hasQuiz) {
       wrap.innerHTML = '';
@@ -1141,28 +1034,21 @@
       ? FWCareerTarget.resolveTargetCareer() : null;
 
     let html = '';
-    let roadmapForPanel = null;
 
     if (resolvedTarget && global.FWCareerTarget) {
       const qz = profile();
-      const localRoadmapForFocus = localRoadmap && global.FWRoadmapTree && FWRoadmapTree.ensureFocusTracker
+      const roadmapForPanel = localRoadmap && global.FWRoadmapTree && FWRoadmapTree.ensureFocusTracker
         ? FWRoadmapTree.ensureFocusTracker(localRoadmap, qz && qz.scores ? qz.scores : null)
         : localRoadmap;
-      roadmapForPanel = localRoadmapForFocus;
-      html += '<div class="portal-panel portal-panel--wide portal-panel--focus" id="portal-focus-panel">'
-        + '<div class="sgt-focus-loading" id="portal-focus-loading" hidden>Loading your next waypoint…</div>'
-        + '<div class="portal-panel-accent" aria-hidden="true"></div>'
-        + '<h2 class="portal-panel-title">Skill gaps</h2>'
-        + '<div id="portal-skill-gap-tracker"></div>'
-        + '</div>';
-    } else {
+      html = readinessSummaryHtml(roadmapForPanel, resolvedTarget, localRoadmap);
+    }
+    if (!html) {
       wrap.innerHTML = '';
       wrap.style.display = 'none';
       return;
     }
 
     wrap.innerHTML = html;
-    mountPortalFocusPanel(roadmapForPanel, resolvedTarget, localRoadmap);
     bindPortalSnapshotDelegation();
     if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
   }
@@ -1226,6 +1112,7 @@
       }
     }
     if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+    notifyPageVeil();
   }
 
   function render() {
@@ -1256,6 +1143,11 @@
     lastSnapshotRenderKey = snapshotRenderKey(data, savedSnap || fallback, localRm);
     updateProfileDrawerContent(data, savedSnap || fallback);
 
+    // Hold the boot veil until the (possibly network-bound) snapshot resolves
+    // and its render lands — otherwise the veil lifts on the fallback render
+    // and the real snapshot bars jitter in a beat later. hold() no-ops once
+    // the veil has already revealed (later refreshes don't re-veil).
+    if (global.FWPageVeil && typeof FWPageVeil.hold === 'function') FWPageVeil.hold();
     ensurePortalSnapshot(data).then(function (snap) {
       if (!data) return;
       var freshData = profile() || data;
@@ -1267,6 +1159,9 @@
         lastSnapshotRenderKey = newKey;
         renderSnapshot(snapshot, freshData, resolvedSnap);
       }
+    }).catch(function () { /* ignore */ }).then(function () {
+      if (global.FWPageVeil && typeof FWPageVeil.release === 'function') FWPageVeil.release();
+      notifyPageVeil();
     });
 
     if (data && data.scores) prefetchVectorRanking(data.scores);
@@ -1274,6 +1169,15 @@
       FWHubZoneFit.resolveZoneFits().catch(function () { /* ignore */ });
     }
     if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+    notifyPageVeil();
+  }
+
+  // Boot-veil hook: every portal render (re)notifies FWPageVeil so the page
+  // reveals only once the boot render storm has gone quiet.
+  function notifyPageVeil() {
+    if (global.FWPageVeil && typeof FWPageVeil.notifyRender === 'function') {
+      FWPageVeil.notifyRender();
+    }
   }
 
   function syncSignOutFooter() {
@@ -1292,6 +1196,31 @@
             : 'auth.html#signin';
           location.replace(authUrl);
         });
+      });
+    }
+    var doom = document.getElementById('portal-doom-btn');
+    if (doom && !doom._fwBound) {
+      doom._fwBound = true;
+      doom.addEventListener('mouseenter', function () { doom.style.background = '#f9d6d1'; });
+      doom.addEventListener('mouseleave', function () { doom.style.background = '#fdecea'; });
+      doom.addEventListener('click', function () {
+        var ok = window.confirm(
+          'Delete your account?\n\nThis permanently erases your profile, roadmap, quiz results, '
+          + 'and everything else — from the site\'s memory, not just this device. It cannot be undone.\n\n'
+          + 'You can sign up again with the same email afterward as a completely clean user.');
+        if (!ok) return;
+        if (global.FWButtonBusy) FWButtonBusy.start(doom, { label: 'Purging your account…' });
+        else { doom.disabled = true; doom.textContent = 'Purging your account…'; }
+        doom.style.opacity = '0.7';
+        var finish = function () {
+          try { localStorage.clear(); } catch (_) { /* ignore */ }
+          try { sessionStorage.clear(); } catch (_) { /* ignore */ }
+          location.replace('index.html');
+        };
+        var req = (global.FWAuth && typeof FWAuth.authFetch === 'function')
+          ? FWAuth.authFetch('/account', { method: 'DELETE' })
+          : fetch('/account', { method: 'DELETE', credentials: 'include' });
+        Promise.resolve(req).then(finish, finish);
       });
     }
   }

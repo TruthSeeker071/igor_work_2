@@ -6,3 +6,24 @@ GEMINI_MODEL=gemini-2.5-flash-lite
 GEMINI_FALLBACK_MODEL=gemini-2.5-flash
 GEMINI_RESUME_MODEL=gemini-2.5-flash-lite
 GEMINI_USE_SEARCH=never
+
+# Billing (free/paid merge §3). Test-mode values only in local dev; the real
+# prototype/production values live as Cloudflare Pages env vars and are never
+# committed. Absent → GET /config reports stripeEnabled:false and pricing.html
+# keeps its fake-door intent modal.
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+STRIPE_PRICE_MONTHLY=
+STRIPE_PRICE_ANNUAL=
+STRIPE_PRICE_LIFETIME=
+STRIPE_PRICE_SPRINT=
+
+# Developer/tester full access (free/paid merge §3.5). Comma-separated emails;
+# empty or unset is a global no-op. Set per environment in the Pages dashboard.
+DEV_TEST_EMAILS=
+
+# Admin console (migration 0016). The ROOT admin — the only account that can
+# manage sub-admins — is defined ONLY here/in the Pages dashboard, never in D1,
+# so no SQL write can mint or remove it. Unset → nobody is root and every
+# /admin/* endpoint answers 404.
+ROOT_ADMIN_EMAIL=

@@ -8,14 +8,14 @@ import {
 import { loadFullProfile } from './_lib/profile.js';
 
 export async function onRequestOptions(context) {
-  return authPreflight(originFromEnv(context.env));
+  return authPreflight(originFromEnv(context.env, context.request));
 }
 
 // GET /profile -> aggregate of every profile sub-resource for the signed-in user.
 // One authenticated round trip in place of separate /auth/me + /profile/quiz calls.
 export async function onRequestGet(context) {
   const { request, env } = context;
-  const origin = originFromEnv(env);
+  const origin = originFromEnv(env, request);
 
   try {
     const { email } = await requireSession(request, env);

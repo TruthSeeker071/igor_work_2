@@ -66,6 +66,7 @@
 
   var S = {
     sims: [],
+    genIndex: [],        // AI-generated sims cached server-side (board discovery)
     view: 'loading',
     sim: null,
     tier: null,          // 'taxi' | 'flight' | 'deep'
@@ -82,6 +83,7 @@
     hintsOpen: {},
     hintCount: 0,
     warmups: {},         // interaction index -> chosen option index
+    scenarioPath: [],    // deep-tier crossroads: [{nodeId, optIdx}]
     chat: [],
     chatBusy: false,
     startAt: null,
@@ -206,6 +208,7 @@
           hintsOpen: S.hintsOpen,
           hintCount: S.hintCount,
           warmups: S.warmups,
+          scenarioPath: S.scenarioPath,
           chat: S.chat,
           elapsed: elapsedSec(),
           at: Date.now()
@@ -223,6 +226,14 @@
 
   function clearDraft(simId) {
     try { localStorage.removeItem(draftKey(simId)); } catch (_) {}
+  }
+
+  // Free/paid merge §1 — the deep tier is Flight Plan. FWEnt.has() is true for
+  // everyone while the paywall ships dark, and true if entitlements never
+  // loaded, so this can only ever lock someone the server would also lock.
+  function deepTierEntitled() {
+    if (!window.FWEnt || typeof FWEnt.has !== 'function') return true;
+    return FWEnt.has('premium');
   }
 
   function completedTier(simId, tier) {
@@ -449,6 +460,31 @@
     });
     page.appendChild(list);
 
+    // AI-generated sims already built for other users — instant to open.
+    var authoredIds = {};
+    S.sims.forEach(function (s2) {
+      authoredIds[s2.id] = 1;
+      (ALIASES[s2.id] || []).forEach(function (a) { authoredIds[a] = 1; });
+    });
+    var gen = (S.genIndex || []).filter(function (g) { return g && g.id && !authoredIds[g.id]; });
+    if (gen.length && S.filter === 'ALL') {
+      page.appendChild(h('h2', 'fw-h2', 'Built by request'));
+      page.appendChild(h('p', 'fw-foot-note', 'Simulations other explorers generated — ready instantly. Any career\'s deep-dive page can build its own.'));
+      var genList = h('div', 'fw-cards');
+      gen.slice(0, 12).forEach(function (g) {
+        var card = h('button', 'fw-flight');
+        card.type = 'button';
+        card.innerHTML =
+          '<div class="fw-flight-top"><span class="fw-eyebrow">' + esc(g.domain || 'GENERATED') + ' · AI-built</span></div>'
+          + '<div class="fw-flight-title">' + esc(g.title) + '</div>'
+          + (g.org ? '<div class="fw-flight-org">' + esc(g.org) + (g.orgPlain ? ' — ' + esc(g.orgPlain) : '') + '</div>' : '')
+          + (g.hook ? '<div class="fw-flight-hook">' + esc(g.hook) + '</div>' : '');
+        card.onclick = function () { openGenerated(g.id, g.title); };
+        genList.appendChild(card);
+      });
+      page.appendChild(genList);
+    }
+
     var foot = h('div', 'fw-board-foot');
     foot.appendChild(h('span', 'fw-foot-note', 'Simulations include the boring parts on purpose — that\'s how you know it\'s honest.'));
     if (S.trials.length > 0) {
@@ -528,24 +564,38 @@
 
     // Tier cards
     var tiersWrap = h('div', 'fw-tiers');
-    var deepUnlocked = completedTier(sim.id, 'flight');
+    // Free/paid merge §1: taxi + flight stay free (the funnel has to feel
+    // complete); the deep dive and its Crossroads branching are Flight Plan.
+    // Reuses the tier card's existing locked language, not a new lock style.
+    var deepEarned = completedTier(sim.id, 'flight');
+    var deepPaid = deepTierEntitled();
+    var deepUnlocked = deepEarned && deepPaid;
+    var deepDesc = !deepPaid
+      ? 'A Flight Plan feature — the full deliverable, every document, extended colleague access.'
+      : (deepEarned
+        ? 'The full deliverable, every document, extended colleague access.'
+        : 'Unlocks after a test flight — see the job before you do the whole job.');
     var defs = [
       { id: 'taxi', title: '2-minute look', desc: 'One real document, one call to make, one honest payoff. No writing.', cta: 'Take a look →' },
       { id: 'flight', title: '10-minute test flight', desc: 'Read the file, DM a colleague, make the call, get reviewed like a real new hire.', cta: 'Start the flight →' },
-      { id: 'deep', title: '25-minute deep dive', desc: deepUnlocked ? 'The full deliverable, every document, extended colleague access.' : 'Unlocks after a test flight — see the job before you do the whole job.', cta: 'Go deep →', locked: !deepUnlocked }
+      { id: 'deep', title: '25-minute deep dive', desc: deepDesc, cta: 'Go deep →', locked: !deepUnlocked, upgrade: !deepPaid }
     ];
     var tierBtns = [];
     defs.forEach(function (d) {
       var card = h('button', 'fw-tier' + (d.locked ? ' is-locked' : ''));
       card.type = 'button';
+      var lockedCta = d.upgrade ? 'See Flight Plan →' : 'Finish a test flight first';
       card.innerHTML = '<div class="fw-tier-head"><span class="fw-tier-title">' + d.title + '</span>'
         + (d.locked ? '<span class="fw-tier-lock">🔒</span>' : '') + '</div>'
         + '<p class="fw-tier-desc">' + d.desc + '</p>'
-        + '<span class="fw-tier-cta">' + (d.locked ? 'Finish a test flight first' : d.cta) + '</span>';
+        + '<span class="fw-tier-cta">' + (d.locked ? lockedCta : d.cta) + '</span>';
       card.disabled = true;
       if (!d.locked) {
         card.onclick = function () { startTier(d.id); };
         tierBtns.push(card);
+      } else if (d.upgrade) {
+        card.disabled = false;
+        card.onclick = function () { location.href = 'pricing.html'; };
       }
       tiersWrap.appendChild(card);
     });
@@ -577,6 +627,7 @@
     S.hintsOpen = {};
     S.hintCount = 0;
     S.warmups = {};
+    S.scenarioPath = [];
     S.chat = [];
     S.chatBusy = false;
     S.elapsedBase = 0;
@@ -591,6 +642,7 @@
     S.hintsOpen = draft.hintsOpen || {};
     S.hintCount = draft.hintCount || 0;
     S.warmups = draft.warmups || {};
+    S.scenarioPath = draft.scenarioPath || [];
     S.chat = draft.chat || [];
     S.elapsedBase = draft.elapsed || 0;
     S.startAt = Date.now();
@@ -769,7 +821,9 @@
       if (el) el.textContent = fmtTime(elapsedSec());
     }, 1000);
 
-    var tabs = [['brief', 'Brief'], ['docs', 'Documents'], ['colleague', firstName(sim.colleague.name)], ['work', 'Your work']];
+    var tabs = [['brief', 'Brief'], ['docs', 'Documents'], ['colleague', firstName(sim.colleague.name)]];
+    if (S.tier === 'deep' && simScenario(sim)) tabs.push(['scenario', 'Crossroads']);
+    tabs.push(['work', 'Your work']);
     var tabRow = h('div', 'fw-tabs');
     tabs.forEach(function (t) {
       var b = h('button', 'fw-tab' + (S.tab === t[0] ? ' is-on' : ''), esc(t[1]));
@@ -783,6 +837,7 @@
     if (S.tab === 'brief') body.appendChild(tabBrief(sim));
     if (S.tab === 'docs') body.appendChild(tabDocs(sim));
     if (S.tab === 'colleague') body.appendChild(tabColleague(sim));
+    if (S.tab === 'scenario') body.appendChild(tabScenario(sim));
     if (S.tab === 'work') body.appendChild(tabWork(sim));
     page.appendChild(body);
 
@@ -817,6 +872,77 @@
     el.appendChild(h('p', 'fw-foot-note',
       'Read the documents (tap any <span class="fw-underline-demo">underlined word</span> for plain English). Message '
       + esc(firstName(sim.colleague.name)) + ' anytime — asking questions is what good new hires do. Then build your answer in <strong>Your work</strong>.'));
+    return el;
+  }
+
+  /* ── Deep-tier Crossroads: branching decision scenario ─────── */
+  // A pressured stretch of the job as sequential calls: each beat shows the
+  // situation, the user picks a move, the outcome plays, and the choice
+  // decides which beat comes next. Generated sims carry sim.scenario;
+  // authored sims without one simply don't get the tab.
+
+  function simScenario(sim) {
+    var sc = sim && sim.scenario;
+    return sc && Array.isArray(sc.nodes) && sc.nodes.length >= 3 ? sc : null;
+  }
+
+  function scenarioNode(sc, id) {
+    for (var i = 0; i < sc.nodes.length; i++) if (sc.nodes[i].id === id) return sc.nodes[i];
+    return null;
+  }
+
+  function tabScenario(sim) {
+    var sc = simScenario(sim);
+    var el = h('div');
+    if (!sc) return el;
+    el.appendChild(h('p', 'fw-p fw-intro', esc(sc.intro || 'A stretch of this job where the calls compound. Make each one.')));
+
+    // Replay the beats already decided.
+    var curId = sc.nodes[0].id;
+    var ended = false;
+    S.scenarioPath.forEach(function (step) {
+      var node = scenarioNode(sc, step.nodeId);
+      if (!node || ended) return;
+      var opt = node.options[step.optIdx];
+      if (!opt) return;
+      var beat = h('div', 'fw-panel');
+      beat.appendChild(h('p', 'fw-p', esc(node.setup)));
+      beat.appendChild(h('p', 'fw-p', '<strong>' + esc(node.decision) + '</strong>'));
+      beat.appendChild(h('p', 'fw-p', '<em>Your call:</em> ' + esc(opt.label)));
+      beat.appendChild(h('p', 'fw-p' + (opt.tone === 'costly' ? ' fw-neg' : opt.tone === 'strong' ? ' fw-pos' : ''), esc(opt.outcome)));
+      el.appendChild(beat);
+      if (opt.next) curId = opt.next; else ended = true;
+    });
+
+    if (ended) {
+      var doneP = h('div', 'fw-panel fw-panel--accent');
+      doneP.appendChild(eyebrow('Crossroads complete', true));
+      doneP.appendChild(h('p', 'fw-p', 'You navigated ' + S.scenarioPath.length + ' calls the way this job actually serves them — under time pressure, with partial information. Bring what you learned into <strong>Your work</strong>.'));
+      var redo = h('button', 'fw-chip', 'Run it again differently');
+      redo.type = 'button';
+      redo.onclick = function () { S.scenarioPath = []; saveDraft(); showSim(); };
+      doneP.appendChild(redo);
+      el.appendChild(doneP);
+      return el;
+    }
+
+    var node = scenarioNode(sc, curId);
+    if (!node) return el;
+    var live = h('div', 'fw-panel fw-panel--reading');
+    live.appendChild(h('p', 'fw-p', esc(node.setup)));
+    live.appendChild(h('p', 'fw-p', '<strong>' + esc(node.decision) + '</strong>'));
+    node.options.forEach(function (opt, i) {
+      var b = h('button', 'fw-option', esc(opt.label));
+      b.type = 'button';
+      b.onclick = function () {
+        S.scenarioPath.push({ nodeId: node.id, optIdx: i });
+        logEvent('scenario_choice', { node: node.id, opt: i });
+        saveDraft();
+        showSim();
+      };
+      live.appendChild(b);
+    });
+    el.appendChild(live);
     return el;
   }
 
@@ -1126,11 +1252,16 @@
       }
 
       if (S.tier === 'flight') {
-        page.appendChild(bigButton('Go deeper — the 25-minute version →', function () {
-          logEvent('tier_upgrade_click', { from: 'flight' });
-          clearDraft(sim.id);
-          startTier('deep');
-        }));
+        var deepOk = deepTierEntitled();
+        page.appendChild(bigButton(
+          deepOk ? 'Go deeper — the 25-minute version →' : 'Go deeper — the 25-minute version (Flight Plan) →',
+          function () {
+            logEvent('tier_upgrade_click', { from: 'flight', gated: !deepOk });
+            if (!deepOk) { location.href = 'pricing.html'; return; }
+            clearDraft(sim.id);
+            startTier('deep');
+          },
+        ));
       }
       var flown = S.trials.filter(function (t) { return t.tier !== 'taxi'; });
       if (flown.length >= 2) page.appendChild(bigButton('The Mirror updated — open your readout →', showMirror, { outline: S.tier === 'flight' }));
@@ -1343,8 +1474,18 @@
     clearRoot();
     var page = h('div', 'fw-page fw-up');
     page.appendChild(backRow('All careers', showBoard));
+    // Hybrid loader: the copy carries the ~20s expectation, the skeleton shows
+    // the workspace being built (doc list + main panel).
     page.appendChild(h('div', 'fw-loading',
-      '<span class="fw-spinner"></span><span>Building a realistic ' + esc(name) + ' simulation… the first person to try a career waits ~20 seconds; everyone after gets it instantly.</span>'));
+      '<span>Building a realistic ' + esc(name) + ' simulation… the first person to try a career waits ~20 seconds; everyone after gets it instantly.</span>'
+      + '<div class="fw-loading-skeleton" aria-hidden="true">'
+      + '<div class="fw-skel-docs">'
+      + '<span class="fw-skeleton fw-skel-doc"></span>'
+      + '<span class="fw-skeleton fw-skel-doc"></span>'
+      + '<span class="fw-skeleton fw-skel-doc"></span>'
+      + '</div>'
+      + '<span class="fw-skeleton fw-skel-panel"></span>'
+      + '</div>'));
     root.appendChild(page);
   }
 
@@ -1377,6 +1518,15 @@
     root = document.getElementById('fw-root');
     if (!root) return;
     S.trials = loadTrials();
+
+    // Board discovery of AI-generated sims — best-effort, never blocks boot.
+    fetch('/sim-generate', { credentials: 'include' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        S.genIndex = (d && d.sims) || [];
+        if (S.view === 'board' && S.genIndex.length) showBoard();
+      })
+      .catch(function () {});
 
     fetch(FLIGHTS_URL)
       .then(function (r) { if (!r.ok) throw new Error('flights ' + r.status); return r.json(); })

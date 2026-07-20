@@ -11,15 +11,16 @@ import {
   SESSION_DAYS,
   checkRateLimit,
   clientIp,
+  DUMMY_PASSWORD_HASH,
 } from '../_lib/auth.js';
 
 export async function onRequestOptions(context) {
-  return authPreflight(originFromEnv(context.env));
+  return authPreflight(originFromEnv(context.env, context.request));
 }
 
 export async function onRequestPost(context) {
   const { request, env } = context;
-  const origin = originFromEnv(env);
+  const origin = originFromEnv(env, request);
 
   let payload;
   try {
@@ -40,12 +41,11 @@ export async function onRequestPost(context) {
     await checkRateLimit(env, `login:${email}`);
 
     const user = await findUserByEmail(env, email);
-    if (!user) {
-      return authJsonResponse(401, { error: 'Invalid email or password.' }, origin);
-    }
-
-    const ok = await verifyPassword(password, user.password_hash);
-    if (!ok) {
+    // Always run a full password verification — against a dummy hash when the
+    // user is absent — so response timing doesn't reveal whether the email is
+    // registered (timing-based user enumeration).
+    const ok = await verifyPassword(password, user ? user.password_hash : DUMMY_PASSWORD_HASH);
+    if (!user || !ok) {
       return authJsonResponse(401, { error: 'Invalid email or password.' }, origin);
     }
 

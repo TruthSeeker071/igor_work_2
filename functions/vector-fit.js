@@ -3,7 +3,8 @@ import {
   preflightResponse,
   originFromEnv,
 } from './_lib.js';
-import { requireSession, loadQuizProfile } from './_lib/auth.js';
+import { requireSession } from './_lib/auth.js';
+import { loadUser, normalizeUser, denormalizeUser } from './_lib/user.js';
 import { getVectorsForSocs, getMagnitudeSample } from './_lib/onet/vectors.js';
 import { getCareers } from './_lib/onet/store.js';
 import {
@@ -25,7 +26,7 @@ async function loadZoneCentroids(baseUrl) {
 
 export async function onRequest(context) {
   const { request, env } = context;
-  const origin = originFromEnv(env);
+  const origin = originFromEnv(env, request);
   if (request.method === 'OPTIONS') return preflightResponse(origin, { credentials: true });
 
   const baseUrl = new URL(request.url).origin;
@@ -58,7 +59,10 @@ export async function onRequest(context) {
       return jsonResponse(400, { error: vectorResult.error }, origin, { credentials: true });
     }
 
-    let quiz = body.quizProfile || (await loadQuizProfile(env, email)) || null;
+    // normalizeUser accepts v1 or v2 posted profiles; the fit math below works
+    // on the v1 view (ensureUserVectors' contract).
+    const user = body.quizProfile ? normalizeUser(body.quizProfile) : await loadUser(env, email);
+    let quiz = user ? denormalizeUser(user) : null;
     if (zoneCentroids && quiz) {
       quiz = ensureUserVectors({ ...quiz }, zoneCentroids);
     }

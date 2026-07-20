@@ -40,16 +40,30 @@
   const GENERATE_TIMEOUT_MS = 120000;
   const FOCUS_TIMEOUT_MS = 20000;
 
+  // Display gate (WS3): only FWErr-marked copy prints verbatim.
+  function fwRespError(resp, data, fallback) {
+    return global.FWErr
+      ? FWErr.fromResponse(resp ? resp.status : 0, data, fallback)
+      : new Error(fallback);
+  }
+
+  function fwErr(err, fallback) {
+    return global.FWErr ? FWErr.forUser(err, fallback) : fallback;
+  }
+
   function friendlyGenerateError(err) {
     const msg = (err && err.message) || '';
     const name = (err && err.name) || '';
+    // Plan limits (free/paid merge §1) already carry user-facing copy from the
+    // server — never rewrite them into a generic "generation failed".
+    if (err && err.upgrade) return msg + ' You can see what Flight Plan adds on the pricing page.';
     if (name === 'AbortError' || name === 'TimeoutError' || /signal timed out|timed out/i.test(msg)) {
       return 'Roadmap generation is taking longer than expected. Please try again — your profile may still be processing.';
     }
     if (/failed to fetch|networkerror|load failed/i.test(msg)) {
       return 'Network error while building your roadmap. Check your connection and try again.';
     }
-    return msg || 'Generation failed. Please try again.';
+    return fwErr(err, 'Generation failed. Please try again.');
   }
 
   function fetchWithTimeout(url, opts, ms) {
@@ -290,8 +304,12 @@
     if (!rm || !isTreeRoadmap(rm)) return rm;
     const q = quizData();
     const scores = q && q.scores ? q.scores : null;
+    const prevRoadmap = state.roadmap;
+    const prevBranchKey = prevRoadmap?.focusTracker?.activeBranchKey;
+    const newBranchKey = rm.focusTracker?.activeBranchKey;
+    const branchChanged = prevBranchKey && newBranchKey && prevBranchKey !== newBranchKey;
     if (global.FWRoadmapTree && FWRoadmapTree.ensureFocusTracker) {
-      rm = FWRoadmapTree.ensureFocusTracker(rm, scores);
+      rm = FWRoadmapTree.ensureFocusTracker(rm, scores, { branchChanged });
     }
     if (global.FWSkillGapTracker && typeof FWSkillGapTracker.syncProgress === 'function') {
       rm = FWSkillGapTracker.syncProgress(rm);
@@ -415,6 +433,109 @@
       });
   }
 
+  // ---- Pre-generation clarifying questions --------------------------------
+  // Before building (or rebuilding) a roadmap, ask 4-5 MCQs — each answerable
+  // with a typed answer instead — so generation is grounded in the student's
+  // actual constraints, not just resume + dossier. Resolves with
+  // [{prompt, answer}] (possibly partial) — never rejects, never blocks
+  // generation: skip/failure resolves with whatever was collected.
+  function askClarifyingQuestions(careerName) {
+    return fetchWithTimeout(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ action: 'generate-questions', careerName: careerName || '' }),
+    }, 25000).then(function (r) { return r.json(); }).then(function (data) {
+      const questions = (data && Array.isArray(data.questions)) ? data.questions.filter(function (q) {
+        return q && q.question && Array.isArray(q.options) && q.options.length >= 2;
+      }).slice(0, 8) : [];
+      if (!questions.length) return null;
+      return runQuestionWizard(questions);
+    }).catch(function () { return null; });
+  }
+
+  function runQuestionWizard(questions) {
+    return new Promise(function (resolve) {
+      const overlay = document.createElement('div');
+      overlay.className = 'fw-qwiz-overlay';
+      overlay.innerHTML = '<div class="fw-qwiz" role="dialog" aria-modal="true" aria-labelledby="fw-qwiz-q">'
+        + '<p class="fw-qwiz-eyebrow">Let’s tailor your roadmap</p>'
+        + '<p class="fw-qwiz-progress" id="fw-qwiz-progress"></p>'
+        + '<h3 class="fw-qwiz-question" id="fw-qwiz-q"></h3>'
+        + '<div class="fw-qwiz-options" id="fw-qwiz-options"></div>'
+        + '<div class="fw-qwiz-other" id="fw-qwiz-other" hidden>'
+        + '<input type="text" class="fw-qwiz-other-input" id="fw-qwiz-other-input" maxlength="200" placeholder="Type your answer…">'
+        + '<button type="button" class="cta-btn fw-qwiz-other-submit" id="fw-qwiz-other-submit">Answer</button>'
+        + '</div>'
+        + '<div class="fw-qwiz-foot">'
+        + '<button type="button" class="fw-qwiz-skip" id="fw-qwiz-skip">Skip questions</button>'
+        + '</div></div>';
+      document.body.appendChild(overlay);
+
+      const answers = [];
+      let idx = 0;
+      const qEl = overlay.querySelector('#fw-qwiz-q');
+      const progEl = overlay.querySelector('#fw-qwiz-progress');
+      const optsEl = overlay.querySelector('#fw-qwiz-options');
+      const otherWrap = overlay.querySelector('#fw-qwiz-other');
+      const otherInput = overlay.querySelector('#fw-qwiz-other-input');
+      const otherSubmit = overlay.querySelector('#fw-qwiz-other-submit');
+      const skipBtn = overlay.querySelector('#fw-qwiz-skip');
+
+      function finish() {
+        document.removeEventListener('keydown', onKey);
+        overlay.remove();
+        resolve(answers.length ? answers : null);
+      }
+
+      function onKey(e) {
+        if (e.key === 'Escape') finish();
+      }
+
+      function answer(text) {
+        const t = String(text || '').trim();
+        if (t) answers.push({ prompt: questions[idx].question, answer: t.slice(0, 200) });
+        idx += 1;
+        if (idx >= questions.length) finish();
+        else paint();
+      }
+
+      function paint() {
+        const q = questions[idx];
+        progEl.textContent = 'Question ' + (idx + 1) + ' of ' + questions.length;
+        qEl.textContent = q.question;
+        otherWrap.hidden = true;
+        otherInput.value = '';
+        optsEl.innerHTML = '';
+        q.options.forEach(function (opt) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'fw-qwiz-option';
+          btn.textContent = opt;
+          btn.addEventListener('click', function () { answer(opt); });
+          optsEl.appendChild(btn);
+        });
+        const other = document.createElement('button');
+        other.type = 'button';
+        other.className = 'fw-qwiz-option fw-qwiz-option--other';
+        other.textContent = 'Something else…';
+        other.addEventListener('click', function () {
+          otherWrap.hidden = false;
+          otherInput.focus();
+        });
+        optsEl.appendChild(other);
+      }
+
+      otherSubmit.addEventListener('click', function () { answer(otherInput.value); });
+      otherInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); answer(otherInput.value); }
+      });
+      skipBtn.addEventListener('click', finish);
+      document.addEventListener('keydown', onKey);
+      paint();
+    });
+  }
+
   async function generate(careerSlug, careerName, refresh, careerSoc) {
     if (!careerSlug) {
       state.error = 'Career link missing — pick a career from the list or Career Hub.';
@@ -447,6 +568,10 @@
         render();
         return;
       }
+
+      // About to really generate (no cached roadmap) — ask the clarifying
+      // questions first; the loading screen resumes underneath when done.
+      const clarifyingAnswers = await askClarifyingQuestions(careerName);
 
       const q = quizData();
       let quizFitBreakdown = null;
@@ -484,7 +609,11 @@
       if (vectorFit) body.vectorFit = vectorFit;
       if (q && q.resumeSummary) body.resumeSummary = q.resumeSummary;
       if (q && q.characterSummary) body.characterSummary = q.characterSummary;
-      if (q && q.customAnswers) body.customAnswers = q.customAnswers;
+      if (clarifyingAnswers && clarifyingAnswers.length) {
+        body.customAnswers = clarifyingAnswers;
+      } else if (q && q.customAnswers) {
+        body.customAnswers = q.customAnswers;
+      }
 
       const resp = await fetchWithTimeout(API, {
         method: 'POST',
@@ -493,8 +622,16 @@
         body: JSON.stringify(body),
       }, GENERATE_TIMEOUT_MS);
       const data = await resp.json().catch(function () { return {}; });
-      if (!resp.ok) throw new Error(data.error || 'Could not generate roadmap.');
-      if (!data.roadmap) throw new Error('No roadmap returned. Try again in a moment.');
+      if (!resp.ok) {
+        const genErr = fwRespError(resp, data, 'Could not generate roadmap.');
+        genErr.upgrade = !!data.upgrade;
+        throw genErr;
+      }
+      if (!data.roadmap) {
+        throw global.FWErr
+          ? FWErr.friendly('No roadmap returned. Try again in a moment.')
+          : new Error('No roadmap returned. Try again in a moment.');
+      }
       if (data.roadmap) setRoadmap(data.roadmap, true);
     } catch (err) {
       state.error = friendlyGenerateError(err);
@@ -554,14 +691,61 @@
   }
 
   function applyRoadmapFromTracker(updated) {
-    const synced = global.FWSkillGapTracker && typeof FWSkillGapTracker.syncProgress === 'function'
-      ? FWSkillGapTracker.syncProgress(updated)
-      : updated;
-    setRoadmap(synced, true);
+    // render() below reassigns body's innerHTML wholesale, which collapses
+    // document height mid-swap and clamps window.scrollY to 0 — this is the
+    // real source of the "confirming a step/gap jumps to the top" bug (the
+    // focus view's own re-render already preserves scroll, but this outer
+    // full-page rebuild happens first and wipes it before that guard ever
+    // sees a scroll position to restore).
+    const restoreScrollY = state.focusOpen ? window.scrollY : null;
+    // The focus view is an inner scroller (.roadmap-focus-view is
+    // overflow-y:auto) and render() replaces the element wholesale, so its
+    // scrollTop must be carried across to the NEW element — window scroll
+    // restoration alone leaves the rebuilt panel snapped to the top.
+    const prevPanel = state.focusOpen ? document.getElementById('roadmap-focus-view') : null;
+    const restorePanelScroll = prevPanel ? prevPanel.scrollTop : null;
+    const prevRoadmap = state.roadmap;
+    const prevBranchKey = prevRoadmap?.focusTracker?.activeBranchKey;
+    const newBranchKey = updated?.focusTracker?.activeBranchKey;
+    const branchChanged = prevBranchKey && newBranchKey && prevBranchKey !== newBranchKey;
+    
+    let synced;
+    if (branchChanged) {
+      // When branch changes, use ensureFocusTracker to regenerate gaps for new branch
+      const q = quizData();
+      const scores = q && q.scores ? q.scores : null;
+      synced = global.FWSkillGapTracker && typeof FWSkillGapTracker.ensureFocusTracker === 'function'
+        ? FWSkillGapTracker.ensureFocusTracker(updated, scores, { branchChanged: true })
+        : updated;
+    } else {
+      synced = global.FWSkillGapTracker && typeof FWSkillGapTracker.syncProgress === 'function'
+        ? FWSkillGapTracker.syncProgress(updated)
+        : updated;
+    }
+    // Apply waypoint content
+    if (synced && isTreeRoadmap(synced) && global.FWRoadmapTree && FWRoadmapTree.ensureWaypointContent) {
+      synced = FWRoadmapTree.ensureWaypointContent(synced);
+    }
+    // Cache locally and persist (skip FWRoadmapSync.publish to avoid re-processing focusTracker)
+    if (global.FWAuth && typeof FWAuth.cacheRoadmap === 'function') {
+      FWAuth.cacheRoadmap(synced);
+    } else {
+      try { localStorage.setItem('fw_roadmap_v1', JSON.stringify(synced)); } catch (_) {}
+    }
+    debouncedSave(synced);
     state.roadmap = synced;
+    // Dispatch update event so portal and other tabs sync
+    if (global.FWRoadmapSync && typeof FWRoadmapSync.dispatchUpdated === 'function') {
+      FWRoadmapSync.dispatchUpdated(synced, { source: 'roadmap' });
+    }
     render();
     refreshDrawerIfOpen();
     if (state.focusOpen) renderFocusPanel();
+    if (restoreScrollY !== null) window.scrollTo(0, restoreScrollY);
+    if (restorePanelScroll !== null && restorePanelScroll > 0) {
+      const newPanel = document.getElementById('roadmap-focus-view');
+      if (newPanel) newPanel.scrollTop = restorePanelScroll;
+    }
   }
 
   function showRoadmapAdvanceLoading() {
@@ -725,6 +909,7 @@
       },
       runAdvance: advanceCtx.runAdvance,
     });
+    if (global.FWOppFinder) FWOppFinder.mount(panel, state.roadmap);
     syncRefineFabVisibility();
   }
 
@@ -881,7 +1066,9 @@
     if (!msg) return;
     input.value = '';
     input.disabled = true;
-    document.getElementById('roadmap-chat-send').disabled = true;
+    const restoreSend = global.FWButtonBusy
+      ? FWButtonBusy.start(document.getElementById('roadmap-chat-send'))
+      : function () {};
     appendChatMsg('user', msg);
     showChatTyping();
 
@@ -912,7 +1099,7 @@
       });
       const data = await resp.json().catch(function () { return {}; });
       hideChatTyping();
-      if (!resp.ok) throw new Error(data.error || 'Chat failed.');
+      if (!resp.ok) throw fwRespError(resp, data, 'Marco could not answer that — please try again.');
       appendChatMsg('assistant', data.reply || 'Done.');
       if (data.intent === 'update' && data.roadmap) setRoadmap(data.roadmap, true);
       state.exchangeCount = data.reset ? 0 : (data.exchangeCount || state.exchangeCount);
@@ -920,10 +1107,10 @@
       if (data.intent === 'update') render();
     } catch (err) {
       hideChatTyping();
-      appendChatMsg('assistant', (err && err.message) || 'Something went wrong.');
+      appendChatMsg('assistant', fwErr(err, 'Marco could not answer that — please try again.'));
     } finally {
       input.disabled = false;
-      document.getElementById('roadmap-chat-send').disabled = false;
+      restoreSend();
       input.focus();
     }
   }
@@ -999,8 +1186,12 @@
       bodyHtml += '<details class="roadmap-alt-picker">'
         + '<summary class="roadmap-alt-picker-summary">Pick a different career</summary>'
         + '<div class="roadmap-picker"><p class="roadmap-picker-label">Other top matches:</p><div class="roadmap-picker-grid">';
-    } else {
+    } else if (matches.length) {
       bodyHtml += '<div class="roadmap-picker"><p class="roadmap-picker-label">Choose a target career:</p><div class="roadmap-picker-grid">';
+    } else {
+      // Rank data unavailable (still loading or the fetch failed) — a bare
+      // label + disabled button reads as broken, so say what to do instead.
+      bodyHtml += '<div class="roadmap-picker"><p class="roadmap-picker-label">We couldn\'t load your top matches right now.</p><div class="roadmap-picker-grid">';
     }
 
     matches.forEach(function (m) {
@@ -1021,8 +1212,10 @@
         + '</div></details>';
     } else {
       bodyHtml += '</div>'
-        + '<button type="button" class="cta-btn roadmap-generate-btn" id="roadmap-generate-top" disabled>Generate roadmap →</button>'
-        + '<p class="roadmap-picker-hint">Or pick any career from the <a href="dashboard.html">Career Hub</a>.</p>'
+        + (matches.length
+          ? '<button type="button" class="cta-btn roadmap-generate-btn" id="roadmap-generate-top" disabled>Generate roadmap →</button>'
+            + '<p class="roadmap-picker-hint">Or pick any career from the <a href="dashboard.html">Career Hub</a>.</p>'
+          : '<p class="roadmap-picker-hint">Pick any career from the <a href="dashboard.html">Career Hub</a> and we\'ll build its roadmap from there.</p>')
         + '</div>';
     }
 
@@ -1086,6 +1279,56 @@
   // Client-only preview of an alternate route (WS1). Computes the trunk->target
   // chain locally, shows the banner, and re-renders the tree — never calls the
   // server (the 'follow' action saves immediately; that is the commit path).
+  // ---- Branch build-out ---------------------------------------------------
+  // Template/generic branches (synthetic fallbacks, thin Gemini output) get
+  // rewritten with student-specific content the first time the user actually
+  // engages with them — preview, explore-in-focus. Same node ids, so the
+  // preview path, decisions, and done-state all stay valid.
+  function branchRootFor(tree, nodeId) {
+    const byId = {};
+    (tree.nodes || []).forEach(function (n) { byId[n.id] = n; });
+    let cur = byId[nodeId];
+    let guard = 0;
+    while (cur && cur.pathRole === 'branch' && guard < 40) {
+      const parent = byId[cur.parentId];
+      if (!parent || parent.pathRole !== 'branch') return cur;
+      cur = parent;
+      guard += 1;
+    }
+    return cur && cur.pathRole === 'branch' ? cur : null;
+  }
+
+  function branchNeedsBuild(tree, nodeId) {
+    const root = branchRootFor(tree, nodeId);
+    return root && !root.aiBuilt && root.synthetic ? root : null;
+  }
+
+  function ensureBranchBuilt(nodeId) {
+    if (!state.roadmap) return Promise.resolve(false);
+    const root = branchNeedsBuild(state.roadmap, nodeId);
+    if (!root) return Promise.resolve(false);
+    if (state.branchBuilding) return Promise.resolve(false);
+    state.branchBuilding = true;
+    showRoadmapToast('Personalizing this path for you…');
+    return fetchWithTimeout(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ action: 'branch-build', branchNodeId: root.id }),
+    }, 60000).then(function (resp) {
+      return resp.json().catch(function () { return {}; }).then(function (data) {
+        if (resp.ok && data.roadmap) {
+          setRoadmap(data.roadmap, false);
+          render();
+          return true;
+        }
+        return false;
+      });
+    }).catch(function () { return false; }).finally(function () {
+      state.branchBuilding = false;
+    });
+  }
+
   function startBranchPreview(nodeId) {
     if (!global.FWRoadmapTree || !state.roadmap) return;
     const path = FWRoadmapTree.computePreviewPath(state.roadmap, nodeId);
@@ -1095,6 +1338,15 @@
     mountPreviewBanner();
     redrawTree();
     refreshDrawerBranchState();
+    // Previewing a generic branch is the moment to make it real: build it
+    // out in the background and refresh the drawer with the tailored content.
+    ensureBranchBuilt(nodeId).then(function (built) {
+      if (!built) return;
+      showRoadmapToast('This path is now tailored to you — take a look.');
+      if (state.previewNodeId === nodeId && FWRoadmapTree.refreshDrawerForNode && state.roadmap) {
+        FWRoadmapTree.refreshDrawerForNode(state.roadmap, nodeId, {});
+      }
+    });
   }
 
   function exitBranchPreview() {
@@ -1141,7 +1393,7 @@
       body: JSON.stringify(body),
     });
     const data = await resp.json().catch(function () { return {}; });
-    if (!resp.ok) throw new Error(data.error || 'Could not update your roadmap path.');
+    if (!resp.ok) throw fwRespError(resp, data, 'Could not update your roadmap path.');
     return data;
   }
 
@@ -1168,7 +1420,7 @@
           type: 'info',
         });
       } else {
-        alert('You must complete the branch choice waypoint ("' + (majorNode?.shortTitle || majorNode?.title || 'Major waypoint') + '") before committing to this branch.');
+        showRoadmapToast('Complete the branch choice waypoint ("' + (majorNode?.shortTitle || majorNode?.title || 'Major waypoint') + '") before committing to this branch.');
       }
       return;
     }
@@ -1190,8 +1442,8 @@
         FWRoadmapTree.refreshDrawerForNode(state.roadmap, nodeId, { committedBranchRoot: hit.option.childNodeId });
       }
     } catch (err) {
-      showRoadmapToast((err && err.message) || 'Could not commit to that branch.');
-      refreshDrawerBranchState({ error: (err && err.message) || '' });
+      showRoadmapToast(fwErr(err, 'Could not commit to that branch.'));
+      refreshDrawerBranchState({ error: fwErr(err, 'Could not commit to that branch.') });
     } finally {
       state.committing = false;
     }
@@ -1212,8 +1464,8 @@
       showRoadmapToast(data.reply || 'Added new steps to your branch.');
       render();
     } catch (err) {
-      showRoadmapToast((err && err.message) || 'Could not extend that branch.');
-      refreshDrawerBranchState({ error: (err && err.message) || '' });
+      showRoadmapToast(fwErr(err, 'Could not extend that branch.'));
+      refreshDrawerBranchState({ error: fwErr(err, 'Could not extend that branch.') });
     } finally {
       state.committing = false;
     }
@@ -1224,12 +1476,19 @@
   function trackBranchInFocus(nodeId) {
     if (!global.FWSkillGapTracker || !state.roadmap) return;
     if (typeof FWSkillGapTracker.trackBranchFocus !== 'function') return;
-    const updated = FWSkillGapTracker.trackBranchFocus(state.roadmap, nodeId, trackerQuizScores());
-    if (!updated) return;
-    setRoadmap(updated, true);
-    state.roadmap = updated;
-    if (global.FWRoadmapTree && FWRoadmapTree.closeDrawer) FWRoadmapTree.closeDrawer();
-    openFocusView();
+    // Personalize a generic branch before dropping the user into its focus
+    // view — exploring hardcoded template steps helps no one decide.
+    const pending = branchNeedsBuild(state.roadmap, nodeId)
+      ? ensureBranchBuilt(nodeId)
+      : Promise.resolve(false);
+    pending.then(function () {
+      const updated = FWSkillGapTracker.trackBranchFocus(state.roadmap, nodeId, trackerQuizScores());
+      if (!updated) return;
+      setRoadmap(updated, true);
+      state.roadmap = updated;
+      if (global.FWRoadmapTree && FWRoadmapTree.closeDrawer) FWRoadmapTree.closeDrawer();
+      openFocusView();
+    });
   }
 
   function trackerQuizScores() {
@@ -1288,26 +1547,37 @@
       const focusChip = imm
         ? '<span class="roadmap-hud-chip">Current focus: ' + esc(imm.shortTitle || imm.title || 'Waypoint') + '</span>'
         : '';
+      // Response-only provenance from a grounded generation (fix plan 2.5) —
+      // present right after generating, absent on later loads by design.
+      const asOfChip = rm.grounding && rm.grounding.fetchedAt
+        ? '<span class="roadmap-hud-chip">Programs checked as of ' + esc(String(rm.grounding.fetchedAt).slice(0, 10)) + '</span>'
+        : '';
 
       html += '<div class="roadmap-stage">'
-        + '<div class="roadmap-hud">'
+        + '<div class="roadmap-hud roadmap-hud--compact">'
         + '<div class="roadmap-hud-left">'
+        + '<div class="roadmap-hud-topline">'
         + '<h1 class="roadmap-hud-title">' + esc(rm.targetCareerName) + '</h1>'
-        + '<p class="roadmap-hud-sub">Your long-term path</p>';
+        + '<div class="roadmap-hud-progress">'
+        + '<span class="roadmap-hud-progress-label">' + esc(progLabel) + '</span>'
+        + '<div class="roadmap-hud-progress-bar"><span style="width:' + prog.pct + '%"></span></div>'
+        + '</div>'
+        + focusChip
+        + asOfChip
+        + '</div>';
       const fc = rm.fitContext || {};
-      if (fc.targetSoc && global.FWOnetVectors && typeof FWOnetVectors.renderDualFitBarsHtml === 'function') {
+      if (fc.targetSoc && fc.personalityFit != null && global.FWOnetVectors && typeof FWOnetVectors.renderDualFitBarsHtml === 'function') {
         html += '<div class="roadmap-hud-fit">' + FWOnetVectors.renderDualFitBarsHtml(
           fc.personalityFit,
           fc.objectiveFit,
           { preparedness: fc.preparedness }
         ) + '</div>';
+      } else {
+        // fitContext can be empty on older/degraded generations — self-heal by
+        // resolving the SOC + fit live after render (see hydrateHudFit).
+        html += '<div class="roadmap-hud-fit" id="roadmap-hud-fit-slot" hidden></div>';
       }
-      html += '<div class="roadmap-hud-progress">'
-        + '<span class="roadmap-hud-progress-label">' + esc(progLabel) + '</span>'
-        + '<div class="roadmap-hud-progress-bar"><span style="width:' + prog.pct + '%"></span></div>'
-        + '</div>'
-        + mismatchChip
-        + focusChip
+      html += mismatchChip
         + '</div>'
         + '<div class="roadmap-hud-actions">'
         + '<button type="button" class="roadmap-hud-btn roadmap-hud-btn--primary" id="roadmap-regen" title="Regenerate plan" aria-label="Regenerate plan">↻</button>'
@@ -1387,33 +1657,55 @@
           confirmLabel: 'Regenerate',
         }).then(function (ok) {
           if (!ok) return;
-        if (global.FWAuth && typeof FWAuth.syncRoadmap === 'function' && FWAuth.authEmail && FWAuth.authEmail()) {
-          state.generating = true;
-          state.generatingCareerName = rm.targetCareerName || '';
-          render();
-          FWAuth.syncRoadmap({ force: true, reason: 'manual-regen' })
-            .then(function (data) {
-              if (data && data.roadmap) setRoadmap(data.roadmap, true);
-            })
-            .catch(function (err) {
-              state.error = (err && err.message) || 'Regeneration failed.';
-            })
-            .finally(function () {
-              state.generating = false;
-              state.generatingCareerName = '';
-              render();
-            });
-        } else {
+          state.error = '';
+          // Route regens through generate() so the clarifying-questions wizard
+          // runs and its answers reach the generation prompt (the roadmap-sync
+          // force path can't carry customAnswers).
           generate(rm.targetCareerSlug, rm.targetCareerName, true);
-        }
         });
       });
     }
     wireRegen(regenBtn);
     wireRegen(regenLegacyBtn);
 
+    hydrateHudFit(rm);
+
     ensureChatUi();
     syncRefineFabVisibility();
+  }
+
+  // Self-heal an empty fitContext: resolve the target SOC and live vector fit,
+  // paint the HUD fit bars, and fold the values back into the roadmap's
+  // fitContext (persisted on the next save) so future renders are instant.
+  function hydrateHudFit(rm) {
+    const slot = document.getElementById('roadmap-hud-fit-slot');
+    if (!slot || !rm || !global.FWOnetVectors) return;
+    if (typeof FWOnetVectors.resolveTargetSoc !== 'function'
+      || typeof FWOnetVectors.renderDualFitBarsHtml !== 'function') return;
+    const fc = rm.fitContext || {};
+    Promise.resolve(fc.targetSoc || FWOnetVectors.resolveTargetSoc(rm.targetCareerSlug, null))
+      .then(function (soc) {
+        if (!soc || typeof FWOnetVectors.fetchAuthenticatedVectorFit !== 'function') return null;
+        return FWOnetVectors.fetchAuthenticatedVectorFit(soc).then(function (fit) {
+          return fit ? { soc: soc, fit: fit } : null;
+        });
+      })
+      .then(function (res) {
+        if (!res || !slot.isConnected || state.roadmap !== rm) return;
+        const fit = res.fit;
+        if (fit.personalityFit == null && fit.objectiveFit == null) return;
+        slot.innerHTML = FWOnetVectors.renderDualFitBarsHtml(
+          fit.personalityFit, fit.objectiveFit, { preparedness: fit.preparedness });
+        slot.hidden = false;
+        rm.fitContext = Object.assign({}, fc, {
+          targetSoc: res.soc,
+          personalityFit: fit.personalityFit != null ? fit.personalityFit : fc.personalityFit,
+          objectiveFit: fit.objectiveFit != null ? fit.objectiveFit : fc.objectiveFit,
+          preparedness: fit.preparedness != null ? fit.preparedness : fc.preparedness,
+          vectorFitScore: fit.fitScore != null ? fit.fitScore : fc.vectorFitScore,
+        });
+      })
+      .catch(function () { /* fit hydration is best-effort */ });
   }
 
   function renderLoading(body) {
@@ -1432,8 +1724,7 @@
 
     body.innerHTML = '<div class="roadmap-stage roadmap-stage--generating">'
       + renderErrorPanel(state.error)
-      + '<div class="roadmap-generating-card">'
-      + '<div class="roadmap-generating-spinner" aria-hidden="true"></div>'
+      + '<div class="roadmap-generating-card" aria-busy="true">'
       + '<p class="roadmap-generating-eyebrow">Career Roadmap</p>'
       + '<h2 class="roadmap-generating-title">Building your plan for ' + esc(name) + fitLabelText + '</h2>'
       + '<div class="roadmap-generating-status" aria-live="polite">'
@@ -1443,6 +1734,16 @@
       + '</div>'
       + '<div class="roadmap-generating-progress" aria-hidden="true"><span></span></div>'
       + '<div class="roadmap-spine-preview" aria-hidden="true">' + spineDots + '</div>'
+      + '<div class="roadmap-generating-skeleton" aria-hidden="true">'
+      + [0, 1, 2].map(function (i) {
+        return '<div class="roadmap-skel-item" style="--skel-i:' + i + '">'
+          + '<span class="fw-skeleton roadmap-skel-dot"></span>'
+          + '<div class="roadmap-skel-lines">'
+          + '<span class="fw-skeleton roadmap-skel-title"></span>'
+          + '<span class="fw-skeleton roadmap-skel-desc"></span>'
+          + '</div></div>';
+      }).join('')
+      + '</div>'
       + '</div></div>';
   }
 
@@ -1467,9 +1768,19 @@
   }
 
   function render() {
+    // Boot-veil hook: every render (re)notifies FWPageVeil so the page
+    // reveals only once the boot render storm has gone quiet.
+    if (global.FWPageVeil && typeof FWPageVeil.notifyRender === 'function') {
+      FWPageVeil.notifyRender();
+    }
     const head = document.getElementById('roadmap-head');
     const body = document.getElementById('roadmap-body');
     if (!head || !body) return;
+    // A full innerHTML rebuild momentarily collapses document height, which
+    // clamps window.scrollY to 0 — every render path (step toggles, async
+    // checklist upgrades, drawer refreshes) must preserve the user's scroll,
+    // so it's restored here at the root rather than per-caller.
+    const renderScrollY = window.scrollY;
 
     if (!isRoadmapPageActive()) {
       if (global.FWRoadmapTree && typeof FWRoadmapTree.closeDrawer === 'function') {
@@ -1495,6 +1806,10 @@
       }
     } else {
       renderEmpty(head, body);
+    }
+
+    if (renderScrollY > 0 && window.scrollY !== renderScrollY) {
+      window.scrollTo(0, renderScrollY);
     }
 
     ensureBackgroundSync();

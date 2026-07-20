@@ -1,5 +1,6 @@
 import { callGeminiJson } from '../gemini-json.js';
-import { checkRateLimit, loadQuizProfile, saveQuizProfile } from '../auth.js';
+import { checkRateLimit } from '../auth.js';
+import { loadUser, saveUser, normalizeUser, denormalizeUser } from '../user.js';
 import { loadDossier } from '../../_lib.js';
 import { DIM_COUNT } from './constants.js';
 import { clamp100 } from './math.js';
@@ -267,8 +268,11 @@ export async function maybePatchObjectiveForUser(env, email, { source, contextTe
     return { skipped: true, reason: 'rate_limit' };
   }
 
-  const quiz = await loadQuizProfile(env, email);
-  if (!quiz) return { skipped: true, reason: 'no_profile' };
+  const user = await loadUser(env, email);
+  if (!user) return { skipped: true, reason: 'no_profile' };
+  // The transformer's working shape is the v1 blob (shared with resume-parse);
+  // storage speaks the user model on both sides of it.
+  const quiz = denormalizeUser(user);
 
   const dossier = await loadDossier(env, email).catch(() => '');
   const result = await patchObjectiveFromLearning(env, baseUrl, {
@@ -279,7 +283,7 @@ export async function maybePatchObjectiveForUser(env, email, { source, contextTe
   });
 
   if (result.changed) {
-    await saveQuizProfile(env, email, result.quiz);
+    await saveUser(env, email, normalizeUser(result.quiz));
   }
 
   return result;

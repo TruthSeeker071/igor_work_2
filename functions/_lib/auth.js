@@ -1,4 +1,5 @@
 import { isValidEmail, normalizeEmail } from '../_lib.js';
+import { normalizeUser, setPath } from './user-model.js';
 import {
   normalizeRoadmap,
   ROADMAP_MAX_CHARS,
@@ -126,6 +127,12 @@ export async function verifyPassword(password, stored) {
   const actualHash = bytesToHex(new Uint8Array(derived));
   return timingSafeEqual(actualHash, expectedHash);
 }
+
+// Well-formed but non-matching hash used to run a real PBKDF2 verification on
+// the "user not found" login branch, so response time can't distinguish a
+// registered email from an unregistered one (timing-based user enumeration).
+export const DUMMY_PASSWORD_HASH =
+  'pbkdf2$100000$0123456789abcdef0123456789abcdef$0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
 function timingSafeEqual(a, b) {
   if (a.length !== b.length) return false;
@@ -268,28 +275,28 @@ export async function updateUserPassword(env, email, passwordHash) {
 }
 
 export async function saveQuizPortalSnapshot(env, email, portalSnapshot) {
-  const quiz = (await loadQuizProfile(env, email)) || {};
-  await saveQuizProfile(env, email, { ...quiz, portalSnapshot });
+  const user = normalizeUser((await loadUserRow(env, email)) || {});
+  setPath(user, 'journey.portalSnapshot', portalSnapshot);
+  await saveUserRow(env, email, user);
 }
 
-export async function saveQuizProfile(env, email, payload) {
+// user_profiles is canonical storage since 0013 (payload is v2, or v1 for
+// backfilled rows not yet re-saved — loadUserRow's callers normalize on read
+// forever). quiz_profiles was dropped in 0014.
+export async function saveUserRow(env, email, payload) {
   const ts = nowIso();
   const json = JSON.stringify(payload);
   await env.DB.prepare(
-    `INSERT INTO quiz_profiles (email, payload, updated_at) VALUES (?, ?, ?)
+    `INSERT INTO user_profiles (email, payload, updated_at) VALUES (?, ?, ?)
      ON CONFLICT(email) DO UPDATE SET payload = excluded.payload, updated_at = excluded.updated_at`,
   ).bind(email, json, ts).run();
 }
 
-export async function loadQuizProfile(env, email) {
-  const row = await env.DB.prepare('SELECT payload FROM quiz_profiles WHERE email = ?')
+export async function loadUserRow(env, email) {
+  const row = await env.DB.prepare('SELECT payload FROM user_profiles WHERE email = ?')
     .bind(email).first();
   if (!row?.payload) return null;
-  try {
-    return JSON.parse(row.payload);
-  } catch {
-    return null;
-  }
+  try { return JSON.parse(row.payload); } catch { return null; }
 }
 
 export async function saveRoadmap(env, email, payload) {
@@ -411,6 +418,7 @@ export async function consumePasswordResetToken(env, token) {
 
 export function quizProfileToSeed(quizProfile) {
   if (!quizProfile || typeof quizProfile !== 'object') return {};
+  const identity = normalizeUser(quizProfile).identity;
   const scores = quizProfile.scores || {};
   const topIndustries = Object.entries(scores)
     .filter(([, v]) => Number(v) > 0)
@@ -420,7 +428,11 @@ export function quizProfileToSeed(quizProfile) {
   return {
     topIndustries,
     archetype: quizProfile.name || 'Student',
-    school: quizProfile.school || null,
+    school: identity.school || null,
+    gpa: identity.gpa ?? null,
+    year: identity.year || null,
+    subjects: Array.isArray(identity.subjects) ? identity.subjects : [],
+    careerLeaning: identity.careerLeaning || null,
     strengths: topIndustries,
     weaknesses: [],
   };

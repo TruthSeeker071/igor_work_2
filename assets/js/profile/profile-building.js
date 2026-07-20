@@ -224,10 +224,17 @@
     el.setAttribute('role', 'status');
     el.setAttribute('aria-live', 'polite');
     el.innerHTML = ''
-      + '<div class="pb-loading-card">'
-      + '<div class="pb-loading-spinner" aria-hidden="true"></div>'
+      + '<div class="pb-loading-card" aria-busy="true">'
       + '<h2>Generating your analysis…</h2>'
       + '<p>Taking you to your home page.</p>'
+      // Step-card silhouette: heading bar, body lines, button-shaped bar.
+      + '<div class="pb-loading-skeleton" aria-hidden="true">'
+      + '<span class="fw-skeleton pb-skel-head"></span>'
+      + '<span class="fw-skeleton pb-skel-line"></span>'
+      + '<span class="fw-skeleton pb-skel-line pb-skel-line--short"></span>'
+      + '<span class="fw-skeleton pb-skel-btn"></span>'
+      + '</div>'
+      + '<span class="fw-vh">Loading…</span>'
       + '</div>';
     page.appendChild(el);
     return el;
@@ -271,8 +278,8 @@
     var overlayStarted = Date.now();
     showLoadingOverlay();
     if (saveBtn) {
-      saveBtn.disabled = true;
-      saveBtn.textContent = 'Saving…';
+      if (global.FWButtonBusy) FWButtonBusy.start(saveBtn, { label: 'Saving…' });
+      else { saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }
     }
     if (statusEl) {
       statusEl.textContent = '';

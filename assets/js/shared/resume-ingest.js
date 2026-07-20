@@ -368,7 +368,9 @@
           handleText(result.text);
         }
       }).catch(function (err) {
-        var msg = err.message || 'Upload failed';
+        var msg = global.FWErr
+          ? FWErr.forUser(err, 'Could not read that file. Try another, or paste the text.')
+          : 'Could not read that file. Try another, or paste the text.';
         setStatus(msg, true);
         if (typeof opts.onFileError === 'function') opts.onFileError(msg);
       });

@@ -2,32 +2,61 @@
  * Career Hub zone overall-fit — single client source (O*NET aggregates + vectors).
  */
 (function (global) {
+  // The 11 display macro-sectors (2026-07-18 macro-hub redesign, see
+  // scripts/onet-etl/rezone-hub.mjs). The underlying zone-aggregate-vectors
+  // artifact deliberately keeps the original 18 zone keys (quiz vector
+  // seeding depends on them) — DISPLAY_ZONE_MERGE below folds those into the
+  // display taxonomy wherever fits are computed.
   var ZONE_ORDER = [
-    'tech', 'healthcare', 'finance', 'science', 'engineering', 'creative',
-    'business', 'marketing', 'education', 'law', 'social', 'media',
-    'government', 'operations', 'trades', 'agriculture', 'cybersecurity', 'hospitality',
+    'tech', 'healthcare', 'engineering-science', 'creative-media',
+    'business-finance', 'education', 'law', 'social', 'government', 'trades',
   ];
 
   var ZONE_LABELS = {
     tech: 'Tech',
     healthcare: 'Healthcare',
-    finance: 'Finance',
-    science: 'Science',
-    engineering: 'Engineering',
-    creative: 'Creative',
-    business: 'Business',
-    marketing: 'Marketing',
+    'engineering-science': 'Engineering & Science',
+    'creative-media': 'Creative & Media',
+    'business-finance': 'Business & Finance',
     education: 'Education',
     law: 'Law',
     social: 'Social',
-    media: 'Media',
     government: 'Government',
-    operations: 'Operations',
     trades: 'Trades',
-    agriculture: 'Agriculture',
-    cybersecurity: 'Cybersecurity',
-    hospitality: 'Hospitality',
   };
+
+  var DISPLAY_ZONE_MERGE = {
+    engineering: 'engineering-science', science: 'engineering-science', cybersecurity: 'engineering-science',
+    creative: 'creative-media', marketing: 'creative-media', media: 'creative-media',
+    business: 'business-finance', finance: 'business-finance',
+  };
+
+  // Fold raw 18-zone aggregates into the 11 display macro-sectors via a
+  // count-weighted average. Already-display-keyed input passes through
+  // unchanged (merged ids aren't in DISPLAY_ZONE_MERGE), so callers can pass
+  // either shape safely.
+  function mergeToDisplayZones(aggregates) {
+    if (!aggregates) return aggregates;
+    var acc = {};
+    Object.keys(aggregates).forEach(function (z) {
+      var a = aggregates[z];
+      if (!a || !a.lvMean) return;
+      var dz = DISPLAY_ZONE_MERGE[z] || z;
+      var n = a.count || 0;
+      if (!acc[dz]) {
+        acc[dz] = { count: n, sum: a.lvMean.map(function (v) { return v * n; }) };
+      } else {
+        acc[dz].count += n;
+        acc[dz].sum = acc[dz].sum.map(function (v, d) { return v + a.lvMean[d] * n; });
+      }
+    });
+    var out = {};
+    Object.keys(acc).forEach(function (dz) {
+      var a = acc[dz];
+      out[dz] = { count: a.count, lvMean: a.count ? a.sum.map(function (v) { return v / a.count; }) : a.sum };
+    });
+    return out;
+  }
 
   var AGGREGATES_URL = '/data/onet/artifacts/zone-aggregate-vectors.json';
   var cachedRows = null;
@@ -63,8 +92,9 @@
     return FWOnetVectors.magnitude(objective.values) > 0.01;
   }
 
-  function computeZoneFitsMap(personality, objective, aggregates) {
-    if (!personality || !personality.values || !aggregates || !global.FWOnetVectors) return {};
+  function computeZoneFitsMap(personality, objective, rawAggregates) {
+    if (!personality || !personality.values || !rawAggregates || !global.FWOnetVectors) return {};
+    var aggregates = mergeToDisplayZones(rawAggregates);
     var V = FWOnetVectors;
     var objOn = objectiveActive(objective);
     var byZone = {};

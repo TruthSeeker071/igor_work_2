@@ -4,7 +4,6 @@
 (function (global) {
   const API = '/career-analysis';
   const CACHE_KEY = 'fw_career_analysis_v7';
-  const HUB_QUIZ_KEY = 'fw_hub_quiz_v1';
   const EXCHANGE_RESET_AT = 5;
 
   let state = {
@@ -19,6 +18,7 @@
     exchangeCount: 0,
     fitTab: 'assessed',
     staticFallback: null,
+    exposureScore: null,
   };
 
   let personalizationCache = null;
@@ -83,7 +83,7 @@
         };
       }
     }
-    const hub = readJson(HUB_QUIZ_KEY);
+    const hub = (window.FWUser && typeof FWUser.getBlob === 'function') ? FWUser.getBlob() : null;
     if (hub && hub.scores) {
       return {
         name: hub.name || 'Student',
@@ -165,12 +165,6 @@
     } catch (_) { /* quota */ }
   }
 
-  function riskLabel(risk) {
-    if (risk === 'low') return 'Low risk';
-    if (risk === 'high') return 'High risk';
-    return 'Moderate';
-  }
-
   function aiBarClass(pct) {
     if (pct <= 30) return 'ai-bar-low';
     if (pct <= 50) return 'ai-bar-med';
@@ -198,11 +192,18 @@
     );
   }
 
+  // Display gate (WS3): only FWErr-marked copy prints verbatim.
+  function fwErr(err, fallback) {
+    return window.FWErr ? FWErr.forUser(err, fallback) : fallback;
+  }
+
   function mapAnalysisError(status, data) {
     if (status === 429) return 'Too many personalization requests—try again in a few minutes.';
-    var msg = (data && data.error) || 'Personalization failed';
+    // Only echo server copy that reads as product copy (WS3).
+    var raw = data && typeof data.error === 'string' ? data.error.trim() : '';
+    var msg = (window.FWErr && FWErr.looksLikeCopy(raw)) ? raw : 'Personalization failed';
     if (msg === 'Could not generate personalized analysis. Please try again.' && state.soc) {
-      return 'O*NET profile and quiz fit are shown — AI narrative is temporarily unavailable.';
+      return 'Your fit scores are ready — the written summary is taking a moment; try again shortly.';
     }
     return msg;
   }
@@ -210,7 +211,7 @@
   function degradedAnalysisMessage(rawMessage) {
     if (state.soc && (!rawMessage || rawMessage.indexOf('Could not generate') >= 0
       || rawMessage === 'Personalization failed')) {
-      return 'O*NET profile and quiz fit are shown — AI narrative is temporarily unavailable.';
+      return 'Your fit scores are ready — the written summary is taking a moment; try again shortly.';
     }
     return rawMessage || 'AI personalization is unavailable — showing quiz-based fit only.';
   }
@@ -319,7 +320,7 @@
       syncFabVisibility(false);
     }).catch(function (err) {
       console.warn('Career personalization retry failed', err);
-      showPersonalizeError(err && err.message ? err.message : 'AI personalization failed.', true);
+      showPersonalizeError(fwErr(err, 'AI personalization failed.'), true);
       if (state.vectorFitDetails || state.quizFit) renderAssessedFit(state.analysis, state.quizFit);
       ensureBaselineForChat();
       syncFabVisibility(true);
@@ -337,9 +338,20 @@
     if (document.getElementById('career-loading-overlay')) return;
     document.body.insertAdjacentHTML('beforeend',
       '<div id="career-loading-overlay" class="career-loading-overlay" hidden>'
-      + '<div class="career-loading-card"><div class="career-loading-spinner" aria-hidden="true"></div>'
+      + '<div class="career-loading-card" role="status" aria-busy="true">'
       + '<h2>Personalizing your deep dive</h2>'
-      + '<p>FlightWay AI is researching this career and your profile…</p></div></div>'
+      + '<p>FlightWay AI is researching this career and your profile…</p>'
+      // Mirrors the analysis layout that lands here: text lines then skill pills.
+      + '<div class="career-loading-skeleton" aria-hidden="true">'
+      + '<span class="fw-skeleton career-skel-line"></span>'
+      + '<span class="fw-skeleton career-skel-line"></span>'
+      + '<span class="fw-skeleton career-skel-line career-skel-line--short"></span>'
+      + '<div class="career-skel-pills">'
+      + '<span class="fw-skeleton skill-pill skill-pill--skeleton"></span>'
+      + '<span class="fw-skeleton skill-pill skill-pill--skeleton"></span>'
+      + '<span class="fw-skeleton skill-pill skill-pill--skeleton"></span>'
+      + '</div></div>'
+      + '<span class="fw-vh">Loading…</span></div></div>'
       + '<button type="button" id="career-ask-fab" class="career-ask-fab" hidden aria-label="Ask AI about this career">'
       + '<span aria-hidden="true">✦</span> Ask AI</button>'
       + '<div id="career-chat-drawer" class="career-chat-drawer" hidden>'
@@ -569,13 +581,6 @@
     return fmt100(level, 1);
   }
 
-  function humanizeDomain(domain) {
-    if (global.FWFormatScale && typeof FWFormatScale.humanizeOnetDomain === 'function') {
-      return FWFormatScale.humanizeOnetDomain(domain);
-    }
-    return ONET_DOMAIN_LABELS[domain] || domain;
-  }
-
   function renderOnetDomainPills(dimensions) {
     if (!dimensions || !dimensions.length) return '';
     return dimensions.map(function (d) {
@@ -611,15 +616,24 @@
     });
   }
 
+  // Static deep-dive careers ship a real day-in-life schedule in the page;
+  // the skeleton overwrites it while the personalized one generates. Stash
+  // the original so a failed generation restores it instead of leaving an
+  // empty frame + "unavailable" note over content we already had.
+  var staticDayScheduleHtml = null;
+
   function renderDayScheduleSkeleton() {
     var schedule = document.querySelector('[data-career-personal="daySchedule"]');
     if (!schedule) return;
+    if (staticDayScheduleHtml === null && schedule.querySelector('.timeline-item:not(.timeline-item--skeleton)')) {
+      staticDayScheduleHtml = schedule.innerHTML;
+    }
     var times = ['9:00 AM', '11:30 AM', '2:00 PM', '4:30 PM'];
     schedule.innerHTML = times.map(function (time) {
       return '<div class="timeline-item timeline-item--skeleton">'
         + '<div class="timeline-time">' + time + '</div>'
-        + '<div class="timeline-content"><div class="timeline-skeleton-title"></div>'
-        + '<div class="timeline-skeleton-desc"></div></div></div>';
+        + '<div class="timeline-content"><div class="timeline-skeleton-title fw-skeleton"></div>'
+        + '<div class="timeline-skeleton-desc fw-skeleton"></div></div></div>';
     }).join('');
     var note = document.querySelector('[data-career-personal="dayScheduleNote"]');
     if (note) {
@@ -631,10 +645,16 @@
   function renderDayScheduleUnavailableNote() {
     var schedule = document.querySelector('[data-career-personal="daySchedule"]');
     if (!schedule || (state.analysis && state.analysis.daySchedule && state.analysis.daySchedule.length)) return;
+    if (staticDayScheduleHtml) {
+      // Generation failed but the page shipped a real schedule — put it back.
+      schedule.innerHTML = staticDayScheduleHtml;
+      clearDayScheduleNote();
+      return;
+    }
     renderDayScheduleSkeleton();
     var note = document.querySelector('[data-career-personal="dayScheduleNote"]');
     if (note) {
-      note.textContent = 'Day-in-life schedule unavailable — O*NET work activities are listed in the Role Profile above.';
+      note.textContent = 'Day-in-the-life schedule unavailable — the role\'s key activities are listed in the Role Profile above.';
       note.hidden = false;
     }
   }
@@ -644,20 +664,21 @@
     if (note) note.hidden = true;
   }
 
+  function setOnetSectionsHidden(hidden) {
+    document.querySelectorAll('[data-career-onet-section]').forEach(function (el) {
+      el.hidden = hidden;
+    });
+  }
+
   function hydrateOnetProfile(soc) {
     if (!soc || !window.FWOnetVectors || typeof FWOnetVectors.buildCareerOnetProfile !== 'function') return;
-    document.querySelectorAll('[data-career-onet-section]').forEach(function (el) {
-      el.hidden = false;
-    });
     FWOnetVectors.buildCareerOnetProfile(soc).then(function (profile) {
-      if (!profile) return;
+      // Sections reveal only once there's data to fill them — unhiding before
+      // the fetch left permanent empty card frames when it failed.
+      if (!profile) { setOnetSectionsHidden(true); return; }
+      setOnetSectionsHidden(false);
       state.onetProfile = profile;
       renderOnetProfileTabs(profile, 'skills');
-      var demandEl = document.querySelector('[data-career-onet="demandBars"]');
-      if (demandEl && window.FWOnetDimensionViewer
-        && typeof FWOnetDimensionViewer.renderDemandBars === 'function') {
-        FWOnetDimensionViewer.renderDemandBars(demandEl, profile.topOverall.slice(0, 8));
-      }
       if (profile.onetRelease) {
         var sidebar = document.querySelector('[data-career-personal="quickFacts"]');
         if (sidebar && !sidebar.querySelector('[data-quick-fact="onet-release"]')) {
@@ -666,12 +687,12 @@
             + '<span class="value">' + esc(profile.onetRelease) + '</span></div>');
         }
       }
-    }).catch(function () { /* ignore */ });
+    }).catch(function () { setOnetSectionsHidden(true); });
   }
 
   function ensureObjectiveFromResume() {
     if (!window.FWOnetVectors || typeof FWOnetVectors.applyResumeToObjective !== 'function') return;
-    var hub = readJson(HUB_QUIZ_KEY);
+    var hub = (window.FWUser && typeof FWUser.getBlob === 'function') ? FWUser.getBlob() : null;
     var resumeText = String((hub && hub.resumeText) || '').trim();
     if (!resumeText || (hub && hub.objectiveSkipped)) return;
     var vecs = FWOnetVectors.readQuizVectors();
@@ -693,16 +714,25 @@
     } else {
       hub.objectiveVector = FWOnetVectors.applyResumeToObjective(baseObj, resumeText, profiles);
     }
-    try { localStorage.setItem(HUB_QUIZ_KEY, JSON.stringify(hub)); } catch (_) { /* quota */ }
+    try { if (window.FWUser) FWUser.putBlob(hub); } catch (_) { /* quota */ }
   }
 
   function hydrateUserOnetMatch(soc) {
     var section = document.querySelector('[data-career-onet="matchSection"]');
     var panel = document.querySelector('[data-career-onet="matchPanel"]');
     // FW2.0 C1 — AI-exposure section is career-level, so mount it even when the
-    // user has no vectors yet (before the match guard below returns).
+    // user has no vectors yet (before the match guard below returns). The
+    // "AI Exposure" metric tile mirrors this same score once it resolves,
+    // overriding whatever applyAnalysis set from the Gemini estimate.
     if (window.FWAiExposure && typeof FWAiExposure.inject === 'function') {
-      try { FWAiExposure.inject(soc, section || panel); } catch (_) {}
+      try {
+        FWAiExposure.inject(soc, section || panel).then(function (score) {
+          if (typeof score === 'number') {
+            state.exposureScore = score;
+            syncAiRisk(score);
+          }
+        });
+      } catch (_) { /* mount is additive — never block the match panel */ }
     }
     if (!section || !panel || !soc || !window.FWOnetVectors
       || typeof FWOnetVectors.userVsCareerDimensions !== 'function') return;
@@ -715,9 +745,10 @@
       section.hidden = false;
       return;
     }
-    FWOnetVectors.userVsCareerDimensions(soc, personality, objective).then(function (match) {
+    var confidence = vecs && vecs.personality && vecs.personality.confidence;
+    FWOnetVectors.userVsCareerDimensions(soc, personality, objective, confidence).then(function (match) {
       if (!match || !match.gaps.length) {
-        panel.innerHTML = '<p class="onet-dim-empty">Your quiz vector is close to this role on top O*NET dimensions.</p>';
+        panel.innerHTML = '<p class="onet-dim-empty">Your profile already lines up closely with this role\'s key strengths.</p>';
         section.hidden = false;
         return;
       }
@@ -725,13 +756,21 @@
         && typeof FWOnetDimensionViewer.renderUserVsCareerBars === 'function') {
         FWOnetDimensionViewer.renderUserVsCareerBars(panel, match.gaps, 8);
       }
-      // FW2.0 A1 — "why this match" drawer, built from the same comparison rows
-      // (no vector recompute). Cites the top O*NET coordinates driving the fit.
+      // FW2.0 A1 — "why this match" drawer from fit drivers (comparisons), not gaps.
       if (window.FWWhyMatch && typeof FWWhyMatch.inject === 'function') {
         try {
-          var whyPct = match.percent != null ? match.percent
-            : (match.fit != null ? match.fit : null);
-          FWWhyMatch.inject(section, match.gaps, whyPct, { k: 3 });
+          var whyRows = (match.comparisons && match.comparisons.length)
+            ? match.comparisons
+            : match.gaps;
+          var whyPct = null;
+          var fs = (state.analysis && state.analysis.fitScores) || {};
+          if (fs.assessedFitPercent != null) whyPct = fs.assessedFitPercent;
+          else if (fs.quizFitPercent != null) whyPct = fs.quizFitPercent;
+          else if (state.vectorFitDetails && state.vectorFitDetails.personalityFit != null) {
+            whyPct = Math.round(Number(state.vectorFitDetails.personalityFit) * 100);
+          } else if (match.percent != null) whyPct = match.percent;
+          else if (match.fit != null) whyPct = match.fit;
+          FWWhyMatch.inject(panel, whyRows, whyPct, { k: 3 });
         } catch (_) { /* drawer is additive — never block the panel */ }
       }
       section.hidden = false;
@@ -752,8 +791,8 @@
       return 'Apply ' + name.toLowerCase() + ' in day-to-day work for this role';
     });
     resp.innerHTML = items.map(function (r) { return '<li>' + esc(r) + '</li>'; }).join('');
-    var respSection = resp.closest('.career-resp-section');
-    if (respSection) respSection.style.display = '';
+    var respSection = resp.closest('[data-career-personal-resp]');
+    if (respSection) respSection.hidden = false;
   }
 
   function finishHydrateRender(opts) {
@@ -792,30 +831,6 @@
       + '<span class="fit-metric-chip-value">' + esc(fmt100(displayPct, 0)) + '</span></span></div>';
   }
 
-  function renderVectorGapDetails(vectorFit) {
-    if (!vectorFit || !vectorFit.topGaps || !vectorFit.topGaps.length) return '';
-    var registry = state.dimensionRegistry;
-    var formatted = (window.FWOnetVectors && typeof FWOnetVectors.formatGapList === 'function' && registry)
-      ? FWOnetVectors.formatGapList(vectorFit.topGaps, registry, 5)
-      : { gaps: vectorFit.topGaps.map(function (g) {
-        return { name: 'Dimension ' + g.index, domain: 'skill', gap: g.gap };
-      }), labels: [] };
-    var items = formatted.gaps.map(function (g) {
-      return '<div class="fit-gap-card">'
-        + '<span class="fit-gap-domain">' + esc(humanizeDomain(g.domain)) + '</span>'
-        + '<span class="fit-gap-name">' + esc(g.name) + '</span>'
-        + '<span class="fit-gap-val">Gap ' + esc(fmt100(g.gap, 1)) + '</span>'
-        + '</div>';
-    }).join('');
-    var roadmapHref = 'roadmap.html?focus=1&career=' + encodeURIComponent(state.slug || '');
-    if (state.soc) roadmapHref += '&soc=' + encodeURIComponent(state.soc);
-    return '<div class="fit-subsection fit-subsection--gaps">'
-      + '<h5 class="fit-subsection-title">Top O*NET gaps</h5>'
-      + '<div class="fit-gap-grid">' + items + '</div>'
-      + '<div class="fit-gaps-track"><a class="cta-btn cta-btn-outline fit-track-roadmap-btn" href="' + esc(roadmapHref) + '">Track on Career Roadmap</a></div>'
-      + '</div>';
-  }
-
   function renderAssessedFit(analysis, quizFit) {
     const el = document.querySelector('[data-career-personal="assessedFit"]');
     if (!el) return;
@@ -843,13 +858,6 @@
         + '<p class="fit-gaps-inline">' + esc(quizFit.gaps.join(' · ')) + '</p>'
         + '<div class="fit-gaps-track"><a class="cta-btn cta-btn-outline fit-track-roadmap-btn" href="roadmap.html?focus=1">Track on Career Roadmap</a></div></div>'
       : '';
-    const vectorGapHtml = state.vectorFitDetails ? renderVectorGapDetails(state.vectorFitDetails) : '';
-    var roadmapHref = 'roadmap.html?career=' + encodeURIComponent(state.slug || '');
-    if (state.soc) roadmapHref += '&soc=' + encodeURIComponent(state.soc);
-    const roadmapCta = state.slug
-      ? '<div class="fit-subsection fit-subsection--cta"><p class="fit-roadmap-cta"><a class="cta-btn cta-btn-outline" href="' + esc(roadmapHref) + '">Build roadmap for this career</a></p></div>'
-      : '';
-
     let tabContent = '';
     if (!hasVectorFit && hasResume() && fs.quizFitPercent != null) {
       tabContent = '<div class="fit-tab-bar" role="tablist">'
@@ -862,7 +870,7 @@
     const note = hasVectorFit
       ? (vf.objectiveFit != null
         ? 'Personality fit reflects who you are; objective fit reflects your background and credentials.'
-        : 'Personality fit from your quiz vector. Add academics or a resume in Career Hub for objective fit.')
+        : 'Personality fit from your quiz. Add academics or a resume in Career Hub to unlock objective fit.')
       : (state.fitTab === 'quiz'
         ? 'Raw Career Quiz industry mapping for this role.'
         : 'Blended from your quiz signals and AI profile analysis.');
@@ -881,7 +889,7 @@
         : '<h4 class="fit-panel-head">How this career fits you</h4>' + metricChips)
       + '<p class="fit-quiz-note">' + note + '</p>'
       + (mapped ? '<div class="fit-mapped"><strong>Relevant quiz signals:</strong> ' + esc(mapped) + '</div>' : '')
-      + strengthHtml + gapHtml + vectorGapHtml + roadmapCta;
+      + strengthHtml + gapHtml;
 
     el.querySelectorAll('[data-fit-tab]').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -1133,102 +1141,6 @@
       bar.style.width = pct + '%';
       bar.dataset.target = String(pct);
     });
-    const aiCard = document.querySelector('[data-career-personal="aiReplacement"]');
-    if (aiCard) {
-      const riskSpan = aiCard.querySelector('[data-career-ai-risk]');
-      if (riskSpan) riskSpan.textContent = pct;
-      const p = aiCard.querySelector('.ai-outlook-text');
-      if (p && outlook) p.textContent = outlook;
-      const taskEl = aiCard.querySelector('.ai-tasks');
-      if (taskEl && tasks && tasks.length) {
-        taskEl.innerHTML = tasks.map(function (t) {
-          return '<div class="ai-task-row"><span class="ai-task-label">' + esc(t.task)
-            + '</span><span class="ai-task-risk risk-' + t.risk + '">' + riskLabel(t.risk) + '</span></div>';
-        }).join('');
-      }
-    }
-  }
-
-  // Ensure a personalization section exists in the DOM, inserting it relative to
-  // an anchor when first created. Returns the section element (or null if the
-  // anchor is missing so we can't place it).
-  function ensurePersonalSection(key, className, anchorSelector, position) {
-    var existing = document.querySelector('[data-career-personal="' + key + '"]');
-    if (existing) return existing;
-    var content = document.getElementById('career-content');
-    if (!content) return null;
-    var anchor = anchorSelector ? content.querySelector(anchorSelector) : null;
-    var section = document.createElement('section');
-    section.className = className;
-    section.setAttribute('data-career-personal', key);
-    section.hidden = true;
-    if (anchor && position === 'before') {
-      anchor.parentNode.insertBefore(section, anchor);
-    } else if (anchor && position === 'after') {
-      anchor.parentNode.insertBefore(section, anchor.nextSibling);
-    } else {
-      content.appendChild(section);
-    }
-    return section;
-  }
-
-  function renderWhatYouBring(analysis) {
-    var wyb = analysis && analysis.whatYouBring;
-    var section = ensurePersonalSection(
-      'whatYouBring', 'career-section career-bring-section',
-      '.career-fit-section', 'before',
-    );
-    if (!section) return;
-    var summary = wyb && String(wyb.summary || '').trim();
-    var points = (wyb && Array.isArray(wyb.points)) ? wyb.points.filter(Boolean) : [];
-    if (!summary && !points.length) {
-      section.hidden = true;
-      section.innerHTML = '';
-      return;
-    }
-    var cards = points.slice(0, 3).map(function (p) {
-      return '<div class="bring-chip">' + esc(p) + '</div>';
-    }).join('');
-    section.innerHTML = '<div class="section-inner">'
-      + '<div class="section-tag fade-in">Your edge</div>'
-      + '<h2 class="section-title fade-in">What you already bring</h2>'
-      + (summary ? '<p class="bring-summary fade-in">' + esc(summary) + '</p>' : '')
-      + (cards ? '<div class="bring-chips fade-in">' + cards + '</div>' : '')
-      + '</div>';
-    section.hidden = false;
-  }
-
-  function renderEntryPath(analysis) {
-    var ep = analysis && analysis.entryPath;
-    var section = ensurePersonalSection(
-      'entryPath', 'career-section career-entry-section',
-      '.cta-section', 'before',
-    );
-    if (!section) return;
-    var intro = ep && String(ep.intro || '').trim();
-    var steps = (ep && Array.isArray(ep.steps)) ? ep.steps.filter(function (s) {
-      return s && (s.title || s.desc);
-    }) : [];
-    if (!steps.length) {
-      section.hidden = true;
-      section.innerHTML = '';
-      return;
-    }
-    var items = steps.slice(0, 4).map(function (s, i) {
-      var gapTag = s.closesGap
-        ? '<span class="entry-gap-tag">Closes gap: ' + esc(s.closesGap) + '</span>'
-        : '';
-      return '<li class="entry-step fade-in"><span class="entry-step-num">' + (i + 1) + '</span>'
-        + '<div class="entry-step-body"><h5>' + esc(s.title || '') + '</h5>'
-        + (s.desc ? '<p>' + esc(s.desc) + '</p>' : '') + gapTag + '</div></li>';
-    }).join('');
-    section.innerHTML = '<div class="section-inner">'
-      + '<div class="section-tag fade-in">Getting in</div>'
-      + '<h2 class="section-title fade-in">Your entry path</h2>'
-      + (intro ? '<p class="entry-intro fade-in">' + esc(intro) + '</p>' : '')
-      + '<ol class="entry-steps fade-in">' + items + '</ol>'
-      + '</div>';
-    section.hidden = false;
   }
 
   function applyAnalysis(analysis) {
@@ -1240,16 +1152,14 @@
     applyMetrics(analysis.metrics);
     renderAssessedFit(analysis, state.quizFit);
     renderAiProfile(analysis);
-    renderWhatYouBring(analysis);
-    renderEntryPath(analysis);
 
     const resp = document.querySelector('[data-career-personal="responsibilities"]');
     if (resp && analysis.responsibilities && analysis.responsibilities.length) {
       resp.innerHTML = analysis.responsibilities.map(function (r) {
         return '<li>' + esc(r) + '</li>';
       }).join('');
-      var respSection = resp.closest('.career-resp-section');
-      if (respSection) respSection.style.display = '';
+      var respSection = resp.closest('[data-career-personal-resp]');
+      if (respSection) respSection.hidden = false;
     }
 
     const timeline = document.querySelector('[data-career-personal="daySchedule"]');
@@ -1270,7 +1180,11 @@
 
     const aiPct = analysis.aiReplacement && analysis.aiReplacement.percent;
     const fallbackAi = state.staticFallback && state.staticFallback.aiAutomation;
-    const resolvedAi = (typeof aiPct === 'number' && aiPct > 0) ? aiPct : fallbackAi;
+    // Prefer the O*NET-derived exposure score (same number as "How AI hits
+    // this career") over Gemini's independent estimate whenever it's loaded.
+    const resolvedAi = (typeof state.exposureScore === 'number')
+      ? state.exposureScore
+      : ((typeof aiPct === 'number' && aiPct > 0) ? aiPct : fallbackAi);
     const aiOutlook = (analysis.aiReplacement && analysis.aiReplacement.outlook)
       || (state.staticFallback && state.staticFallback.aiOutlook);
     const aiTasks = (analysis.aiReplacement && analysis.aiReplacement.tasks && analysis.aiReplacement.tasks.length)
@@ -1442,7 +1356,7 @@
     input.value = '';
     appendChatMsg('user', text);
     state.chatHistory.push({ role: 'user', content: text });
-    if (sendBtn) sendBtn.disabled = true;
+    const restoreSend = window.FWButtonBusy ? FWButtonBusy.start(sendBtn) : function () {};
     showChatTyping();
 
     try {
@@ -1532,9 +1446,9 @@
       }
     } catch (err) {
       hideChatTyping();
-      appendChatMsg('assistant', err.message || 'Something went wrong. Try again.');
+      appendChatMsg('assistant', fwErr(err, 'Marco could not answer that — please try again.'));
     } finally {
-      if (sendBtn) sendBtn.disabled = false;
+      restoreSend();
     }
   }
 
@@ -1548,6 +1462,7 @@
     state.exchangeCount = 0;
     state.fitTab = 'assessed';
     state.dimensionRegistry = null;
+    state.exposureScore = null;
     state.vectorFitDetails = null;
 
     var socPromise = (window.FWOnetVectors && typeof FWOnetVectors.resolveTargetSoc === 'function')
@@ -1643,15 +1558,13 @@
       }
       finishHydrateRender({
         analysisFailed: !!(result.error && canFetchAiAnalysis()),
-        analysisError: result.error && result.error.message
-          ? result.error.message
-          : 'AI personalization is unavailable — showing quiz-based fit only.',
+        analysisError: fwErr(result.error, 'AI personalization is unavailable — showing quiz-based fit only.'),
       });
     }).catch(function (err) {
       console.warn('Career deep dive hydrate failed', err);
       finishHydrateRender({
         analysisFailed: canFetchAiAnalysis(),
-        analysisError: (err && err.message) || 'Could not load personalization.',
+        analysisError: fwErr(err, 'Could not load personalization.'),
       });
     }).finally(function () {
       showLoading(false);

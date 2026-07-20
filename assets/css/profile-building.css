@@ -207,7 +207,7 @@
 }
 
 .pb-loading-overlay[hidden] {
-  display: none !important;
+  display: none; /* attribute selector outranks the base overlay rule */
 }
 
 .pb-loading-card {
@@ -234,18 +234,28 @@
   margin: 0;
 }
 
-.pb-loading-spinner {
-  width: 40px;
-  height: 40px;
-  margin: 0 auto;
-  border: 3px solid var(--border-light);
-  border-top-color: rgb(var(--primary));
-  border-radius: 50%;
-  animation: pb-spin 0.85s linear infinite;
+/* Size only — .fw-skeleton (flightway-theme.css) supplies the shimmer. Under
+   reduced motion the shimmer stops, so the visually-hidden "Loading…" text and
+   the heading copy carry the feedback. */
+.pb-loading-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 22px;
+  text-align: left;
 }
+.pb-skel-head { height: 18px; width: 62%; border-radius: 6px; }
+.pb-skel-line { height: 12px; width: 100%; border-radius: 6px; }
+.pb-skel-line--short { width: 78%; }
+.pb-skel-btn { height: 40px; width: 148px; border-radius: 999px; margin-top: 8px; }
 
-@keyframes pb-spin {
-  to { transform: rotate(360deg); }
+/* Reduced-motion (C6, 2026-07-18): snap page transitions. The loading ring is
+   gone (WS1); .fw-skeleton goes static under reduced motion, so the overlay's
+   heading + visually-hidden "Loading…" carry the feedback instead. */
+@media (prefers-reduced-motion: reduce) {
+  #page-profile-build *,
+  #page-profile-build *::before,
+  #page-profile-build *::after { transition-duration: 0.01ms !important; }
 }
 
 body.pb-page-loading {

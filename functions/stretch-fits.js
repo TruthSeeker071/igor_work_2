@@ -3,9 +3,13 @@ import {
   preflightResponse,
   originFromEnv,
 } from './_lib.js';
-import { requireSession, loadQuizProfile } from './_lib/auth.js';
+import { requireSession } from './_lib/auth.js';
+import { requirePlan } from './_lib/entitlements.js';
+import { loadUserBlob } from './_lib/user.js';
+import { schoolPromptBlock, resolveSchool } from './_lib/school.js';
 import { getCareers } from './_lib/onet/store.js';
 import { callGeminiJson } from './_lib/gemini-json.js';
+import { groundedJson, GROUNDING_TTL } from './_lib/gemini-grounded.js';
 
 const MAX_ITEMS = 4;
 const MAX_WORDS = 45;
@@ -49,9 +53,11 @@ function sanitizeDrivers(drivers) {
  * text (academics notes, resume summary) — treated as DATA in the prompt, never
  * as instructions.
  */
-function buildProfileContext(quiz) {
-  if (!quiz || typeof quiz !== 'object') return '';
-  const lines = [];
+function buildProfileContext(quiz, school) {
+  // The school block goes in even with no quiz profile: "which programs can
+  // this student actually use" is the one thing we must never get wrong.
+  const lines = [schoolPromptBlock(school)];
+  if (!quiz || typeof quiz !== 'object') return lines.join('\n');
   const academics = quiz.academics && typeof quiz.academics === 'object' ? quiz.academics : null;
   if (academics) {
     if (academics.major) lines.push(`Major/field: ${String(academics.major).slice(0, 160)}`);
@@ -90,7 +96,7 @@ function buildPrompt(items, profileContext) {
 
 export async function onRequest(context) {
   const { request, env } = context;
-  const origin = originFromEnv(env);
+  const origin = originFromEnv(env, request);
   if (request.method === 'OPTIONS') return preflightResponse(origin, { credentials: true });
 
   const baseUrl = new URL(request.url).origin;
@@ -102,6 +108,18 @@ export async function onRequest(context) {
 
     const session = await requireSession(request, env);
     const email = session.email;
+
+    // Free/paid merge §1: stretch-fit / growth-path suggestions are a grounded
+    // Gemini surface, so they sit on the paid side of the cost boundary.
+    const ent = await requirePlan(env, email, 'premium');
+    if (!ent.ok) {
+      return jsonResponse(402, {
+        error: 'Stretch-fit suggestions are a Flight Plan feature.',
+        upgrade: true,
+        feature: 'stretch-fits',
+        items: [],
+      }, origin, { credentials: true });
+    }
 
     const body = await request.json().catch(() => ({}));
     const rawItems = Array.isArray(body.items) ? body.items : [];
@@ -166,18 +184,31 @@ export async function onRequest(context) {
     }
 
     // Load grounding profile server-side.
-    const quiz = await loadQuizProfile(env, email).catch(() => null);
-    const profileContext = buildProfileContext(quiz);
+    const quiz = await loadUserBlob(env, email).catch(() => null);
+    const profileContext = buildProfileContext(quiz, await resolveSchool(env, email, { quiz }).catch(() => ''));
 
     let result = null;
+    let grounding = null;
     try {
-      result = await callGeminiJson(env, {
+      // Pillar W (Tier B): a short current-outlook brief for the careers being
+      // explained. Flag off → byte-identical ungrounded call.
+      const missTitles = misses.map((it) => it.title).filter(Boolean).slice(0, 3);
+      let sources; let fetchedAt; let grounded;
+      ({ result, sources, fetchedAt, grounded } = await groundedJson(env, {
+        research: missTitles.length
+          ? [`current job market outlook and entry paths for ${missTitles.join(', ')}`]
+          : [],
+        freshnessTtl: GROUNDING_TTL.SEMI_STABLE,
+        researchTimeoutMs: 6000,
+        budgetKey: email,
         prompt: buildPrompt(misses, profileContext),
         temperature: 0.4,
         maxTokens: 640,
         label: 'stretch-fits',
         softFail: true,
-      });
+      }));
+      // Provenance travels to the client (fix plan 2.5).
+      if (grounded) grounding = { sources: sources || [], fetchedAt: fetchedAt || null };
     } catch {
       result = null;
     }
@@ -199,7 +230,7 @@ export async function onRequest(context) {
       }
     }));
 
-    return jsonResponse(200, { explanations }, origin, { credentials: true });
+    return jsonResponse(200, { explanations, grounding }, origin, { credentials: true });
   } catch (err) {
     // Auth failures should surface (requireSession sets err.status = 401);
     // AI failures are already handled inline and return {explanations:{}}.
