@@ -227,6 +227,8 @@ body {
   outline: 2px solid rgb(var(--primary) / 0.35);
   outline-offset: 1px;
 }
+
+body {
   position: relative;
   overflow-x: clip;
   min-width: 0;
@@ -361,7 +363,7 @@ html.theme-ready .coach-shell {
   align-items: center;
   justify-content: center;
   min-height: 36px;
-  min-width: 0;
+  flex-shrink: 0; /* never compress below label width — nav container scrolls instead */
   padding: 8px 14px;
   font-family: inherit;
   font-size: 0.875rem;

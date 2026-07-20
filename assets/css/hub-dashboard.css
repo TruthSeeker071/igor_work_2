@@ -56,7 +56,7 @@ body.hub-page #topbar {
   display: none;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1199px) {
   .hub-app-nav {
     max-width: none;
     flex: 1 1 auto;
@@ -461,10 +461,11 @@ body.hub-page .btn-daylife {
     white-space: nowrap;
   }
   .legend-bar {
-    width: 168px;
-    height: 11px;
-    border-radius: 6px;
+    width: 128px;
+    height: 8px;
+    border-radius: 999px;
     background: linear-gradient(to right, #9AA0AD, #5ED152, #3FAEF0, #BD4AE8, #F2A82E, #FFD24A);
+    filter: saturate(0.5) opacity(0.85); /* muted: keeps the rarity hue mapping, kills the loudness */
   }
   .legend-bar--zones {
     background: linear-gradient(to right, #3B82F6, #10B981, #F59E0B, #8B5CF6, #EC4899, #78716C);
@@ -475,14 +476,6 @@ body.hub-page .btn-daylife {
   .legend-bar--rarity {
     display: block;
     background: linear-gradient(to right, #9AA0AD, #5ED152, #3FAEF0, #BD4AE8, #F2A82E, #FFD24A);
-  }
-  .legend-orb-sample {
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    background: radial-gradient(circle at 35% 30%, #eef1f8, #a855f7 45%, #6b21a8);
-    box-shadow: 0 0 0 1px rgb(0 0 0 / 0.12);
   }
 
   /* ── Map HUD (overview hint / sector back) ── */
