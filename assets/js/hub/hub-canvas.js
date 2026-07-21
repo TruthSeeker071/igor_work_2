@@ -538,46 +538,66 @@ function drawFixedZoneTiles(targetCtx) {
   });
 
   // 3b. Career points — one global pass over every real (non-satellite)
-  // career. Positions are the real distributed layout, then loosened outward
-  // from each industry's centroid so the field breathes instead of clumping.
+  // career. Real layout, then an organic scatter: each point is pushed out
+  // from its industry centroid by a hash-varied factor plus jitter, so the
+  // field looks naturally distributed (no lattice, no tight clump) instead of
+  // a scaled copy of the dense source layout.
   var centroids = {};
   Object.keys(geo).forEach(function (id) { centroids[id] = { x: geo[id].g.cx, y: geo[id].g.cy }; });
-  var SPREAD = 1.34; // push points away from their cluster centre → looser, airier
+  var SPREAD = 1.28;   // mean outward push from the industry centre
+  var JIT = 30;        // organic jitter amplitude (px)
   var allCareers = (window.FWOnetHub && typeof FWOnetHub.getAllCareers === 'function')
     ? FWOnetHub.getAllCareers() : [];
-  var neutral = hubLight ? { r: 150, g: 146, b: 141 } : { r: 128, g: 124, b: 120 };
-  var staticDraw = !_api.motionOk; // motion path paints per-frame instead
+  var neutral = hubLight ? { r: 158, g: 154, b: 149 } : { r: 120, g: 116, b: 112 };
   for (var pi = 0; pi < allCareers.length; pi++) {
     var c = allCareers[pi];
     if (!c || c.aiDerived) continue;
     var pos = _api.careerWorldXY(c);
     var scr = worldToScreen(pos.x, pos.y);
-    // Loosen: shift each point outward from its industry centroid.
     var hz = String(c.hubZone || '').toLowerCase();
     var ct = centroids[CANVAS_DISPLAY_MERGE[hz] || hz];
     if (ct) {
-      scr = { x: ct.x + (scr.x - ct.x) * SPREAD, y: ct.y + (scr.y - ct.y) * SPREAD };
+      // Hash-varied radial spread breaks the concentric "scaled clump" look;
+      // per-axis jitter breaks any residual grid. Deterministic per index.
+      var sprv = SPREAD * (0.78 + 0.62 * hash01(pi * 1.7 + 3));
+      var jx = (hash01(pi * 2.3 + 1) - 0.5) * JIT;
+      var jy = (hash01(pi * 2.9 + 7) - 0.5) * JIT;
+      scr = {
+        x: ct.x + (scr.x - ct.x) * sprv + jx,
+        y: ct.y + (scr.y - ct.y) * sprv + jy,
+      };
     }
-    // Cull off-screen points (generous margin — drift + halos overhang).
-    if (scr.x < -40 || scr.x > _api.viewW + 40 || scr.y < -40 || scr.y > _api.viewH + 40) continue;
+    if (scr.x < -50 || scr.x > _api.viewW + 50 || scr.y < -50 || scr.y > _api.viewH + 50) continue;
     var fit = c.fitScore != null ? c.fitScore : (c.personalityFit != null ? c.personalityFit : 0);
     var heat = fitHeat(fit);
     var ir2 = industryRgbOf(c);
-    var mix = heat * heat * (3 - 2 * heat); // smoothstep: low fit -> neutral gray
+    var mix = heat * heat * (3 - 2 * heat);
+    // Fit drives size hard (pow curve): weak matches stay small specks, strong
+    // matches are big and unmistakable.
+    var r = 1.6 + Math.pow(heat, 1.7) * 10.0;
     var pt = {
-      x: scr.x, y: scr.y,
-      r: 2.6 + heat * heat * 6.6,   // bigger dots; strong matches largest
-      heat: heat,
+      x: scr.x, y: scr.y, r: r, heat: heat,
       cr: ir2.r, cg: ir2.g, cb: ir2.b,
       mr: Math.round(neutral.r + (ir2.r - neutral.r) * mix),
       mg: Math.round(neutral.g + (ir2.g - neutral.g) * mix),
       mb: Math.round(neutral.b + (ir2.b - neutral.b) * mix),
-      alpha: (hubLight ? 0.22 : 0.22) + heat * (hubLight ? 0.66 : 0.70),
-      seed: pi * 0.61803399, // golden-ratio phase so neighbours drift out of sync
+      // Lightened hue for the bright core on strong matches.
+      lr: Math.round(ir2.r + (255 - ir2.r) * 0.55),
+      lg: Math.round(ir2.g + (255 - ir2.g) * 0.55),
+      lb: Math.round(ir2.b + (255 - ir2.b) * 0.55),
+      alpha: (hubLight ? 0.16 : 0.18) + heat * (hubLight ? 0.76 : 0.76),
+      seed: pi * 0.61803399,
     };
-    if (staticDraw) paintHeatDot(ctx, pt, pt.x, pt.y, 1, 1, hubLight);
     geoCache.points.push(pt);
     if (heat > 0.72) geoCache.top.push(pt);
+  }
+  // Draw weak → strong so high-fit dots always sit ON TOP of the gray field.
+  geoCache.points.sort(function (a, b) { return a.heat - b.heat; });
+  if (!_api.motionOk) {
+    for (var si = 0; si < geoCache.points.length; si++) {
+      var sp = geoCache.points[si];
+      paintHeatDot(ctx, sp, sp.x, sp.y, 1, 1, hubLight);
+    }
   }
 
   // Pass 4: label plates, big zones first, colliding plates culled — at
@@ -871,26 +891,51 @@ var CANVAS_DISPLAY_MERGE = {
   business: 'business-finance', finance: 'business-finance',
 };
 
+// Deterministic per-index pseudo-random in [0,1) — used to scatter the field
+// organically (no lattice) without any allocation or state.
+function hash01(n) {
+  var x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+  return x - Math.floor(x);
+}
+
 // One heat point (organism). Shared by the static path (reduced motion, drawn
 // into the cached layer) and the live path (drifting/breathing, per frame), so
-// the two can never diverge. rMul/aMul let the live path breathe it.
+// the two can never diverge. rMul/aMul let the live path breathe it. High-fit
+// points get a stronger halo, a bright core, and a crisp rim so they visibly
+// dominate the weak gray field.
 function paintHeatDot(ctx, p, x, y, rMul, aMul, hubLight) {
   var r = p.r * rMul;
-  // Soft halo behind lit matches — the "glow of life" on strong fits.
-  if (p.heat > 0.55) {
-    var ga = (p.heat - 0.55) * 2.0 * (hubLight ? 0.16 : 0.30) * aMul;
-    var halo = ctx.createRadialGradient(x, y, r * 0.5, x, y, r * 4.4);
+  // Soft halo behind lit matches — scales hard with fit so strong ones bloom.
+  if (p.heat > 0.42) {
+    var hh = (p.heat - 0.42) / 0.58;
+    var ga = hh * hh * (hubLight ? 0.30 : 0.42) * aMul;
+    var hR = r * (4.2 + 2.0 * p.heat);
+    var halo = ctx.createRadialGradient(x, y, r * 0.5, x, y, hR);
     halo.addColorStop(0, 'rgba(' + p.cr + ',' + p.cg + ',' + p.cb + ',' + ga.toFixed(3) + ')');
     halo.addColorStop(1, 'rgba(' + p.cr + ',' + p.cg + ',' + p.cb + ',0)');
     ctx.fillStyle = halo;
     ctx.beginPath();
-    ctx.arc(x, y, r * 4.4, 0, Math.PI * 2);
+    ctx.arc(x, y, hR, 0, Math.PI * 2);
     ctx.fill();
   }
+  // Body.
   ctx.fillStyle = 'rgba(' + p.mr + ',' + p.mg + ',' + p.mb + ',' + (p.alpha * aMul).toFixed(3) + ')';
   ctx.beginPath();
   ctx.arc(x, y, r, 0, Math.PI * 2);
   ctx.fill();
+  // Standout for strong matches: bright inner core + crisp rim.
+  if (p.heat > 0.6) {
+    var st = (p.heat - 0.6) / 0.4;
+    ctx.fillStyle = 'rgba(' + p.lr + ',' + p.lg + ',' + p.lb + ',' + (st * 0.85 * aMul).toFixed(3) + ')';
+    ctx.beginPath();
+    ctx.arc(x, y, r * 0.42, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(' + p.cr + ',' + p.cg + ',' + p.cb + ',' + ((0.35 + 0.45 * st) * aMul).toFixed(3) + ')';
+    ctx.beginPath();
+    ctx.arc(x, y, r + 0.6, 0, Math.PI * 2);
+    ctx.stroke();
+  }
 }
 
 function darkenRgb(rgb, factor) {
