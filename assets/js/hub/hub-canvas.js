@@ -538,45 +538,46 @@ function drawFixedZoneTiles(targetCtx) {
   });
 
   // 3b. Career points — one global pass over every real (non-satellite)
-  // career, drawn at its own map coordinate. Data-distributed, not clustered.
+  // career. Positions are the real distributed layout, then loosened outward
+  // from each industry's centroid so the field breathes instead of clumping.
+  var centroids = {};
+  Object.keys(geo).forEach(function (id) { centroids[id] = { x: geo[id].g.cx, y: geo[id].g.cy }; });
+  var SPREAD = 1.34; // push points away from their cluster centre → looser, airier
   var allCareers = (window.FWOnetHub && typeof FWOnetHub.getAllCareers === 'function')
     ? FWOnetHub.getAllCareers() : [];
   var neutral = hubLight ? { r: 150, g: 146, b: 141 } : { r: 128, g: 124, b: 120 };
+  var staticDraw = !_api.motionOk; // motion path paints per-frame instead
   for (var pi = 0; pi < allCareers.length; pi++) {
     var c = allCareers[pi];
     if (!c || c.aiDerived) continue;
     var pos = _api.careerWorldXY(c);
     var scr = worldToScreen(pos.x, pos.y);
-    // Cull off-screen points (with margin) so we never pay for what we can't see.
-    if (scr.x < -20 || scr.x > _api.viewW + 20 || scr.y < -20 || scr.y > _api.viewH + 20) continue;
+    // Loosen: shift each point outward from its industry centroid.
+    var hz = String(c.hubZone || '').toLowerCase();
+    var ct = centroids[CANVAS_DISPLAY_MERGE[hz] || hz];
+    if (ct) {
+      scr = { x: ct.x + (scr.x - ct.x) * SPREAD, y: ct.y + (scr.y - ct.y) * SPREAD };
+    }
+    // Cull off-screen points (generous margin — drift + halos overhang).
+    if (scr.x < -40 || scr.x > _api.viewW + 40 || scr.y < -40 || scr.y > _api.viewH + 40) continue;
     var fit = c.fitScore != null ? c.fitScore : (c.personalityFit != null ? c.personalityFit : 0);
     var heat = fitHeat(fit);
     var ir2 = industryRgbOf(c);
-    // Low fit desaturates toward neutral gray; high fit shows full industry hue.
-    var mix = heat * heat * (3 - 2 * heat); // smoothstep
-    var cr = Math.round(neutral.r + (ir2.r - neutral.r) * mix);
-    var cg = Math.round(neutral.g + (ir2.g - neutral.g) * mix);
-    var cb = Math.round(neutral.b + (ir2.b - neutral.b) * mix);
-    var r = 1.4 + heat * heat * 4.4;
-    var alpha = (hubLight ? 0.20 : 0.20) + heat * (hubLight ? 0.68 : 0.72);
-    // Soft halo behind the hottest matches so they read as "lit".
-    if (heat > 0.6) {
-      var ga = (heat - 0.6) * 2.2 * (hubLight ? 0.16 : 0.28);
-      var halo = ctx.createRadialGradient(scr.x, scr.y, r * 0.5, scr.x, scr.y, r * 4.2);
-      halo.addColorStop(0, 'rgba(' + ir2.r + ',' + ir2.g + ',' + ir2.b + ',' + ga.toFixed(3) + ')');
-      halo.addColorStop(1, 'rgba(' + ir2.r + ',' + ir2.g + ',' + ir2.b + ',0)');
-      ctx.fillStyle = halo;
-      ctx.beginPath();
-      ctx.arc(scr.x, scr.y, r * 4.2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.fillStyle = 'rgba(' + cr + ',' + cg + ',' + cb + ',' + alpha.toFixed(3) + ')';
-    ctx.beginPath();
-    ctx.arc(scr.x, scr.y, r, 0, Math.PI * 2);
-    ctx.fill();
-    var pt = { x: scr.x, y: scr.y, r: r, cr: ir2.r, cg: ir2.g, cb: ir2.b, heat: heat };
+    var mix = heat * heat * (3 - 2 * heat); // smoothstep: low fit -> neutral gray
+    var pt = {
+      x: scr.x, y: scr.y,
+      r: 2.6 + heat * heat * 6.6,   // bigger dots; strong matches largest
+      heat: heat,
+      cr: ir2.r, cg: ir2.g, cb: ir2.b,
+      mr: Math.round(neutral.r + (ir2.r - neutral.r) * mix),
+      mg: Math.round(neutral.g + (ir2.g - neutral.g) * mix),
+      mb: Math.round(neutral.b + (ir2.b - neutral.b) * mix),
+      alpha: (hubLight ? 0.22 : 0.22) + heat * (hubLight ? 0.66 : 0.70),
+      seed: pi * 0.61803399, // golden-ratio phase so neighbours drift out of sync
+    };
+    if (staticDraw) paintHeatDot(ctx, pt, pt.x, pt.y, 1, 1, hubLight);
     geoCache.points.push(pt);
-    if (heat > 0.78) geoCache.top.push(pt);
+    if (heat > 0.72) geoCache.top.push(pt);
   }
 
   // Pass 4: label plates, big zones first, colliding plates culled — at
@@ -669,70 +670,60 @@ function drawFixedZoneTiles(targetCtx) {
   overviewGeoCache = geoCache;
 }
 
-// ── PER-FRAME MOUSE / IDLE LAYER ──
-// Drawn over the cached heatmap blit every frame. Two jobs: (1) the cursor
-// acts as a light source — career points near the pointer light up in their
-// industry color, brightest at the center of the beam; (2) the very top
-// matches keep a gentle idle shimmer so the eye is drawn to them at rest.
-// Reads the point geometry cached by the heatmap build (screen coords stay
-// valid until the camera changes, which rebuilds the cache).
+// ── PER-FRAME LIVING LAYER ──
+// The heatmap is alive: every point drifts on a slow, out-of-phase orbit and
+// breathes (radius/opacity pulse), so the field reads like an ecosystem rather
+// than a static scatter. The cursor is a light source that wakes nearby points
+// in their industry hue. Under reduced motion this layer is inert and the dots
+// were baked static into the cached blit instead.
 function drawOverviewIdleLayer(nowMs) {
   var geo = overviewGeoCache;
-  if (!geo || !geo.points || !_api.ctx) return;
+  if (!geo || !geo.points || !_api.ctx || !_api.motionOk) return;
   var ctx = _api.ctx;
   var hubLight = isHubLightTheme();
   var t = (nowMs || 0) / 1000;
 
-  // (1) Cursor beam — lights up nearby points in their own hue. On the white
-  // canvas we paint richer, more opaque hue (source-over) so colors deepen
-  // toward the cursor; on the dark canvas we add light (additive) for a glow.
-  var mouseOn = _api.state.mouseOn && _api.motionOk;
-  if (mouseOn) {
-    var mx = _api.state.mouseX, my = _api.state.mouseY;
-    var R = Math.max(_api.viewW, _api.viewH) * 0.16;
-    ctx.save();
-    if (!hubLight) ctx.globalCompositeOperation = 'lighter';
-    for (var i = 0; i < geo.points.length; i++) {
-      var p = geo.points[i];
-      var dx = p.x - mx, dy = p.y - my;
-      var d2 = dx * dx + dy * dy;
-      if (d2 > R * R) continue;
-      var prox = 1 - Math.sqrt(d2) / R;
-      prox = prox * prox * (3 - 2 * prox); // smoothstep
-      if (prox < 0.02) continue;
-      // Weak points still wake a little under the beam; strong ones flare.
-      var bloom = prox * (0.35 + 0.65 * p.heat);
-      // Soft colored halo.
-      var hr = p.r * (2.0 + 2.5 * prox);
-      var ha = bloom * (hubLight ? 0.22 : 0.30);
-      var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, hr);
-      g.addColorStop(0, 'rgba(' + p.cr + ',' + p.cg + ',' + p.cb + ',' + ha.toFixed(3) + ')');
-      g.addColorStop(1, 'rgba(' + p.cr + ',' + p.cg + ',' + p.cb + ',0)');
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, hr, 0, Math.PI * 2);
-      ctx.fill();
-      // Brighter core so the point itself reads as lit, in full industry hue.
-      ctx.fillStyle = 'rgba(' + p.cr + ',' + p.cg + ',' + p.cb + ',' + (bloom * (hubLight ? 0.85 : 0.7)).toFixed(3) + ')';
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r * (1 + 0.5 * prox), 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.restore();
+  // (1) Living field — drift + breathe every point.
+  for (var i = 0; i < geo.points.length; i++) {
+    var p = geo.points[i];
+    var ph = p.seed;
+    var amp = 2.4 + p.heat * 2.2;                 // stronger matches roam a touch more
+    var dx = Math.sin(t * 0.42 + ph * 1.7) * amp;
+    var dy = Math.cos(t * 0.35 + ph * 2.3) * amp * 0.9;
+    var breathe = 1 + (0.05 + 0.11 * p.heat) * Math.sin(t * 0.8 + ph * 3.1);
+    p.dx = dx; p.dy = dy; // remembered so the cursor beam lines up with the drift
+    paintHeatDot(ctx, p, p.x + dx, p.y + dy, breathe, 1, hubLight);
   }
 
-  // (2) Idle shimmer on the top matches — a slow breathing glow, additive so
-  // it never muddies the color. Skipped under reduced motion.
-  if (_api.motionOk && geo.top && geo.top.length) {
+  // (2) Cursor beam — points near the pointer light up in their own hue.
+  var mouseOn = _api.state.mouseOn;
+  if (mouseOn) {
+    var mx = _api.state.mouseX, my = _api.state.mouseY;
+    var R = Math.max(_api.viewW, _api.viewH) * 0.17;
     ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    for (var k = 0; k < geo.top.length; k++) {
-      var tp = geo.top[k];
-      var pulse = 0.5 + 0.5 * Math.sin(t * 1.6 + (tp.x + tp.y) * 0.01);
-      var a = (hubLight ? 0.05 : 0.10) + 0.16 * pulse * tp.heat;
-      ctx.fillStyle = 'rgba(' + tp.cr + ',' + tp.cg + ',' + tp.cb + ',' + a.toFixed(3) + ')';
+    if (!hubLight) ctx.globalCompositeOperation = 'lighter';
+    for (var j = 0; j < geo.points.length; j++) {
+      var q = geo.points[j];
+      var qx = q.x + (q.dx || 0), qy = q.y + (q.dy || 0);
+      var ddx = qx - mx, ddy = qy - my;
+      var d2 = ddx * ddx + ddy * ddy;
+      if (d2 > R * R) continue;
+      var prox = 1 - Math.sqrt(d2) / R;
+      prox = prox * prox * (3 - 2 * prox);
+      if (prox < 0.02) continue;
+      var bloom = prox * (0.35 + 0.65 * q.heat);
+      var hr = q.r * (2.2 + 2.6 * prox);
+      var ha = bloom * (hubLight ? 0.22 : 0.30);
+      var g = ctx.createRadialGradient(qx, qy, 0, qx, qy, hr);
+      g.addColorStop(0, 'rgba(' + q.cr + ',' + q.cg + ',' + q.cb + ',' + ha.toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(' + q.cr + ',' + q.cg + ',' + q.cb + ',0)');
+      ctx.fillStyle = g;
       ctx.beginPath();
-      ctx.arc(tp.x, tp.y, tp.r + 1.2 * pulse, 0, Math.PI * 2);
+      ctx.arc(qx, qy, hr, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(' + q.cr + ',' + q.cg + ',' + q.cb + ',' + (bloom * (hubLight ? 0.85 : 0.7)).toFixed(3) + ')';
+      ctx.beginPath();
+      ctx.arc(qx, qy, q.r * (1 + 0.5 * prox), 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();
@@ -761,6 +752,7 @@ function overviewLayerKey() {
     st.hoveredZone || '',
     Math.round((st.zoneHoverAlpha || 0) * 20),
     isHubLightTheme() ? 'l' : 'd',
+    _api.motionOk ? 'm' : 's',
     _api.viewW, _api.viewH,
     overviewDataVersion,
   ].join('|');
@@ -869,6 +861,36 @@ function industryRgbOf(c) {
 function fitHeat(fit) {
   var f = (fit == null) ? 0 : fit;
   return Math.max(0, Math.min(1, (f - 12) / 56));
+}
+
+// Fold a career's raw O*NET zone id onto its display macro-sector, so a point
+// can be pushed away from the right cluster centroid when we loosen the spread.
+var CANVAS_DISPLAY_MERGE = {
+  engineering: 'engineering-science', science: 'engineering-science', cybersecurity: 'engineering-science',
+  creative: 'creative-media', marketing: 'creative-media', media: 'creative-media',
+  business: 'business-finance', finance: 'business-finance',
+};
+
+// One heat point (organism). Shared by the static path (reduced motion, drawn
+// into the cached layer) and the live path (drifting/breathing, per frame), so
+// the two can never diverge. rMul/aMul let the live path breathe it.
+function paintHeatDot(ctx, p, x, y, rMul, aMul, hubLight) {
+  var r = p.r * rMul;
+  // Soft halo behind lit matches — the "glow of life" on strong fits.
+  if (p.heat > 0.55) {
+    var ga = (p.heat - 0.55) * 2.0 * (hubLight ? 0.16 : 0.30) * aMul;
+    var halo = ctx.createRadialGradient(x, y, r * 0.5, x, y, r * 4.4);
+    halo.addColorStop(0, 'rgba(' + p.cr + ',' + p.cg + ',' + p.cb + ',' + ga.toFixed(3) + ')');
+    halo.addColorStop(1, 'rgba(' + p.cr + ',' + p.cg + ',' + p.cb + ',0)');
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 4.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = 'rgba(' + p.mr + ',' + p.mg + ',' + p.mb + ',' + (p.alpha * aMul).toFixed(3) + ')';
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 function darkenRgb(rgb, factor) {
