@@ -528,13 +528,14 @@ function drawFixedZoneTiles(targetCtx) {
     if (!G) return;
     var g = G.g;
     var ir = G.industry;
-    var wa = (hubLight ? 0.055 : 0.075) + G.hoverA * 0.05;
-    var wash = ctx.createRadialGradient(g.cx, g.cy, g.R * 0.1, g.cx, g.cy, g.R * 1.7);
+    var wa = (hubLight ? 0.14 : 0.17) + G.hoverA * 0.07;
+    var wR = g.R * 1.85;
+    var wash = ctx.createRadialGradient(g.cx, g.cy, g.R * 0.1, g.cx, g.cy, wR);
     wash.addColorStop(0, 'rgba(' + ir.r + ',' + ir.g + ',' + ir.b + ',' + wa.toFixed(3) + ')');
-    wash.addColorStop(0.7, 'rgba(' + ir.r + ',' + ir.g + ',' + ir.b + ',' + (wa * 0.45).toFixed(3) + ')');
+    wash.addColorStop(0.55, 'rgba(' + ir.r + ',' + ir.g + ',' + ir.b + ',' + (wa * 0.5).toFixed(3) + ')');
     wash.addColorStop(1, 'rgba(' + ir.r + ',' + ir.g + ',' + ir.b + ',0)');
     ctx.fillStyle = wash;
-    ctx.fillRect(g.cx - g.R * 1.75, g.cy - g.R * 1.75, g.R * 3.5, g.R * 3.5);
+    ctx.fillRect(g.cx - wR, g.cy - wR, wR * 2, wR * 2);
   });
 
   // 3b. Career points — one global pass over every real (non-satellite)
@@ -863,11 +864,13 @@ function hexToRgb(hex) {
 // instead (high match = vivid + lit; low match = small + grayed). Keys cover
 // both the 10 display zones and the raw O*NET zone ids a career can carry.
 var INDUSTRY_HUE = {
-  tech: '#3B82F6', government: '#0EA5E9', healthcare: '#14B8A6', education: '#22C55E',
-  'business-finance': '#F5A623', business: '#F5A623', finance: '#F5A623',
-  trades: '#A16207', social: '#EF4444', law: '#6366F1',
+  tech: '#2F6BFF', healthcare: '#0FB5A6', education: '#17C964',
+  'business-finance': '#F5A524', business: '#F5A524', finance: '#F5A524',
+  trades: '#C2410C', social: '#F43F5E',
+  // Law and Government are one industry ("Law & Government") — shared indigo.
+  law: '#5B6BF0', government: '#5B6BF0',
   'creative-media': '#EC4899', creative: '#EC4899', marketing: '#EC4899', media: '#EC4899',
-  'engineering-science': '#A855F7', engineering: '#A855F7', science: '#A855F7', cybersecurity: '#A855F7',
+  'engineering-science': '#9333EA', engineering: '#9333EA', science: '#9333EA', cybersecurity: '#9333EA',
 };
 function industryHex(key) {
   var k = String(key || '').toLowerCase();

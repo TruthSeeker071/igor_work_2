@@ -552,7 +552,9 @@
       var inZone = state.careersByZone[zone] || [];
       return {
         id: zone,
-        label: titleCaseZone(zone),
+        // Law + Government read as one industry on the map (shared hue); give
+        // both regions the same label so they're understood as one field.
+        label: (zone === 'law' || zone === 'government') ? 'Law & Government' : titleCaseZone(zone),
         bounds: b,
         count: inZone.length,
         orbColor: state.zoneColors[zone]
