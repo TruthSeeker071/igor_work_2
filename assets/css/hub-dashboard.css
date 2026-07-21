@@ -468,8 +468,10 @@ body.hub-page .panel-description {
     width: 128px;
     height: 8px;
     border-radius: 999px;
-    /* Heat ramp: warm gray (low fit) -> ember (best fit). Single hue family. */
-    background: linear-gradient(to right, #CBC5BF, #DFBCA6, #E09B6E, #D97742, #C6521C, #A83C0F);
+    /* Intensity ramp: faded (weak match) -> vivid (strong match). Color on the
+       map encodes industry; brightness encodes fit, so the legend shows fit as
+       a fade-to-vivid, not a single hue. */
+    background: linear-gradient(to right, #D9D4CF, #C4A9C9, #8FA0D9, #E0A15A, #E5643C);
   }
   .legend-bar--zones {
     background: linear-gradient(to right, #3B82F6, #10B981, #F59E0B, #8B5CF6, #EC4899, #78716C);
@@ -479,7 +481,7 @@ body.hub-page .panel-description {
   }
   .legend-bar--rarity {
     display: block;
-    background: linear-gradient(to right, #CBC5BF, #DFBCA6, #E09B6E, #D97742, #C6521C, #A83C0F);
+    background: linear-gradient(to right, #D9D4CF, #C4A9C9, #8FA0D9, #E0A15A, #E5643C);
   }
 
   /* ── Map HUD (overview hint / sector back) ── */
