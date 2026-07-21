@@ -505,106 +505,79 @@ function drawFixedZoneTiles(targetCtx) {
       pPct: pPct,
       rarity: rarityOf(pPct),
       rgb: hexToRgb(rarityOf(pPct).base),
+      industry: hexToRgb(industryHex(zone.id) || '#9AA0AD'),
       isHover: _api.state.hoveredZone === zone.id,
       hoverA: hoverA,
     };
   });
 
-  // Pass 2: the inter-cluster web (under everything). Link strength comes
-  // from the real zone-vector cosine — stronger relationships draw wider,
-  // brighter, and in a gradient between the two clusters' colors, so the web
-  // reads as meaningful rather than decorative.
-  if (window.FWOnetHub && typeof FWOnetHub.getZoneNeighborLinks === 'function') {
-    var links = FWOnetHub.getZoneNeighborLinks() || [];
-    var sMin = Infinity, sMax = -Infinity;
-    links.forEach(function (l) {
-      if (typeof l.score === 'number') {
-        if (l.score < sMin) sMin = l.score;
-        if (l.score > sMax) sMax = l.score;
-      }
-    });
-    var sSpan = (sMax > sMin) ? (sMax - sMin) : 1;
-    links.forEach(function (link) {
-      var A = geo[link.a];
-      var B = geo[link.b];
-      if (!A || !B) return;
-      var t = (typeof link.score === 'number') ? (link.score - sMin) / sSpan : 0.5;
-      var a = { x: A.g.cx, y: A.g.cy };
-      var b2 = { x: B.g.cx, y: B.g.cy };
-      var dx = b2.x - a.x, dy = b2.y - a.y;
-      var len = Math.hypot(dx, dy) || 1;
-      // Start/end at the cluster edges, not centers.
-      var ax = a.x + dx / len * A.g.R * 0.95;
-      var ay = a.y + dy / len * A.g.R * 0.95;
-      var bx = b2.x - dx / len * B.g.R * 0.95;
-      var by = b2.y - dy / len * B.g.R * 0.95;
-      var mx = (ax + bx) / 2, my = (ay + by) / 2;
-      var bulge = Math.min(40, len * 0.12);
-      var alpha = (hubLight ? 0.13 : 0.11) + t * 0.20;
-      var grad = ctx.createLinearGradient(ax, ay, bx, by);
-      grad.addColorStop(0, 'rgba(' + A.rarity.glow + ',' + alpha.toFixed(3) + ')');
-      grad.addColorStop(1, 'rgba(' + B.rarity.glow + ',' + alpha.toFixed(3) + ')');
-      ctx.strokeStyle = grad;
-      ctx.lineWidth = 0.9 + t * 1.6;
-      ctx.beginPath();
-      ctx.moveTo(ax, ay);
-      ctx.quadraticCurveTo(mx - (dy / len) * bulge, my + (dx / len) * bulge, bx, by);
-      ctx.stroke();
-    });
-  }
+  // Pass 2 (the inter-cluster link web) removed in the heatmap redesign —
+  // "remove the lines". Relationships now read through spatial proximity and
+  // shared industry hue, not drawn edges.
 
-  // Pass 3: cloud + orb cluster per zone.
-  var geoCache = { zones: [] };
+  // Pass 3: soft industry regions (no hard borders) + the distributed career
+  // heatmap. Every career is one dot at its real map position: hue = industry,
+  // and fit drives brightness/size/opacity so strong matches light up while
+  // weak ones recede to faint gray.
+  var geoCache = { points: [], top: [] };
+
+  // 3a. Faint industry wash per zone — orients the eye to regions without
+  // boxing them in. Industry hue, very low alpha, generous overlap.
   zones.forEach(function (zone) {
     var G = geo[zone.id];
     if (!G) return;
     var g = G.g;
-    var rgb = G.rgb;
-    var rarity = G.rarity;
-    var hoverA = G.hoverA;
-    var baseA = (hubLight ? 0.15 : 0.20) + hoverA * 0.08;
-
-    // Soft cloud: one broad wash + 4 offset blobs, all inside ~1.5R so each
-    // cluster reads as a discrete cloud-orb with open space around it.
-    var wash = ctx.createRadialGradient(g.cx, g.cy, g.R * 0.1, g.cx, g.cy, g.R * 1.55);
-    wash.addColorStop(0, 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',' + (baseA * 1.15).toFixed(3) + ')');
-    wash.addColorStop(0.62, 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',' + (baseA * 0.5).toFixed(3) + ')');
-    wash.addColorStop(1, 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',0)');
+    var ir = G.industry;
+    var wa = (hubLight ? 0.055 : 0.075) + G.hoverA * 0.05;
+    var wash = ctx.createRadialGradient(g.cx, g.cy, g.R * 0.1, g.cx, g.cy, g.R * 1.7);
+    wash.addColorStop(0, 'rgba(' + ir.r + ',' + ir.g + ',' + ir.b + ',' + wa.toFixed(3) + ')');
+    wash.addColorStop(0.7, 'rgba(' + ir.r + ',' + ir.g + ',' + ir.b + ',' + (wa * 0.45).toFixed(3) + ')');
+    wash.addColorStop(1, 'rgba(' + ir.r + ',' + ir.g + ',' + ir.b + ',0)');
     ctx.fillStyle = wash;
-    ctx.fillRect(g.cx - g.R * 1.6, g.cy - g.R * 1.6, g.R * 3.2, g.R * 3.2);
-    for (var bi = 0; bi < 4; bi++) {
-      var bx = g.cx + (g.rnd(bi * 5 + 1) - 0.5) * g.R * 1.1;
-      var by = g.cy + (g.rnd(bi * 7 + 3) - 0.5) * g.R * 1.0;
-      var br = g.R * (0.5 + 0.35 * g.rnd(bi * 3 + 5));
-      var ba = baseA * 0.6;
-      var blob = ctx.createRadialGradient(bx, by, 0, bx, by, br);
-      blob.addColorStop(0, 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',' + ba.toFixed(3) + ')');
-      blob.addColorStop(1, 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',0)');
-      ctx.fillStyle = blob;
+    ctx.fillRect(g.cx - g.R * 1.75, g.cy - g.R * 1.75, g.R * 3.5, g.R * 3.5);
+  });
+
+  // 3b. Career points — one global pass over every real (non-satellite)
+  // career, drawn at its own map coordinate. Data-distributed, not clustered.
+  var allCareers = (window.FWOnetHub && typeof FWOnetHub.getAllCareers === 'function')
+    ? FWOnetHub.getAllCareers() : [];
+  var neutral = hubLight ? { r: 150, g: 146, b: 141 } : { r: 128, g: 124, b: 120 };
+  for (var pi = 0; pi < allCareers.length; pi++) {
+    var c = allCareers[pi];
+    if (!c || c.aiDerived) continue;
+    var pos = _api.careerWorldXY(c);
+    var scr = worldToScreen(pos.x, pos.y);
+    // Cull off-screen points (with margin) so we never pay for what we can't see.
+    if (scr.x < -20 || scr.x > _api.viewW + 20 || scr.y < -20 || scr.y > _api.viewH + 20) continue;
+    var fit = c.fitScore != null ? c.fitScore : (c.personalityFit != null ? c.personalityFit : 0);
+    var heat = fitHeat(fit);
+    var ir2 = industryRgbOf(c);
+    // Low fit desaturates toward neutral gray; high fit shows full industry hue.
+    var mix = heat * heat * (3 - 2 * heat); // smoothstep
+    var cr = Math.round(neutral.r + (ir2.r - neutral.r) * mix);
+    var cg = Math.round(neutral.g + (ir2.g - neutral.g) * mix);
+    var cb = Math.round(neutral.b + (ir2.b - neutral.b) * mix);
+    var r = 1.4 + heat * heat * 4.4;
+    var alpha = (hubLight ? 0.20 : 0.20) + heat * (hubLight ? 0.68 : 0.72);
+    // Soft halo behind the hottest matches so they read as "lit".
+    if (heat > 0.6) {
+      var ga = (heat - 0.6) * 2.2 * (hubLight ? 0.16 : 0.28);
+      var halo = ctx.createRadialGradient(scr.x, scr.y, r * 0.5, scr.x, scr.y, r * 4.2);
+      halo.addColorStop(0, 'rgba(' + ir2.r + ',' + ir2.g + ',' + ir2.b + ',' + ga.toFixed(3) + ')');
+      halo.addColorStop(1, 'rgba(' + ir2.r + ',' + ir2.g + ',' + ir2.b + ',0)');
+      ctx.fillStyle = halo;
       ctx.beginPath();
-      ctx.arc(bx, by, br, 0, Math.PI * 2);
+      ctx.arc(scr.x, scr.y, r * 4.2, 0, Math.PI * 2);
       ctx.fill();
     }
-    // Hover: rim glow around the (already scaled+lifted) cloud-orb.
-    if (hoverA > 0.02) {
-      var rim = ctx.createRadialGradient(g.cx, g.cy, g.R * 0.9, g.cx, g.cy, g.R * 1.7);
-      rim.addColorStop(0, 'rgba(' + rarity.glow + ',0)');
-      rim.addColorStop(0.7, 'rgba(' + rarity.glow + ',' + (hoverA * 0.26).toFixed(3) + ')');
-      rim.addColorStop(1, 'rgba(' + rarity.glow + ',0)');
-      ctx.fillStyle = rim;
-      ctx.fillRect(g.cx - g.R * 1.8, g.cy - g.R * 1.8, g.R * 3.6, g.R * 3.6);
-    }
-
-    var dots = zoneClusterDots(zone, g, G.count);
-    drawZoneClusterOrbs(ctx, dots, hoverA, rarity);
-    geoCache.zones.push({
-      id: zone.id,
-      cx: g.cx, cy: g.cy, R: g.R,
-      glow: rarity.glow,
-      sparkles: dots.sparkles,
-      moteSeedA: g.rnd(201), moteSeedB: g.rnd(207),
-    });
-  });
+    ctx.fillStyle = 'rgba(' + cr + ',' + cg + ',' + cb + ',' + alpha.toFixed(3) + ')';
+    ctx.beginPath();
+    ctx.arc(scr.x, scr.y, r, 0, Math.PI * 2);
+    ctx.fill();
+    var pt = { x: scr.x, y: scr.y, r: r, cr: ir2.r, cg: ir2.g, cb: ir2.b, heat: heat };
+    geoCache.points.push(pt);
+    if (heat > 0.78) geoCache.top.push(pt);
+  }
 
   // Pass 4: label plates, big zones first, colliding plates culled — at
   // mobile widths not all 11 macro-sector labels may fit; the biggest
@@ -671,7 +644,7 @@ function drawFixedZoneTiles(targetCtx) {
     ctx.fill();
     ctx.lineWidth = 1;
     ctx.strokeStyle = hoverA > 0.02
-      ? 'rgba(' + G.rarity.glow + ',' + (0.25 + hoverA * 0.3).toFixed(3) + ')'
+      ? 'rgba(' + G.industry.r + ',' + G.industry.g + ',' + G.industry.b + ',' + (0.35 + hoverA * 0.35).toFixed(3) + ')'
       : (hubLight ? 'rgba(62,40,28,0.14)' : 'rgba(255,255,255,0.10)');
     roundRectPath(ctx, plateX, plateY, plateW, plateH, 9);
     ctx.stroke();
@@ -696,42 +669,73 @@ function drawFixedZoneTiles(targetCtx) {
   overviewGeoCache = geoCache;
 }
 
-// ── PER-FRAME IDLE LAYER ──
-// A few twinkling front dots and two slow-drifting motes per cluster, drawn
-// over the cached blit every frame. ~160 tiny arcs total — cheap enough to
-// run continuously without touching the cached layer (the fix that the cache
-// exists for). Skipped entirely under prefers-reduced-motion.
+// ── PER-FRAME MOUSE / IDLE LAYER ──
+// Drawn over the cached heatmap blit every frame. Two jobs: (1) the cursor
+// acts as a light source — career points near the pointer light up in their
+// industry color, brightest at the center of the beam; (2) the very top
+// matches keep a gentle idle shimmer so the eye is drawn to them at rest.
+// Reads the point geometry cached by the heatmap build (screen coords stay
+// valid until the camera changes, which rebuilds the cache).
 function drawOverviewIdleLayer(nowMs) {
   var geo = overviewGeoCache;
-  if (!geo || !geo.zones.length || !_api.ctx) return;
-  if (!_api.motionOk) return;
+  if (!geo || !geo.points || !_api.ctx) return;
   var ctx = _api.ctx;
+  var hubLight = isHubLightTheme();
   var t = (nowMs || 0) / 1000;
-  for (var zi = 0; zi < geo.zones.length; zi++) {
-    var z = geo.zones[zi];
-    // Twinkle: sine-pulse the bright front dots.
-    for (var si = 0; si < z.sparkles.length; si++) {
-      var s = z.sparkles[si];
-      var pulse = 0.5 + 0.5 * Math.sin(t * s.speed + s.phase);
-      var a = (isHubLightTheme() ? 0.06 + 0.22 * pulse : 0.10 + 0.38 * pulse);
-      ctx.fillStyle = 'rgba(' + z.glow + ',' + a.toFixed(3) + ')';
+
+  // (1) Cursor beam — lights up nearby points in their own hue. On the white
+  // canvas we paint richer, more opaque hue (source-over) so colors deepen
+  // toward the cursor; on the dark canvas we add light (additive) for a glow.
+  var mouseOn = _api.state.mouseOn && _api.motionOk;
+  if (mouseOn) {
+    var mx = _api.state.mouseX, my = _api.state.mouseY;
+    var R = Math.max(_api.viewW, _api.viewH) * 0.16;
+    ctx.save();
+    if (!hubLight) ctx.globalCompositeOperation = 'lighter';
+    for (var i = 0; i < geo.points.length; i++) {
+      var p = geo.points[i];
+      var dx = p.x - mx, dy = p.y - my;
+      var d2 = dx * dx + dy * dy;
+      if (d2 > R * R) continue;
+      var prox = 1 - Math.sqrt(d2) / R;
+      prox = prox * prox * (3 - 2 * prox); // smoothstep
+      if (prox < 0.02) continue;
+      // Weak points still wake a little under the beam; strong ones flare.
+      var bloom = prox * (0.35 + 0.65 * p.heat);
+      // Soft colored halo.
+      var hr = p.r * (2.0 + 2.5 * prox);
+      var ha = bloom * (hubLight ? 0.22 : 0.30);
+      var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, hr);
+      g.addColorStop(0, 'rgba(' + p.cr + ',' + p.cg + ',' + p.cb + ',' + ha.toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(' + p.cr + ',' + p.cg + ',' + p.cb + ',0)');
+      ctx.fillStyle = g;
       ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r + 0.9 * pulse, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, hr, 0, Math.PI * 2);
+      ctx.fill();
+      // Brighter core so the point itself reads as lit, in full industry hue.
+      ctx.fillStyle = 'rgba(' + p.cr + ',' + p.cg + ',' + p.cb + ',' + (bloom * (hubLight ? 0.85 : 0.7)).toFixed(3) + ')';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r * (1 + 0.5 * prox), 0, Math.PI * 2);
       ctx.fill();
     }
-    // Motes: two faint dots on slow elliptical orbits inside the cloud.
-    for (var mi = 0; mi < 2; mi++) {
-      var seed = mi === 0 ? z.moteSeedA : z.moteSeedB;
-      var orbitR = z.R * (0.45 + 0.4 * seed);
-      var speed = (Math.PI * 2) / (26 + seed * 18) * (mi === 0 ? 1 : -1);
-      var ang = t * speed + seed * Math.PI * 2;
-      var mx = z.cx + Math.cos(ang) * orbitR;
-      var my = z.cy + Math.sin(ang) * orbitR * 0.85;
-      ctx.fillStyle = 'rgba(' + z.glow + ',0.35)';
+    ctx.restore();
+  }
+
+  // (2) Idle shimmer on the top matches — a slow breathing glow, additive so
+  // it never muddies the color. Skipped under reduced motion.
+  if (_api.motionOk && geo.top && geo.top.length) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (var k = 0; k < geo.top.length; k++) {
+      var tp = geo.top[k];
+      var pulse = 0.5 + 0.5 * Math.sin(t * 1.6 + (tp.x + tp.y) * 0.01);
+      var a = (hubLight ? 0.05 : 0.10) + 0.16 * pulse * tp.heat;
+      ctx.fillStyle = 'rgba(' + tp.cr + ',' + tp.cg + ',' + tp.cb + ',' + a.toFixed(3) + ')';
       ctx.beginPath();
-      ctx.arc(mx, my, 1.3, 0, Math.PI * 2);
+      ctx.arc(tp.x, tp.y, tp.r + 1.2 * pulse, 0, Math.PI * 2);
       ctx.fill();
     }
+    ctx.restore();
   }
 }
 
@@ -840,6 +844,31 @@ function hexToRgb(hex) {
     g: parseInt(h.slice(2, 4), 16) || 113,
     b: parseInt(h.slice(4, 6), 16) || 108,
   };
+}
+
+// ── INDUSTRY HUE (2026-07-20 heatmap redesign) ──
+// Color now encodes INDUSTRY, not fit. Fit drives brightness/opacity/size
+// instead (high match = vivid + lit; low match = small + grayed). Keys cover
+// both the 10 display zones and the raw O*NET zone ids a career can carry.
+var INDUSTRY_HUE = {
+  tech: '#3B82F6', government: '#0EA5E9', healthcare: '#14B8A6', education: '#22C55E',
+  'business-finance': '#F5A623', business: '#F5A623', finance: '#F5A623',
+  trades: '#A16207', social: '#EF4444', law: '#6366F1',
+  'creative-media': '#EC4899', creative: '#EC4899', marketing: '#EC4899', media: '#EC4899',
+  'engineering-science': '#A855F7', engineering: '#A855F7', science: '#A855F7', cybersecurity: '#A855F7',
+};
+function industryHex(key) {
+  var k = String(key || '').toLowerCase();
+  return INDUSTRY_HUE[k] || null;
+}
+function industryRgbOf(c) {
+  var hex = industryHex(c && c.hubZone) || (c && c.orbColor) || '#9AA0AD';
+  return hexToRgb(hex);
+}
+// Fit (0-100 mean-centered cosine) -> heat [0,1]. Cold below ~12, saturated by ~68.
+function fitHeat(fit) {
+  var f = (fit == null) ? 0 : fit;
+  return Math.max(0, Math.min(1, (f - 12) / 56));
 }
 
 function darkenRgb(rgb, factor) {
