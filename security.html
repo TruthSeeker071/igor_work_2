@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg?v=20260720f">
+  <link rel="icon" href="/favicon.ico?v=20260720a" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/icons/favicon-128.png?v=20260720a">
+  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-180.png?v=20260720a">
+  <title>Security — FlightWay</title>
+  <meta name="description" content="How FlightWay protects your data: where it lives, how accounts, sessions and payments are secured, and how to report a vulnerability.">
+  <!-- Absolute canonical: this exact file is served by BOTH Pages projects, and
+       without it the prototype host competes with flightway.ai as duplicate
+       content. Hardcoded on purpose — the preview host must point away from itself. -->
+  <link rel="canonical" href="https://flightway.ai/security">
+  <meta property="og:site_name" content="FlightWay">
+  <meta property="og:url" content="https://flightway.ai/security">
+  <meta property="og:title" content="Security — FlightWay">
+  <meta property="og:description" content="Where your data lives, how accounts and payments are protected, and how to report a vulnerability.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://flightway.ai/assets/og/og-default.png?v=20260724a">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="FlightWay — career development for students">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Security — FlightWay">
+  <meta name="twitter:description" content="Where your data lives, how accounts and payments are protected, and how to report a vulnerability.">
+  <meta name="twitter:image" content="https://flightway.ai/assets/og/og-default.png?v=20260724a">
+  <link rel="preload" href="/assets/fonts/inter-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/space-grotesk-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260721p">
+  <link rel="stylesheet" href="assets/css/flightway-legal.css?v=20260724a">
+  <script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
+  <script src="assets/js/shared/flags.js?v=20260716h"></script>
+  <script src="assets/js/shared/events.js?v=20260724a" defer></script>
+</head>
+<body>
+  <a class="fw-skip-link" href="#main">Skip to content</a>
+
+  <header class="fw-doc-nav">
+    <div class="fw-doc-nav-inner">
+      <a href="/" class="fw-brand" data-fw-brand data-fw-brand-href="/" aria-label="FlightWay home"></a>
+      <div class="fw-doc-nav-links">
+        <a class="fw-doc-nav-hide-sm" href="/pricing">Pricing</a>
+        <a class="fw-doc-nav-hide-sm" href="/privacy">Privacy</a>
+        <button type="button" class="fw-theme-toggle" aria-label="Switch to light mode" aria-pressed="true">
+          <span class="fw-theme-icon" aria-hidden="true"></span>
+        </button>
+        <a href="/quiz" class="fw-btn fw-btn-primary fw-btn-sm">Get started</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="fw-doc" id="main">
+    <div class="fw-doc-head">
+      <p class="fw-eyebrow">SECURITY</p>
+      <h1>Security</h1>
+      <p class="fw-doc-meta"><strong>Last updated:</strong> July 24, 2026 · <strong>Effective:</strong> July 24, 2026</p>
+      <p>This statement describes the security controls presently implemented in the Service — where your data is
+        stored, how your Account and payments are protected, and who on our side can access data. It is also our
+        coordinated-disclosure channel: Section 8 states how to report a Vulnerability and what we commit to in
+        return.</p>
+
+      <div class="fw-doc-review">
+        <div>
+          <strong>NOTICE — DRAFT PENDING LEGAL REVIEW.</strong> The technical descriptions in this statement were
+          written by the engineers who wrote the code and are accurate to the Service as presently operated. The
+          legal provisions have not been reviewed by counsel, and two items remain unresolved: FlightWay's
+          <strong>registered postal address</strong>, not published anywhere on this site; and the
+          <strong>governing law and venue</strong> applicable to a dispute. Until counsel settles both, the
+          safe-harbor commitment in <a href="#report-a-vulnerability">Section 8 (Vulnerability disclosure)</a>
+          should be treated as a sincere commitment rather than a counsel-drafted instrument.
+        </div>
+      </div>
+    </div>
+
+    <nav class="fw-doc-toc">
+      <h2>Contents</h2>
+      <ol>
+        <li><a href="#definitions">Scope and definitions</a></li>
+        <li><a href="#where-your-data-lives">Data storage and transport</a></li>
+        <li><a href="#accounts-and-sessions">Account and session security</a></li>
+        <li><a href="#payments">Payment security</a></li>
+        <li><a href="#abuse-and-rate-limits">Abuse prevention and rate limiting</a></li>
+        <li><a href="#who-can-see-your-data">Personnel and administrative access</a></li>
+        <li><a href="#ai-and-your-data">Artificial intelligence and your data</a></li>
+        <li><a href="#report-a-vulnerability">Vulnerability disclosure</a></li>
+        <li><a href="#your-part">User responsibilities</a></li>
+        <li><a href="#questions">Further information</a></li>
+      </ol>
+    </nav>
+
+    <h2 id="definitions">1. Scope and definitions</h2>
+    <p>This statement covers the security of flightway.ai and its server endpoints. It is a technical and
+      operational description, not an inventory of the data itself; the categories of data collected, the
+      purposes, the recipients, and the retention periods are set out in the <a href="/privacy">Privacy
+      Policy</a>. In this statement:</p>
+    <ul>
+      <li><strong>"FlightWay," "we," "us," or "our"</strong> means FlightWay, Inc.</li>
+      <li><strong>"Service"</strong> means flightway.ai and every application and feature offered through it.</li>
+      <li><strong>"you"</strong> or <strong>"User"</strong> means the individual who accesses the Service.</li>
+      <li><strong>"Personal Data"</strong> has the meaning given in the <a href="/privacy">Privacy Policy</a>.</li>
+      <li><strong>"AI Provider"</strong> means Google LLC, operating the Gemini API — the sole AI provider used
+        by the Service.</li>
+      <li><strong>"Vulnerability"</strong> means a security weakness in the Service capable of affecting the
+        confidentiality, integrity, or availability of data or of the Service.</li>
+    </ul>
+
+    <h2 id="where-your-data-lives">2. Data storage and transport</h2>
+
+    <p>The entire Service operates on Cloudflare's network. There is no on-premises server, no second cloud
+      account, and no data warehouse. Four locations hold data concerning you:</p>
+
+    <div class="fw-doc-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Location</th>
+            <th>Contents</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Cloudflare Pages</td>
+            <td>The site itself and every server endpoint. Code, not data.</td>
+          </tr>
+          <tr>
+            <td>Cloudflare D1 (SQLite)</td>
+            <td>The durable record: your email and password hash, your sessions, your profile, roadmap, career
+              analyses, resumes, saved artifacts, mock-interview scores, and your plan state.</td>
+          </tr>
+          <tr>
+            <td>Cloudflare Workers KV</td>
+            <td>Working state and caches: Marco's memory of your conversations, cached AI results, rate-limit
+              counters, and admin elevation leases. Most keys carry an expiry.</td>
+          </tr>
+          <tr>
+            <td>Your browser</td>
+            <td>A working copy of your profile, roadmap, quiz results, resume drafts, and theme, in local storage
+              on the device you used. See <a href="#your-part">Section 9 (User responsibilities)</a>.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p><strong>2.1 In transit.</strong> The Service is HTTPS only, so all traffic between your browser and the
+      Service is encrypted with TLS. Our outbound calls to Google, Stripe, and Resend are likewise HTTPS. The
+      session cookie is marked <code>Secure</code>, so the browser will not transmit it over a plain HTTP
+      connection.</p>
+
+    <p><strong>2.2 At rest.</strong> Cloudflare encrypts D1 and Workers KV at rest as the platform provider; that
+      is Cloudflare's control, not ours. Beyond it, we do not operate our own application-level encryption on
+      individual database rows. The two items we never store in usable form — passwords and session tokens — are
+      addressed in Section 3.</p>
+
+    <p><strong>2.3 Refusal to run half-configured.</strong> Both of our Cloudflare projects can publish preview
+      builds, and a preview build inherits the production database while receiving none of the production
+      secrets. Every request therefore first verifies that a specific server-side secret is present; if it is
+      not, the deployment returns a 503 and serves nothing. A deployment that was never properly configured does
+      not answer requests against real user data.</p>
+
+    <p><strong>2.4 Response headers.</strong> Static responses carry
+      <code>X-Content-Type-Options: nosniff</code>, <code>X-Frame-Options: DENY</code> (so that the Service
+      cannot be placed in a concealed iframe to induce clicks), <code>Referrer-Policy:
+      strict-origin-when-cross-origin</code>, and a <code>Permissions-Policy</code> that denies camera,
+      microphone, and geolocation outright, none of which the Service uses.</p>
+
+    <h2 id="accounts-and-sessions">3. Account and session security</h2>
+
+    <h3>3.1 Passwords</h3>
+
+    <p>We never store your password. When you set one, we generate a fresh 16-byte random salt and derive a
+      256-bit key using PBKDF2 with HMAC-SHA-256 at 100,000 iterations. The database holds the algorithm, the
+      iteration count, the salt, and the derived hash — nothing that can be reversed into your password.
+      Verification recomputes the derivation and compares the result in constant time, so that the comparison
+      itself reveals nothing about the proximity of a guess.</p>
+
+    <p>An attempt to sign in with an email address that has no Account still runs a full PBKDF2 verification
+      against a dummy hash. This is deliberate: without it, the difference in response time would disclose which
+      email addresses are registered.</p>
+
+    <p>The only rule we enforce on passwords is a minimum of eight characters. We do not check your password
+      against lists of previously breached passwords, which is why uniqueness matters more than complexity — see
+      <a href="#your-part">Section 9 (User responsibilities)</a>.</p>
+
+    <h3>3.2 Sessions</h3>
+
+    <p>When you sign in, we generate a session token from 32 bytes of cryptographically secure randomness. The
+      token is delivered to your browser in a cookie. <strong>The database never stores the token.</strong> It
+      stores only a SHA-256 hash of the token combined with a server-side secret (a "pepper") held in
+      Cloudflare's secret store — not in this repository, not in the database, and not in any backup of the
+      database. Consequently, a party who obtained a copy of our database could not reconstruct a working session
+      from any row in the sessions table.</p>
+
+    <p>The cookie is set with exactly these attributes:</p>
+
+    <ul>
+      <li><code>HttpOnly</code> — page JavaScript cannot read it, so a script injection cannot lift your
+        session.</li>
+      <li><code>Secure</code> — transmitted over HTTPS only.</li>
+      <li><code>SameSite=Lax</code> — not sent with cross-site requests initiated by another site.</li>
+      <li><code>Path=/</code> and <code>Max-Age=2592000</code> — a 30-day lifetime.</li>
+    </ul>
+
+    <p>The 30-day expiry is also enforced on the server against the stored expiry time, not merely by trusting
+      the cookie: when an expired token is presented, the session row is deleted and the request is treated as
+      signed out. Signing out deletes the row and clears the cookie. Resetting your password destroys every
+      session on every device. Deleting your Account does the same.</p>
+
+    <h3>3.3 Password resets</h3>
+
+    <p>A reset link carries 32 bytes of random token, emailed to the address on the Account. We store only a
+      SHA-256 hash of it. It is valid for one hour, may be used once, and requesting a new one immediately
+      invalidates the previous one. We also rate-limit reset requests — see
+      <a href="#abuse-and-rate-limits">Section 5 (Abuse prevention and rate limiting)</a>.</p>
+
+    <h3>3.4 Account deletion</h3>
+
+    <p>You may delete your Account yourself from your home page, with no email to us and no waiting period. It
+      removes your Account and the records attached to it across our database and our key-value store, and
+      destroys every session. It is a best-effort purge, store by store, and a small number of records are not
+      reached today; the <a href="/privacy">Privacy Policy</a> enumerates exactly what is and is not covered.</p>
+
+    <h2 id="payments">4. Payment security</h2>
+
+    <p>Payments are processed through Stripe, using Stripe's own hosted checkout page. When you purchase a plan,
+      your browser is handed to Stripe, and your card number, expiry, and CVC are entered on Stripe's page, not
+      ours.</p>
+
+    <ul>
+      <li><strong>Card details never reach our servers.</strong> We do not receive them, we do not log them, and
+        no column anywhere in our database can hold a card number.</li>
+      <li><strong>What we transmit to Stripe</strong> is your email address and the plan you selected.</li>
+      <li><strong>What we store in return</strong> is a Stripe customer identifier and your plan state — which
+        plan, when it expires, and whether it resulted from a purchase or was granted by us.</li>
+      <li><strong>Changing or cancelling</strong> a plan directs you to Stripe's own customer portal, using that
+        stored customer identifier.</li>
+    </ul>
+
+    <p>Stripe notifies us of payments by calling a webhook endpoint on our side. Because Stripe calls it, that
+      endpoint has no session to check, and the signature is therefore the authentication. Every request must
+      carry Stripe's <code>Stripe-Signature</code> header; we recompute the HMAC-SHA-256 over the timestamp and
+      the raw request body using the endpoint's signing secret, compare it in constant time, and reject anything
+      older than five minutes so that a captured request cannot be replayed. No byte of the body is trusted
+      before that check passes, and an unverified request can never move your plan. Each event's identifier is
+      also claimed in a table before it is handled, so that a retried delivery is processed exactly once.</p>
+
+    <h2 id="abuse-and-rate-limits">5. Abuse prevention and rate limiting</h2>
+
+    <p>Every limit below is enforced on the server, within the endpoint itself. None resides in the browser, so a
+      modified client cannot bypass it. Counters are held in Workers KV on a one-hour rolling window. The sign-in
+      family is keyed by IP address and by email address simultaneously, so that neither one address attacking
+      many Accounts nor many addresses attacking one Account passes through; the remaining endpoints are keyed on
+      whichever of the two identifies the caller.</p>
+
+    <ul>
+      <li><strong>Sign in, register, reset password:</strong> 10 attempts per hour per IP address and 10 per hour
+        per email address. This control renders credential stuffing and password guessing impractical.</li>
+      <li><strong>Endpoints that incur cost.</strong> Every AI feature carries its own ceiling — for example, 30
+        mock-interview requests per hour, 20 per hour for the resume tools, and 60 per hour for a coach
+        conversation. In addition to the hourly limits, metered features carry per-Account daily caps enforced
+        with an atomic daily counter.</li>
+      <li><strong>Endpoints that send email.</strong> The quiz-results email and the password-reset email are
+        limited by IP address and by recipient address, so that the Service cannot be used to direct mail at a
+        third party.</li>
+      <li><strong>The contact form</strong> permits five messages per hour from the same sender. That is one
+        limit, not two: a contact message is delivered only to our own inbox, so there is no recipient to
+        protect. The counter is keyed on a peppered hash of your IP address rather than the address itself,
+        because a rate-limit key becomes part of a key name we store, and hashing it first keeps a raw IP out of
+        that store. On deployments where a site key is configured, the form additionally requires a Cloudflare
+        Turnstile challenge.</li>
+      <li><strong>Administrative actions</strong> carry their own separate, tighter limits in addition to all of
+        the foregoing.</li>
+    </ul>
+
+    <p>Two further points. Where a request fails because of a fault on our side, we return the attempt rather than
+      charge you for a failure you did not cause. And these are abuse controls, not a web application firewall:
+      volumetric attacks and network-level filtering are handled by Cloudflare as our host, which is Cloudflare's
+      control, not ours.</p>
+
+    <h2 id="who-can-see-your-data">6. Personnel and administrative access</h2>
+
+    <p>FlightWay is a small team, and production access is narrower than the team: a few people who operate the
+      Service can reach the live database. We connect no third-party support desk, session-replay tool, or
+      customer-data platform to production; there is no vendor seat that reads your profile.</p>
+
+    <p>There is an internal admin console, built to present a small target:</p>
+
+    <ul>
+      <li><strong>A single root address, held outside the database.</strong> The root admin is an email address
+        set as an environment variable in Cloudflare. It is not a row that anyone can write. No database write —
+        including one made through a compromised admin account — can make a person root, and the root address
+        cannot be demoted, revoked, or targeted by any admin action.</li>
+      <li><strong>404 to everyone else.</strong> Every admin endpoint returns a plain "not found" to anyone who
+        is not an admin, including signed-in Users. A 401 or 403 would confirm that the console exists; a 404
+        discloses nothing.</li>
+      <li><strong>A stolen cookie is insufficient.</strong> Before any change can be made, the admin must
+        re-enter their own password to obtain a 15-minute elevation lease. A session cookie alone can read but
+        cannot act, and failed elevation attempts are recorded — a run of them is precisely the signal that a
+        session has been taken.</li>
+      <li><strong>All actions are audited.</strong> Every admin action writes an append-only log row: who acted,
+        what they did, to whom, and when.</li>
+      <li><strong>The surface is minimal.</strong> The console can grant and revoke complimentary plans, add and
+        remove admins, and read the audit log. That is the entire set of functions. No screen within it browses
+        your profile, your resume, or your coach history.</li>
+    </ul>
+
+    <p>Cloudflare, as the host, necessarily receives request metadata including your IP address. Our own code
+      uses your IP address only as a rate-limit key or stores it as a salted hash; we do not write raw IP
+      addresses into the database.</p>
+
+    <h2 id="ai-and-your-data">7. Artificial intelligence and your data</h2>
+
+    <p>The Service's AI features operate on the AI Provider's Gemini API, which is the only AI provider used.</p>
+
+    <p><strong>7.1 Data transmitted.</strong> Each feature transmits the context it requires. The identity block
+      assembled for advice prompts is your name, year, GPA, subjects or major interests, career leaning, and
+      school. In addition, depending on the feature: your messages to Marco and the durable notes Marco keeps
+      about your goals; your quiz answers; your resume text — and, where you upload a resume file, the contents
+      of that file, which include whatever contact details you placed on it; a job posting you paste into the
+      tailoring tool; and your answers during a mock interview. Where the Opportunity Finder is enabled on your
+      Account, the research question that feature constructs from your request is transmitted to the Gemini API
+      with web search enabled, so that Google runs a search with it, and that query may contain names you
+      mentioned, such as a school or a firm.</p>
+
+    <p><strong>7.2 Data not transmitted.</strong> Your password, in any form. Your session token. Your card
+      details, which we do not have. Your email address is not part of the identity block we build for prompts,
+      though it will travel with your resume where your resume contains it.</p>
+
+    <p><strong>7.3 Training.</strong> FlightWay does not train models on student data. We do not train models at
+      all; we call an API. What Google may or may not do with data submitted to that API is governed by Google's
+      terms for the Gemini API. We do not paraphrase another company's terms as our own commitment: we can state
+      what we transmit and why, and we cannot make commitments on Google's behalf.</p>
+
+    <p><strong>7.4 Marco's memory.</strong> Marco retains a short dossier of durable facts about you, together
+      with recent conversation state, so that it does not repeat the same question. That data resides in Workers
+      KV and persists until you delete your Account.</p>
+
+    <p><strong>7.5 Do not submit secrets.</strong> Anything you enter into Marco is stored and transmitted to
+      Google. Do not enter passwords, API keys, card or bank numbers, or government identification numbers; none
+      of it improves the advice. Likewise, do not enter another person's Personal Data — a contact's details, a
+      recommender's draft letter, a classmate's grades. That data is not yours to submit to a third party, and
+      Marco does not require it to assist you.</p>
+
+    <h2 id="report-a-vulnerability">8. Vulnerability disclosure</h2>
+
+    <p>If you have identified a Vulnerability, report it to us.</p>
+
+    <p>Email <a href="mailto:hello@flightway.ai">hello@flightway.ai</a> with <strong>SECURITY</strong> in the
+      subject line. That is the fastest route and reaches a person. If you prefer a form,
+      <a href="/contact">/contact</a> reaches the same destination; include SECURITY in the message so that it is
+      prioritized.</p>
+
+    <h3>8.1 What to include</h3>
+
+    <ul>
+      <li>The URL or endpoint involved, and the browser or tool you used.</li>
+      <li>Steps to reproduce it, in sufficient detail to follow.</li>
+      <li>What an attacker could actually do with it — the factor that sets our priority.</li>
+      <li>A proof of concept, if you have one. A screenshot or a single request is sufficient.</li>
+      <li>Whether you intend to publish, and approximately when, so that we are not surprised.</li>
+      <li>How you wish to be credited, or that you prefer not to be.</li>
+    </ul>
+
+    <h3>8.2 What we commit to</h3>
+
+    <ul>
+      <li>We acknowledge your report within <strong>three business days</strong>.</li>
+      <li>We inform you of our conclusion, including if we determine that it is not a Vulnerability, and why.</li>
+      <li>We inform you when it is fixed.</li>
+      <li>We credit you by name or handle if you wish, and remain silent about you if you do not.</li>
+      <li>We do not share your identity or your report with any other party unless you ask us to.</li>
+      <li><strong>We will not pursue legal action against good-faith research</strong> that remains within the
+        scope below, and we will not ask your school or employer to act against you for it. If a third party
+        brings a claim regarding research that followed these rules, we will make clear that your testing was
+        authorized.</li>
+      <li>We do not pay bounties today. We state this in advance so that no one undertakes the work expecting
+        payment.</li>
+    </ul>
+
+    <h3>8.3 In scope</h3>
+
+    <ul>
+      <li><code>flightway.ai</code> and its API endpoints.</li>
+      <li>The sign-in, registration, session, and password-reset flows.</li>
+      <li>Account and profile data access — for example, any means of reading or writing another Account's
+        data.</li>
+      <li>Our integration with Stripe, Google, and Resend: our endpoints, our webhook handling, our keys.</li>
+      <li>The admin console gating, if you can locate it.</li>
+    </ul>
+
+    <h3>8.4 Out of scope</h3>
+
+    <ul>
+      <li>Anything that touches another real User's Account or data. If you need two Accounts to demonstrate an
+        issue, register two of your own.</li>
+      <li>Destroying, altering, or exfiltrating data. Confirm the issue and stop; one record is proof, a database
+        dump is not research.</li>
+      <li>Denial of service, load testing, stress testing, or brute-forcing our rate limits to locate their
+        thresholds.</li>
+      <li>Social engineering of our team, our Users, our schools, or our vendors. Phishing, pretexting, and
+        anything involving a physical location are out of scope.</li>
+      <li>Spamming Users, including through the contact form or the results email.</li>
+      <li>Automated scanner output with no demonstrated impact, and reports that a hardening header is missing
+        without an exploit.</li>
+      <li>Self-XSS, or issues that require an already-compromised device or browser extension.</li>
+      <li>Vulnerabilities in Cloudflare, Google, Stripe, or Resend themselves. Those belong in the respective
+        provider's disclosure program, not ours; if, however, our <em>use</em> of one of them is incorrect, that
+        is within scope.</li>
+    </ul>
+
+    <p>To the extent this Section has legal effect, it is governed by the laws of the state in which FlightWay,
+      Inc. is incorporated, without regard to its conflict-of-law rules. As noted at the top of this statement,
+      that state and the venue for any dispute remain with counsel.</p>
+
+    <h2 id="your-part">9. User responsibilities</h2>
+
+    <p>Most compromised accounts are not breached; they are accessed with a password that leaked elsewhere. Three
+      measures on your side do most of the work:</p>
+
+    <h3>9.1 Use a strong, unique password</h3>
+
+    <p>Uniqueness matters more than complexity. We hash your password properly, so a copy of our database does
+      not disclose your password; but if you reuse a password that leaked from another site, that is a door we
+      cannot close from here. A password manager, or three or four random words you have not used elsewhere, is
+      sufficient. We have no second factor yet, so this password is the whole of the lock.</p>
+
+    <h3>9.2 Sign out on shared machines</h3>
+
+    <p>On a library computer, a school laptop, or another person's browser, sign out when you are finished. Your
+      session lasts 30 days, and closing the tab does not end it. Signing out deletes the session on our side,
+      not only in that browser. If you believe another person has your password, change it; that signs out every
+      device.</p>
+
+    <h3>9.3 A substantial portion of your data resides on your device</h3>
+
+    <p>The Service keeps a working copy of your profile, roadmap, quiz results, and drafts in your browser's
+      local storage, on the device you used, which is what makes the Service responsive. It also means that
+      anyone with your unlocked phone or laptop can open the page and read it without a password, so lock your
+      device. Clearing your browser data erases that local copy; the copy on our server is unaffected, and
+      signing in again restores it.</p>
+
+    <h3>9.4 Verify the address bar</h3>
+
+    <p>We request your password only on <code>flightway.ai</code>. Our emails are sent from
+      <code>careers@flightway.ai</code>. We will never email you to request your password, and we will never
+      request it over chat, over the telephone, or through the contact form. A message claiming to be from us
+      that does any of these is not from us; forward it to
+      <a href="mailto:hello@flightway.ai">hello@flightway.ai</a> and we will investigate.</p>
+
+    <h2 id="questions">10. Further information</h2>
+
+    <p>For the categories of data we collect, the purposes, the recipients, and the retention periods, see the
+      <a href="/privacy">Privacy Policy</a>, which contains the full inventory; this statement deliberately does
+      not duplicate it.</p>
+
+    <p>For any other matter — a question about this statement, a school or district review, or a request not
+      addressed here — use <a href="/contact">/contact</a> or email
+      <a href="mailto:hello@flightway.ai">hello@flightway.ai</a>. A member of our team reads it.</p>
+  </main>
+
+  <footer class="fw-footer">
+    <div class="fw-container">
+      <div class="fw-footer-grid">
+        <div>
+          <a href="/" class="fw-brand" data-fw-brand data-fw-brand-href="/" aria-label="FlightWay"></a>
+          <p class="fw-footer-tagline">The talent development platform for students.</p>
+        </div>
+        <div class="fw-footer-col">
+          <h3>Product</h3>
+          <ul>
+            <li><a href="/#features">Features</a></li>
+            <li><a href="/pricing">Pricing</a></li>
+            <li><a href="/quiz">Career Quiz</a></li>
+            <li><a href="/auth#signin">Sign in</a></li>
+          </ul>
+        </div>
+        <div class="fw-footer-col">
+          <h3>Company</h3>
+          <ul>
+            <li><a href="/#how-it-works">How it works</a></li>
+            <li><a href="/contact?topic=career-center">Career centers</a></li>
+            <li><a href="/contact">Contact</a></li>
+          </ul>
+        </div>
+        <div class="fw-footer-col">
+          <h3>Legal</h3>
+          <ul>
+            <li><a href="/privacy">Privacy</a></li>
+            <li><a href="/terms">Terms</a></li>
+            <li><a href="/security">Security</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="fw-footer-bar">
+        <p>© 2026 FlightWay, Inc. All rights reserved.</p>
+        <p><a href="mailto:hello@flightway.ai">hello@flightway.ai</a></p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/js/shared/brand.js?v=20260720i" defer></script>
+  <script src="assets/js/shared/theme.js?v=20260703p" defer></script>
+</body>
+</html>

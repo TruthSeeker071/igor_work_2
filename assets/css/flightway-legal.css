@@ -1,0 +1,370 @@
+/* FlightWay — long-form document pages (V2 S2).
+   Loaded by privacy.html, terms.html, security.html and contact.html only.
+
+   Why a new file: the design system has no prose style. Confirmed by grep —
+   there is no bare h1..h6 or p rule anywhere in flightway-theme.css, every
+   heading primitive is component-scoped (.fw-hero h1, .fw-heading h2,
+   .fw-footer-col h3), and the only "prose"-shaped rules in the repo are
+   .fw-legal-note (a centered 12px caption) and .portal-drawer-prose (a single
+   paragraph inside a widget). A privacy policy is ~90 elements of h2/h3/p/ul/
+   table, so it needed a real document style rather than four copies of the same
+   inline <style> block.
+
+   Everything here is scoped under .fw-doc / .fw-contact so it cannot leak into
+   the app pages, and every colour comes from a theme token, so both themes work
+   and the contrast:check gate has nothing to flag (no hardcoded dark plate with
+   theme-reactive text on it). */
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+
+/* Deliberately NOT .fw-nav. That one is position:fixed and depends on
+   landing/landing.js for both its scrolled state and its mobile menu button;
+   reusing it here would mean either shipping landing.js on a static legal page
+   or shipping a menu button that does nothing on mobile. A document page needs
+   neither, so it gets a self-contained header in normal flow. */
+.fw-doc-nav {
+  border-bottom: 1px solid rgb(var(--border));
+  background: rgb(var(--bg));
+}
+
+.fw-doc-nav-inner {
+  width: min(var(--page-max), 100% - 2 * var(--page-pad));
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 64px;
+}
+
+.fw-doc-nav-links {
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 3vw, 26px);
+}
+
+.fw-doc-nav-links a:not(.fw-btn) {
+  font-size: 0.875rem;
+  color: rgb(var(--text-muted));
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.fw-doc-nav-links a:not(.fw-btn):hover { color: rgb(var(--text)); }
+
+@media (max-width: 560px) {
+  .fw-doc-nav-links .fw-doc-nav-hide-sm { display: none; }
+}
+
+/* Keyboard users get out of the header without tabbing the whole nav. */
+.fw-skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 8px;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  background: rgb(var(--primary));
+  color: rgb(var(--primary-fg));
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  z-index: 200;
+}
+
+.fw-skip-link:focus { left: 16px; }
+
+/* ── Document shell ─────────────────────────────────────────────────────── */
+
+.fw-doc {
+  width: min(760px, 100% - 2 * var(--page-pad));
+  margin-inline: auto;
+  padding: clamp(40px, 7vw, 88px) 0 72px;
+}
+
+.fw-doc-head {
+  padding-bottom: 28px;
+  margin-bottom: 36px;
+  border-bottom: 1px solid rgb(var(--border));
+}
+
+.fw-doc-head h1 {
+  font-family: var(--font-display);
+  font-size: var(--fs-h1);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin: 10px 0 0;
+  color: rgb(var(--text));
+}
+
+.fw-doc-meta {
+  margin-top: 14px;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: rgb(var(--text-muted));
+}
+
+.fw-doc-meta strong { color: rgb(var(--text)); font-weight: 600; }
+
+/* The "not legal advice yet" banner. D21 ships Claude-drafted text explicitly
+   marked for attorney review — the marking is part of the deliverable, not a
+   disclaimer to quietly drop later, so it is a styled component rather than a
+   sentence someone can delete without noticing. */
+.fw-doc-review {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin: 28px 0 0;
+  padding: 14px 16px;
+  border: 1px solid rgb(var(--border));
+  border-left: 3px solid rgb(var(--primary));
+  border-radius: var(--radius-sm);
+  background: rgb(var(--surface));
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: rgb(var(--text-muted));
+}
+
+/* ── Prose ──────────────────────────────────────────────────────────────── */
+
+.fw-doc h2 {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  margin: 52px 0 14px;
+  color: rgb(var(--text));
+  scroll-margin-top: 96px;
+}
+
+.fw-doc h3 {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.35;
+  margin: 30px 0 10px;
+  color: rgb(var(--text));
+}
+
+.fw-doc p,
+.fw-doc li {
+  font-size: 1rem;
+  line-height: 1.72;
+  color: rgb(var(--text-muted));
+}
+
+.fw-doc p { margin: 0 0 16px; }
+.fw-doc strong { color: rgb(var(--text)); font-weight: 600; }
+
+.fw-doc ul,
+.fw-doc ol { margin: 0 0 16px; padding-left: 22px; }
+.fw-doc li { margin-bottom: 8px; }
+.fw-doc li > ul, .fw-doc li > ol { margin-top: 8px; }
+
+.fw-doc a {
+  color: rgb(var(--primary));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.fw-doc a:hover { color: rgb(var(--primary-hover)); }
+
+.fw-doc code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.875em;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: rgb(var(--surface-2));
+  color: rgb(var(--text));
+}
+
+/* ── Tables (processors, retention, subprocessor lists) ─────────────────── */
+
+.fw-doc-table-wrap {
+  /* Wide tables scroll inside their own box; the page body never does. */
+  overflow-x: auto;
+  margin: 0 0 20px;
+  border: 1px solid rgb(var(--border));
+  border-radius: var(--radius-sm);
+}
+
+.fw-doc table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  min-width: 460px;
+}
+
+.fw-doc th,
+.fw-doc td {
+  text-align: left;
+  padding: 11px 14px;
+  border-bottom: 1px solid rgb(var(--border));
+  line-height: 1.55;
+  color: rgb(var(--text-muted));
+  vertical-align: top;
+}
+
+.fw-doc th {
+  font-weight: 600;
+  color: rgb(var(--text));
+  background: rgb(var(--surface));
+  white-space: nowrap;
+}
+
+.fw-doc tr:last-child td { border-bottom: none; }
+
+/* ── Table of contents ──────────────────────────────────────────────────── */
+
+.fw-doc-toc {
+  margin: 0 0 8px;
+  padding: 18px 20px;
+  border: 1px solid rgb(var(--border));
+  border-radius: var(--radius-sm);
+  background: rgb(var(--surface));
+}
+
+.fw-doc-toc h2 {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin: 0 0 12px;
+  color: rgb(var(--text-muted));
+}
+
+.fw-doc-toc ol {
+  margin: 0;
+  padding-left: 20px;
+  columns: 2;
+  column-gap: 28px;
+}
+
+@media (max-width: 560px) {
+  .fw-doc-toc ol { columns: 1; }
+}
+
+.fw-doc-toc li {
+  margin-bottom: 6px;
+  font-size: 0.875rem;
+  break-inside: avoid;
+}
+
+.fw-doc-toc a { color: rgb(var(--text-muted)); text-decoration: none; }
+.fw-doc-toc a:hover { color: rgb(var(--text)); text-decoration: underline; }
+
+/* Footer links live in .fw-footer-bar on these pages; theme.css styles the bar
+   but not anchors inside it (its own links only exist inside .fw-footer-col). */
+.fw-footer-bar a { color: inherit; text-decoration: none; }
+.fw-footer-bar a:hover { color: rgb(var(--text)); text-decoration: underline; }
+
+/* ── Contact form ───────────────────────────────────────────────────────── */
+
+.fw-contact-grid {
+  display: grid;
+  gap: 40px;
+  align-items: start;
+}
+
+@media (min-width: 860px) {
+  .fw-contact-grid { grid-template-columns: 1.15fr 0.85fr; gap: 56px; }
+}
+
+.fw-contact-card {
+  padding: 26px;
+  border: 1px solid rgb(var(--border));
+  border-radius: var(--radius);
+  background: rgb(var(--surface));
+}
+
+.fw-field { margin-bottom: 18px; }
+
+.fw-field label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  margin-bottom: 7px;
+  color: rgb(var(--text));
+}
+
+.fw-field input,
+.fw-field select,
+.fw-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 13px;
+  border: 1px solid rgb(var(--border-strong));
+  border-radius: var(--radius-sm);
+  background: rgb(var(--bg));
+  color: rgb(var(--text));
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.fw-field textarea { min-height: 150px; resize: vertical; }
+
+.fw-field input:focus-visible,
+.fw-field select:focus-visible,
+.fw-field textarea:focus-visible {
+  outline: 2px solid rgb(var(--primary));
+  outline-offset: 1px;
+  border-color: rgb(var(--primary));
+}
+
+.fw-field-hint {
+  margin: 7px 0 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: rgb(var(--text-muted));
+}
+
+.fw-contact-submit {
+  width: 100%;
+  padding: 13px 20px;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(var(--primary));
+  color: rgb(var(--primary-fg));
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.fw-contact-submit:hover:not(:disabled) { background: rgb(var(--primary-hover)); }
+.fw-contact-submit:disabled { opacity: 0.6; cursor: default; }
+
+.fw-contact-status {
+  margin: 14px 0 0;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: rgb(var(--text-muted));
+}
+
+.fw-contact-status.is-ok { color: rgb(var(--primary)); }
+
+.fw-contact-aside h2 {
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  margin: 0 0 10px;
+  color: rgb(var(--text));
+}
+
+.fw-contact-aside + .fw-contact-aside { margin-top: 30px; }
+
+.fw-contact-aside p,
+.fw-contact-aside li {
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: rgb(var(--text-muted));
+}
+
+.fw-contact-aside a { color: rgb(var(--primary)); text-decoration: underline; text-underline-offset: 2px; }
+
+/* Turnstile only renders when TURNSTILE_SITE_KEY is configured; the slot must
+   collapse to nothing on every deployment that has not set one. */
+#fw-turnstile:empty { display: none; }
+#fw-turnstile { margin-bottom: 18px; }
