@@ -6,7 +6,7 @@
 // taken.
 
 import { originFromEnv, jsonResponse, preflightResponse } from '../_lib.js';
-import { checkRateLimit, clientIp, verifyPassword, DUMMY_PASSWORD_HASH } from '../_lib/auth.js';
+import { checkRateLimit, clientIp, hashedIpKey, verifyPassword, DUMMY_PASSWORD_HASH } from '../_lib/auth.js';
 import { adminGate, adminNotFound, readJsonBody, grantElevation, audit, ELEVATION_TTL_SEC } from '../_lib/admin.js';
 
 export async function onRequestOptions(context) {
@@ -25,7 +25,7 @@ export async function onRequestPost(context) {
 
   try {
     await checkRateLimit(env, `adminelev:${who.email}`, { max: 10 });
-    await checkRateLimit(env, `adminelev:${clientIp(request)}`, { max: 20 });
+    await checkRateLimit(env, `adminelev:${await hashedIpKey(env, request)}`, { max: 20 });
   } catch (err) {
     return jsonResponse(err.status || 429, { error: err.message || 'Too many attempts.' }, origin, { credentials: true });
   }

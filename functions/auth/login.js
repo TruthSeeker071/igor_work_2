@@ -1,18 +1,5 @@
 import { originFromEnv, isValidEmail, normalizeEmail } from '../_lib.js';
-import {
-  authPreflight,
-  authJsonResponse,
-  authErrorResponse,
-  verifyPassword,
-  isValidPassword,
-  findUserByEmail,
-  createSession,
-  sessionCookieHeader,
-  SESSION_DAYS,
-  checkRateLimit,
-  clientIp,
-  DUMMY_PASSWORD_HASH,
-} from '../_lib/auth.js';
+import { authPreflight, authJsonResponse, authErrorResponse, verifyPassword, isValidPassword, findUserByEmail, createSession, sessionCookieHeader, SESSION_DAYS, checkRateLimit, hashedIpKey, DUMMY_PASSWORD_HASH } from '../_lib/auth.js';
 
 export async function onRequestOptions(context) {
   return authPreflight(originFromEnv(context.env, context.request));
@@ -37,7 +24,7 @@ export async function onRequestPost(context) {
   }
 
   try {
-    await checkRateLimit(env, `login:${clientIp(request)}`);
+    await checkRateLimit(env, `login:${await hashedIpKey(env, request)}`);
     await checkRateLimit(env, `login:${email}`);
 
     const user = await findUserByEmail(env, email);

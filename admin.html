@@ -4,21 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-  <link rel="icon" href="/favicon.ico?v=20260717h" sizes="any">
-  <link rel="icon" type="image/png" href="/assets/favicon.png?v=20260717h">
-  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=20260717h">
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg?v=20260720f">
+  <link rel="icon" href="/favicon.ico?v=20260720a" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/icons/favicon-128.png?v=20260720a">
+  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-180.png?v=20260720a">
 <title>Admin console — FlightWay</title>
-<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260720c">
-<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260720c">
-<link rel="stylesheet" href="assets/css/flightway-2.css?v=20260720c">
+<link rel="preload" href="/assets/fonts/inter-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/space-grotesk-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260721p">
+<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260724i">
+<link rel="stylesheet" href="assets/css/flightway-2.css?v=20260725g">
 <script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
 <script src="assets/js/shared/global-shim.js?v=20260703p"></script>
 <script src="assets/js/shared/flags.js?v=20260716h"></script>
-<script src="assets/js/shared/events.js?v=20260716h" defer></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-<script src="assets/vendor/lucide-lite.js?v=20260720a" defer></script>
+<script src="assets/js/shared/events.js?v=20260724a" defer></script>
+<script src="assets/vendor/lucide-lite.js?v=20260724d" defer></script>
 <style>
   /* Same page-shell padding as #page-resume/#page-portal — without it the H1
      slides under the fixed nav on mobile. */
@@ -32,7 +32,14 @@
   .admin-badge--root { border-color: var(--accent); color: var(--accent); }
   .admin-badge--locked { color: rgb(var(--text-muted)); }
   .admin-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+  #admin-elevate-form { margin-top: 14px; }
   .admin-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  /* An author `display:` ALWAYS beats the user-agent's [hidden]{display:none},
+     so without this an .admin-field with the `hidden` attribute stays on screen.
+     Found by the S11 probe: the broadcast composer's school input rendered for
+     every segment, which reads as "we are about to mail one school" when the
+     segment says everyone. */
+  .admin-field[hidden] { display: none; }
   .admin-field label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: rgb(var(--text-muted)); }
   .admin-field input, .admin-field select { padding: 8px 10px; border-radius: 8px; border: 1px solid rgb(var(--border)); background: rgb(var(--surface-2)); color: rgb(var(--text)); font: inherit; box-sizing: border-box; min-width: 0; }
   .admin-field--email input { width: 240px; max-width: 100%; }
@@ -51,8 +58,76 @@
   .admin-empty { font-size: 13px; color: rgb(var(--text-muted)); margin: 12px 0 0 0; }
   .admin-btn-quiet { font-size: 12px; padding: 6px 12px; border-radius: 999px; border: 1px solid rgb(var(--border)); background: rgb(var(--surface-2)); color: inherit; cursor: pointer; font-family: inherit; }
   .admin-btn-quiet:hover { border-color: var(--accent); }
+  .admin-btn-more { margin-top: 10px; }
   .admin-detail { max-width: 340px; }
   @media (max-width: 640px) { .admin-field--email input, .admin-field--note input { width: 100%; } .admin-field { flex: 1 1 100%; } }
+
+  /* --- S3 analytics --- */
+  .admin-section-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-bottom: 12px; }
+  .admin-section-head h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 17px; }
+  .admin-section-head h2 svg { width: 17px; height: 17px; opacity: 0.75; }
+  .admin-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .admin-tab { font-size: 12px; padding: 5px 12px; border-radius: 999px; border: 1px solid rgb(var(--border)); background: rgb(var(--surface-2)); color: rgb(var(--text-muted)); cursor: pointer; font-family: inherit; }
+  .admin-tab:hover { border-color: var(--accent); }
+  .admin-tab.is-active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  [data-theme="dark"] .admin-tab.is-active { color: #0b1120; }
+  .admin-apanel { min-height: 120px; }
+  .admin-controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin-bottom: 14px; }
+  .admin-note { font-size: 12px; color: rgb(var(--text-muted)); margin: 12px 0 0 0; }
+  .admin-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .admin-stat { border: 1px solid rgb(var(--border)); border-radius: 10px; padding: 12px 14px; background: rgb(var(--surface-2)); }
+  .admin-stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: rgb(var(--text-muted)); }
+  .admin-stat-num { font-size: 26px; font-weight: 700; line-height: 1.15; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .admin-stat-sub { font-size: 12px; color: rgb(var(--text-muted)); margin-top: 2px; }
+  .admin-subhead { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: rgb(var(--text-muted)); font-weight: 600; margin: 20px 0 8px; }
+  .admin-spark { display: flex; align-items: flex-end; gap: 3px; height: 44px; margin-top: 8px; }
+  .admin-spark-bar { flex: 1 1 0; min-width: 4px; background: var(--accent); border-radius: 2px 2px 0 0; opacity: 0.85; min-height: 2px; }
+  .admin-funnel-row { display: grid; grid-template-columns: 130px 1fr 56px 62px; align-items: center; gap: 10px; padding: 5px 0; font-size: 13px; }
+  .admin-funnel-label { color: rgb(var(--text-muted)); }
+  .admin-funnel-track { position: relative; height: 22px; background: rgb(var(--surface-2)); border-radius: 6px; overflow: hidden; }
+  .admin-funnel-fill { position: absolute; inset: 0 auto 0 0; background: var(--accent); opacity: 0.55; border-radius: 6px; }
+  .admin-funnel-num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .admin-funnel-pct { text-align: right; font-variant-numeric: tabular-nums; color: rgb(var(--text-muted)); font-size: 12px; }
+  .admin-chip { display: inline-block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; padding: 1px 7px; border-radius: 999px; background: rgb(var(--surface-2)); border: 1px solid rgb(var(--border)); color: rgb(var(--text-muted)); }
+  .admin-tri td.tri-cell { text-align: center; font-variant-numeric: tabular-nums; border-radius: 4px; }
+  .admin-tail { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; }
+  .admin-tail td { padding: 4px 10px 4px 0; }
+  .admin-refresh-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: rgb(var(--text-muted)); }
+
+  /* --- Broadcasts (D11) --- */
+  .admin-note-callout { margin: 0 0 14px 0; padding: 10px 12px; border-radius: 8px; background: rgb(var(--surface-2)); border: 1px solid rgb(var(--border)); font-size: 13px; color: rgb(var(--text)); }
+  .admin-broadcast-form { flex-direction: column; align-items: stretch; }
+  .admin-form-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-top: 4px; }
+  .admin-field--broadcast-subject, .admin-field--broadcast-body { width: 100%; }
+  .admin-field--broadcast-subject input, .admin-field--broadcast-body textarea { width: 100%; box-sizing: border-box; }
+  .admin-field--broadcast-body textarea { font: inherit; resize: vertical; min-height: 140px; }
+  .admin-charcount { align-self: flex-end; font-size: 11px; color: rgb(var(--text-muted)); font-variant-numeric: tabular-nums; }
+  .admin-broadcast-help code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; background: rgb(var(--surface-2)); padding: 1px 5px; border-radius: 4px; }
+  .admin-field--broadcast-school input { width: 220px; max-width: 100%; }
+  .admin-broadcast-actions { gap: 10px; }
+  .admin-broadcast-preview { margin-top: 18px; padding-top: 16px; border-top: 1px solid rgb(var(--border)); }
+  .admin-broadcast-preview-meta { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 12px; color: rgb(var(--text-muted)); margin: 0 0 12px 0; }
+  .admin-broadcast-preview-panes { display: flex; flex-wrap: wrap; gap: 16px; }
+  .admin-broadcast-preview-pane { flex: 1 1 320px; min-width: 0; }
+  .admin-broadcast-iframe { width: 100%; height: 360px; border: 1px solid rgb(var(--border)); border-radius: 10px; background: rgb(var(--surface-2)); }
+  .admin-broadcast-text { width: 100%; height: 360px; margin: 0; padding: 12px; box-sizing: border-box; overflow: auto; border: 1px solid rgb(var(--border)); border-radius: 10px; background: rgb(var(--surface-2)); color: rgb(var(--text)); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; white-space: pre-wrap; word-break: break-word; }
+  /* Status pills read through a border/tint only, same rule as the roadmap
+     commit chips — --ok/--warn/--err measure too poorly as body text to ever
+     be a `color:` value (contrast:check enforces this). */
+  .admin-badge--status-scheduled, .admin-badge--status-cancelled { color: rgb(var(--text-muted)); }
+  .admin-badge--status-sending { border-color: rgb(var(--warn)); background: rgb(var(--warn) / 0.14); color: rgb(var(--text)); }
+  .admin-badge--status-sent { border-color: rgb(var(--ok)); background: rgb(var(--ok) / 0.12); color: rgb(var(--text)); }
+  .admin-badge--status-failed { border-color: rgb(var(--err)); background: rgb(var(--err) / 0.12); color: rgb(var(--text)); }
+  @media (max-width: 640px) { .admin-field--broadcast-school input { width: 100%; } .admin-broadcast-preview-panes { gap: 12px; } }
+
+  /* --- Testimonials (S19) — same border/tint-only pill rule as the broadcast
+     statuses above; --primary is the accent's RGB triplet, so a "featured"
+     quote (published + pinned first) reads distinctly from a merely
+     "approved" one. */
+  .admin-badge--status-pending { color: rgb(var(--text-muted)); }
+  .admin-badge--status-approved { border-color: rgb(var(--ok)); background: rgb(var(--ok) / 0.12); color: rgb(var(--text)); }
+  .admin-badge--status-featured { border-color: rgb(var(--primary)); background: rgb(var(--primary) / 0.12); color: rgb(var(--text)); }
+  .admin-badge--status-rejected { border-color: rgb(var(--err)); background: rgb(var(--err) / 0.12); color: rgb(var(--text)); }
 </style>
 </head>
 <body class="portal-page">
@@ -66,9 +141,10 @@
     <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay home"></a>
     <div class="nav-links app-nav" aria-label="App">
       <a href="portal.html" class="app-nav-tab" data-app-nav="home"><span class="app-nav-label">Home</span></a>
-      <a href="dashboard.html" class="app-nav-tab" data-app-nav="hub"><span class="app-nav-label">Career Hub</span></a>
+      <a href="flightplan.html" class="app-nav-tab" data-app-nav="plan"><span class="app-nav-label">Flight Plan</span></a>
+      <a href="roadmap.html" class="app-nav-tab" data-app-nav="roadmap"><span class="app-nav-label">Roadmap</span></a>
       <a href="coach.html" class="app-nav-tab" data-app-nav="advisor"><span class="app-nav-label">Marco</span></a>
-      <a href="roadmap.html" class="app-nav-tab" data-app-nav="roadmap"><span class="app-nav-label">Career Roadmap</span></a>
+      <a href="dashboard.html" class="app-nav-tab" data-app-nav="explore"><span class="app-nav-label">Explore</span></a>
       <a href="auth.html#signin" class="app-nav-tab nav-signin-link" id="nav-signin-link">Sign in</a>
       <button type="button" class="fw-theme-toggle" aria-label="Switch to dark mode" aria-pressed="false">
         <span class="fw-theme-icon" aria-hidden="true"></span>
@@ -98,7 +174,7 @@
           <span class="admin-badge" id="admin-role-badge">admin</span>
           <span class="admin-badge admin-badge--locked" id="admin-elev-badge">locked</span>
         </div>
-        <form class="admin-form" id="admin-elevate-form" style="margin-top:14px">
+        <form class="admin-form" id="admin-elevate-form">
           <div class="admin-field admin-field--email">
             <label for="admin-elev-password">Confirm your password to make changes</label>
             <input type="password" id="admin-elev-password" autocomplete="current-password" placeholder="Your FlightWay password">
@@ -106,6 +182,29 @@
           <button type="submit" class="fw-iv-btn fw-iv-btn--primary" id="admin-elev-btn">Unlock for 15 min</button>
         </form>
         <p class="admin-msg" id="admin-elev-msg" aria-live="polite"></p>
+      </div>
+
+      <!-- S3 analytics — self-hosted dashboards. Read-only; no elevation needed.
+           Panels load lazily on tab switch; each renders into #admin-analytics-panel. -->
+      <div id="admin-analytics" hidden>
+        <div class="admin-card">
+          <div class="admin-section-head">
+            <h2><i data-lucide="target" aria-hidden="true"></i>Analytics</h2>
+            <div class="admin-tabs" role="tablist" id="admin-analytics-tabs">
+              <button type="button" class="admin-tab is-active" data-atab="overview" role="tab">Overview</button>
+              <button type="button" class="admin-tab" data-atab="funnel" role="tab">Funnel</button>
+              <button type="button" class="admin-tab" data-atab="retention" role="tab">Retention</button>
+              <button type="button" class="admin-tab" data-atab="features" role="tab">Features</button>
+              <button type="button" class="admin-tab" data-atab="sources" role="tab">Sources</button>
+              <button type="button" class="admin-tab" data-atab="tail" role="tab">Live tail</button>
+              <button type="button" class="admin-tab" data-atab="errors" role="tab">Errors</button>
+            </div>
+          </div>
+          <div id="admin-analytics-panel" class="admin-apanel" aria-live="polite">
+            <p class="admin-empty">Loading…</p>
+          </div>
+          <p class="admin-msg" id="admin-analytics-msg" aria-live="polite"></p>
+        </div>
       </div>
 
       <div class="admin-card">
@@ -151,6 +250,183 @@
         <p class="admin-empty" id="admin-grants-empty" hidden>No comp grants yet.</p>
       </div>
 
+      <div class="admin-card" id="admin-broadcasts-card">
+        <h2><i data-lucide="message-circle" aria-hidden="true"></i>Broadcasts</h2>
+        <p class="admin-card-note">
+          Product-update email to an opted-in segment. Sending is queued, not inline — a broadcast
+          goes out at the next dispatch (within the hour), never immediately.
+        </p>
+        <p class="admin-note-callout" id="admin-broadcast-migration" hidden>
+          Migration 0021 has not been applied to D1 yet, so the broadcasts table doesn't exist. The
+          composer below still works for drafting and previewing — Queue will fail until the
+          migration lands.
+        </p>
+
+        <form class="admin-form admin-broadcast-form" id="admin-broadcast-form">
+          <div class="admin-field admin-field--broadcast-subject">
+            <label for="admin-bcast-subject">Subject</label>
+            <input type="text" id="admin-bcast-subject" maxlength="140" required placeholder="Subject line">
+            <span class="admin-charcount" id="admin-bcast-subject-count">0 / 140</span>
+          </div>
+
+          <div class="admin-field admin-field--broadcast-body">
+            <label for="admin-bcast-body">Body</label>
+            <textarea id="admin-bcast-body" maxlength="8000" rows="8" required placeholder="Body text — supports ## headings, **bold**, *italic*, [links](https://…) and - bullets. Blank line = new paragraph."></textarea>
+            <span class="admin-charcount" id="admin-bcast-body-count">0 / 8000</span>
+          </div>
+          <p class="admin-card-note admin-broadcast-help">
+            Supported markdown: <code>## heading</code>, <code>**bold**</code>, <code>*italic*</code>,
+            <code>[label](https://…)</code>, <code>- bullet</code>, and a blank line for a new
+            paragraph. That's the entire supported set.
+          </p>
+
+          <div class="admin-form-row">
+            <div class="admin-field">
+              <label for="admin-bcast-segment">Segment</label>
+              <select id="admin-bcast-segment">
+                <option value="">Loading…</option>
+              </select>
+            </div>
+            <div class="admin-field admin-field--broadcast-school" id="admin-bcast-school-field" hidden>
+              <label for="admin-bcast-school">School name contains</label>
+              <input type="text" id="admin-bcast-school" maxlength="200" placeholder="e.g. Chicago">
+            </div>
+            <div class="admin-field">
+              <label for="admin-bcast-schedule">Schedule for (optional)</label>
+              <input type="datetime-local" id="admin-bcast-schedule">
+            </div>
+          </div>
+
+          <div class="admin-form-row admin-broadcast-actions">
+            <button type="button" class="admin-btn-quiet" id="admin-bcast-preview-btn">Preview</button>
+            <button type="button" class="admin-btn-quiet" id="admin-bcast-test-btn">Send test to me</button>
+            <button type="submit" class="fw-iv-btn fw-iv-btn--primary" id="admin-bcast-queue-btn">Queue</button>
+          </div>
+          <p class="admin-msg" id="admin-broadcast-msg" aria-live="polite"></p>
+        </form>
+
+        <div class="admin-broadcast-preview" id="admin-broadcast-preview" hidden>
+          <div class="admin-subhead">Preview</div>
+          <div class="admin-broadcast-preview-meta">
+            <span id="admin-bcast-preview-segment"></span>
+            <span id="admin-bcast-preview-recipients"></span>
+          </div>
+          <div class="admin-broadcast-preview-panes">
+            <div class="admin-broadcast-preview-pane">
+              <div class="admin-subhead">Email</div>
+              <iframe id="admin-bcast-preview-frame" class="admin-broadcast-iframe" sandbox title="Broadcast email preview"></iframe>
+            </div>
+            <div class="admin-broadcast-preview-pane">
+              <div class="admin-subhead">Plain text</div>
+              <pre class="admin-broadcast-text" id="admin-bcast-preview-text"></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="admin-table-wrap">
+          <table class="admin-table" id="admin-broadcasts-table">
+            <thead>
+              <tr>
+                <th scope="col">Created</th><th scope="col">Subject</th><th scope="col">Segment</th>
+                <th scope="col">Status</th><th scope="col">Recipients</th><th scope="col">Scheduled</th>
+                <th scope="col">Sent</th><th scope="col"></th>
+              </tr>
+            </thead>
+            <tbody id="admin-broadcasts-body"></tbody>
+          </table>
+        </div>
+        <p class="admin-empty" id="admin-broadcasts-empty" hidden>No broadcasts yet.</p>
+      </div>
+
+      <div class="admin-card" id="admin-testimonials-card">
+        <h2><i data-lucide="mic" aria-hidden="true"></i>Testimonials</h2>
+        <p class="admin-card-note">
+          Promoter quotes waiting for review, plus the 90-day NPS summary. Approving or featuring
+          a quote publishes a named student's words on the public site immediately.
+        </p>
+        <p class="admin-note-callout" id="admin-testimonials-migration" hidden>
+          Migration 0027 has not been applied to D1 yet, so the testimonial queue doesn't exist —
+          there is nothing to show here until it lands.
+        </p>
+
+        <div class="admin-stats" id="admin-testimonials-stats"></div>
+        <p class="admin-empty" id="admin-testimonials-summary-empty" hidden>Nobody has been surveyed yet.</p>
+
+        <div class="admin-subhead">By moment</div>
+        <div id="admin-testimonials-moments"></div>
+
+        <div id="admin-testimonials-comments" hidden></div>
+
+        <div class="admin-subhead">Review queue</div>
+        <div class="admin-table-wrap" id="admin-testimonials-table-wrap">
+          <table class="admin-table" id="admin-testimonials-table">
+            <thead>
+              <tr>
+                <th scope="col">Quote</th><th scope="col">Attribution</th><th scope="col">Score</th>
+                <th scope="col">Status</th><th scope="col">Created</th><th scope="col"></th>
+              </tr>
+            </thead>
+            <tbody id="admin-testimonials-body"></tbody>
+          </table>
+        </div>
+        <p class="admin-empty" id="admin-testimonials-empty" hidden>No testimonials in the queue.</p>
+        <p class="admin-msg" id="admin-testimonials-msg" aria-live="polite"></p>
+      </div>
+
+      <div class="admin-card" id="admin-referrals-card">
+        <h2><i data-lucide="repeat" aria-hidden="true"></i>Referrals</h2>
+        <p class="admin-card-note">
+          Referral signups, conversions and credits — retry a fraud hold once it clears, or void a
+          referral outright.
+        </p>
+        <p class="admin-note-callout" id="admin-referrals-migration" hidden>
+          Migration 0023 has not been applied to D1 yet, so the referrals table doesn't exist —
+          there is nothing to show here until it lands.
+        </p>
+
+        <div class="admin-controls">
+          <div class="admin-field">
+            <label for="admin-referrals-filter">Status</label>
+            <select id="admin-referrals-filter">
+              <option value="">All</option>
+              <option value="signed_up">signed_up</option>
+              <option value="converted">converted</option>
+              <option value="credited">credited</option>
+              <option value="void">void</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="admin-table-wrap">
+          <table class="admin-table" id="admin-referrals-table">
+            <thead>
+              <tr>
+                <th scope="col">Referrer</th><th scope="col">Referee</th><th scope="col">Status</th>
+                <th scope="col">Flags</th><th scope="col">Credit</th><th scope="col">Created</th>
+                <th scope="col"></th>
+              </tr>
+            </thead>
+            <tbody id="admin-referrals-body"></tbody>
+          </table>
+        </div>
+        <p class="admin-empty" id="admin-referrals-empty" hidden>No referrals yet.</p>
+        <p class="admin-msg" id="admin-referrals-msg" aria-live="polite"></p>
+      </div>
+
+      <div class="admin-card">
+        <h2><i data-lucide="triangle-alert" aria-hidden="true"></i>Unverified accounts</h2>
+        <p class="admin-card-note">Never confirmed their email, older than 30 days — candidates for purge.</p>
+        <div class="admin-table-wrap">
+          <table class="admin-table" id="admin-unverified-table">
+            <thead>
+              <tr><th scope="col">Email</th><th scope="col">Created</th><th scope="col">Verify sent</th></tr>
+            </thead>
+            <tbody id="admin-unverified-body"></tbody>
+          </table>
+        </div>
+        <p class="admin-empty" id="admin-unverified-empty" hidden>None — every account over 30 days is verified.</p>
+      </div>
+
       <!-- Root-only. Sub-admins get a 404 from /admin/admins, so this stays hidden. -->
       <div class="admin-card" id="admin-admins-card" hidden>
         <h2><i data-lucide="users" aria-hidden="true"></i>Admins</h2>
@@ -190,7 +466,7 @@
         </div>
         <p class="admin-empty" id="admin-audit-empty" hidden>Nothing recorded yet.</p>
         <p class="admin-msg" id="admin-audit-msg" aria-live="polite"></p>
-        <button type="button" class="admin-btn-quiet" id="admin-audit-more" hidden style="margin-top:10px">Load more</button>
+        <button type="button" class="admin-btn-quiet admin-btn-more" id="admin-audit-more" hidden>Load more</button>
       </div>
     </div>
   </section>
@@ -202,21 +478,27 @@
       <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay"></a>
       <p>&copy; 2026 FlightWay. All rights reserved.</p>
     </div>
-    <div class="footer-links"><a href="mailto:hello@flightway.app">Contact</a></div>
+    <div class="footer-links">
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+      <a href="/security">Security</a>
+      <a href="/contact">Contact</a>
+    </div>
   </div>
 </footer>
 
-<script src="assets/js/shared/page-veil.js?v=20260720c" defer></script>
+<script src="assets/js/shared/page-veil.js?v=20260721a" defer></script>
 <script src="assets/js/shared/page-boot.js?v=20260703p" defer></script>
 <script src="assets/js/shared/fw-errors.js?v=20260720a" defer></script>
-<script src="assets/js/shared/auth.js?v=20260720c" defer></script>
+<script src="assets/js/shared/auth.js?v=20260725b" defer></script>
 <script src="assets/js/shared/fw-busy.js?v=20260720a" defer></script>
 <script src="assets/js/shared/fw-confirm.js?v=20260703p" defer></script>
-<script src="assets/js/shared/auth-nav.js?v=20260703p" defer></script>
-<script src="assets/js/app/admin-console.js?v=20260720b" defer></script>
+<script src="assets/js/shared/auth-nav.js?v=20260724d" defer></script>
+<script src="assets/js/shared/user-chip.js?v=20260721a" defer></script>
+<script src="assets/js/app/admin-console.js?v=20260725f" defer></script>
 <script src="assets/js/shared/data-field.js?v=20260703p" defer></script>
-<script src="assets/js/shared/brand.js?v=20260717g" defer></script>
-<script src="assets/js/shared/app-nav.js?v=20260703p" defer></script>
+<script src="assets/js/shared/brand.js?v=20260720i" defer></script>
+<script src="assets/js/shared/app-nav.js?v=20260724d" defer></script>
 <script src="assets/js/shared/theme.js?v=20260703p" defer></script>
 <script>
   document.addEventListener('DOMContentLoaded', function () {

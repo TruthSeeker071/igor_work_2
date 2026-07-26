@@ -31,6 +31,8 @@ import {
 } from './school.js';
 import { parseDossierFields, patchDossierLine } from './dossier-parse.js';
 import { getUserField, setPath, normalizeUser } from './user-model.js';
+import { TERM_SYSTEMS } from './term-core.js';
+import { isIsoDate } from './deadline-core.js';
 
 // Lazy stores — same reason school.js does it: keeps this module importable
 // from plain-Node tests and the _lib.js ⇄ auth.js graph cycle-free.
@@ -80,6 +82,24 @@ export function cleanLeaningValue(v) {
   return cleanSchoolValue(v).slice(0, 120);
 }
 
+/** S18 — 'semester' | 'quarter' | 'trimester'. '' for anything else. */
+export function cleanTermSystemValue(v) {
+  const s = sanitizeSchoolName(v).toLowerCase().replace(/\s+system$/, '').trim();
+  return TERM_SYSTEMS.includes(s) ? s : '';
+}
+
+/**
+ * S18 — a bare ISO day. Deliberately strict: a term boundary drives "week 6 of
+ * 15" in the digest and the seeding dates of every commitment the ritual
+ * creates, so a half-parsed "sometime in March" is worse than no date at all.
+ * Anything that is not already `YYYY-MM-DD` is rejected rather than guessed at,
+ * which is also what stops a Gemini dossier merge inventing one.
+ */
+export function cleanTermDateValue(v) {
+  const s = sanitizeSchoolName(v).slice(0, 10);
+  return isIsoDate(s) ? s : '';
+}
+
 // key: user-model path. line: dossier field name (buildSeedDossier +
 // FIELD_PREFIXES must list every `line` here). toLine/equal handle the
 // array-valued subjects field; the defaults cover scalar fields.
@@ -94,6 +114,17 @@ export const FIELDS = [
     toLine: (v) => (Array.isArray(v) ? v.join(', ') : String(v || '')),
   },
   { key: 'identity.careerLeaning', line: 'career_leaning', clean: cleanLeaningValue },
+  // S18 Semester Loop. These join the registry rather than living only in the
+  // `terms` row because a student states them in conversation far more readily
+  // than they fill in a wizard — "my quarter ends March 20" is a sentence
+  // somebody actually types, and it should be enough to make the digest
+  // term-aware. term-store.js `resolveTerm` prefers the D1 row where one exists
+  // and falls back to these; the ritual writes them through setUserField, which
+  // is the registry's own explicit-set direction, so there is still exactly one
+  // writer per direction.
+  { key: 'identity.termSystem', line: 'term_system', clean: cleanTermSystemValue },
+  { key: 'identity.termStart', line: 'term_start', clean: cleanTermDateValue },
+  { key: 'identity.termEnd', line: 'term_end', clean: cleanTermDateValue },
 ];
 
 function fieldByKey(key) {
@@ -183,26 +214,51 @@ export async function mirrorFieldsToDossier(env, email, user, opts = {}) {
  * fact and cannot revert it. Returns the cleaned value ('' clears).
  */
 export async function setUserField(env, email, key, value) {
-  const field = fieldByKey(key);
-  if (!field) throw new Error(`setUserField: unknown field ${key}`);
-  const clean = field.clean(value);
-  const { loadDossier, saveDossier, loadUserBlob, saveUser } = await store();
+  const out = await setUserFields(env, email, { [key]: value });
+  return out[key];
+}
 
+/**
+ * The batched form: several registry fields, ONE user save and ONE dossier
+ * write. Returns the cleaned value per key.
+ *
+ * `setUserField` is now a one-key call into this rather than the other way
+ * round, because the alternative is what S18's term ritual would otherwise do —
+ * three loads, three saves and three dossier writes to store three halves of the
+ * same fact, with two windows in the middle where the store holds a term whose
+ * start date has moved and whose end date has not.
+ */
+export async function setUserFields(env, email, patch = {}) {
+  const entries = Object.keys(patch).map((key) => {
+    const field = fieldByKey(key);
+    if (!field) throw new Error(`setUserFields: unknown field ${key}`);
+    return { field, clean: field.clean(patch[key]) };
+  });
+  const out = {};
+  entries.forEach(({ field, clean }) => { out[field.key] = clean; });
+  if (!entries.length) return out;
+
+  const { loadDossier, saveDossier, loadUserBlob, saveUser } = await store();
   const user = normalizeUser((await loadUserBlob(env, email)) || {});
-  if (clean !== '' && clean != null) setPath(user, field.key, clean);
-  else setPath(user, field.key, undefined);
+  entries.forEach(({ field, clean }) => {
+    if (clean !== '' && clean != null) setPath(user, field.key, clean);
+    else setPath(user, field.key, undefined);
+  });
   await saveUser(env, email, user);
 
   try {
     const dossier = await loadDossier(env, email);
     if (dossier) {
-      const updated = field.line === 'school'
-        ? applySchoolToDossier(dossier, clean) // keeps school's placeholder idiom
-        : patchDossierLine(dossier, field.line, toLineValue(field, clean) || '(unknown)');
+      let updated = dossier;
+      entries.forEach(({ field, clean }) => {
+        updated = field.line === 'school'
+          ? applySchoolToDossier(updated, clean) // keeps school's placeholder idiom
+          : patchDossierLine(updated, field.line, toLineValue(field, clean) || '(unknown)');
+      });
       if (updated !== dossier) await saveDossier(env, email, updated);
     }
   } catch (err) {
-    console.warn(`${field.line} mirror into dossier failed`, err && err.message ? err.message : err);
+    console.warn('registry mirror into dossier failed', err && err.message ? err.message : err);
   }
-  return clean;
+  return out;
 }

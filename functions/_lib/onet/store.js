@@ -1,5 +1,6 @@
 import { SCHEMA_ID, DIM_COUNT, STATIC_ARTIFACT_BASE } from './constants.js';
 import { deriveZoneProfilesFromAggregates } from './zone-profiles-fallback.js';
+import { baseIndexFromCareers, rekeyDerivedRows } from './derive-rekey.js';
 
 /**
  * Site-native O*NET artifact store. Artifacts are produced by `npm run onet:build`;
@@ -159,7 +160,11 @@ async function mergeDerivedIntoCareers(env, baseUrl) {
       }
     }
     const derived = await getDerivedCareers(env, baseUrl);
-    for (const d of derived) {
+    // Fragments snapshot their base's zone/color/coords at generation time, so
+    // re-key them against the live catalog before they enter it (and drop the
+    // ones whose base is gone) — see derive-rekey.js.
+    const rekeyed = rekeyDerivedRows(derived, baseIndexFromCareers(careersCache));
+    for (const d of rekeyed) {
       if (!d || !d.soc || careersDerivedSocs.has(d.soc)) continue;
       const { vector, importance, ...row } = d;
       careersCache.push(row);

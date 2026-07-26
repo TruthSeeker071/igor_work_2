@@ -2,14 +2,14 @@
 
 #page-profile-build {
   padding: clamp(96px, 12vw, 110px) clamp(16px, 4vw, 24px) 80px;
-  min-height: 100dvh;
+  min-height: 100vh;
   background: var(--bg-solid);
   min-width: 0;
 }
 
 .pb-wrap {
-  max-width: 560px;
-  margin: 0 auto;
+  width: min(var(--frame-narrow), 100%);
+  margin-inline: auto;
   min-width: 0;
 }
 
@@ -19,7 +19,7 @@
 }
 
 .pb-eyebrow {
-  font-size: 0.8125rem;
+  font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -37,9 +37,18 @@
 }
 
 .pb-sub {
-  font-size: 0.875rem;
+  font-size: 0.92rem;
   color: var(--text-secondary);
   margin: 0;
+  line-height: 1.5;
+}
+
+/* How to answer, under what the step is for — the second line of the teaching. */
+.pb-hint {
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+  opacity: 0.8;
+  margin: 8px 0 0;
   line-height: 1.5;
 }
 
@@ -55,11 +64,11 @@
   height: 100%;
   border-radius: 999px;
   background: rgb(var(--hint-dot));
-  transition: width 0.3s ease;
+  transition: width 0.28s ease;
 }
 
 .pb-prog-lbl {
-  font-size: 0.8125rem;
+  font-size: 0.78rem;
   color: var(--text-tertiary);
   margin: 0 0 20px;
   text-align: center;
@@ -76,7 +85,7 @@
 
 .pb-q {
   display: block;
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 600;
   color: var(--text-solid);
   margin-bottom: 14px;
@@ -92,7 +101,7 @@
   background: rgb(var(--bg));
   color: rgb(var(--text));
   font-family: inherit;
-  font-size: 1rem;
+  font-size: 0.95rem;
   line-height: 1.5;
   resize: vertical;
   transition: border-color 0.18s ease, box-shadow 0.18s ease;
@@ -129,7 +138,7 @@
 
 .pb-btn {
   font-family: inherit;
-  font-size: 0.875rem;
+  font-size: 0.88rem;
   font-weight: 600;
   padding: 12px 18px;
   border-radius: var(--radius-sm);
@@ -172,7 +181,7 @@
   background: none;
   border: none;
   font-family: inherit;
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   color: var(--text-tertiary);
   cursor: pointer;
   text-decoration: underline;
@@ -185,7 +194,7 @@
 
 .pb-status {
   margin-top: 16px;
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   text-align: center;
   color: var(--text-secondary);
   min-height: 1.2em;
@@ -207,7 +216,7 @@
 }
 
 .pb-loading-overlay[hidden] {
-  display: none; /* attribute selector outranks the base overlay rule */
+  display: none !important;
 }
 
 .pb-loading-card {
@@ -222,13 +231,13 @@
 
 .pb-loading-card h2 {
   font-family: var(--font-display);
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   margin: 16px 0 8px;
   color: var(--text-solid);
 }
 
 .pb-loading-card p {
-  font-size: 0.875rem;
+  font-size: 0.88rem;
   color: var(--text-secondary);
   line-height: 1.55;
   margin: 0;
@@ -244,10 +253,10 @@
   margin-top: 22px;
   text-align: left;
 }
-.pb-skel-head { height: 18px; width: 62%; border-radius: 6px; }
-.pb-skel-line { height: 12px; width: 100%; border-radius: 6px; }
+.pb-skel-head { height: 18px; width: 62%; border-radius: 5px; }
+.pb-skel-line { height: 12px; width: 100%; border-radius: 4px; }
 .pb-skel-line--short { width: 78%; }
-.pb-skel-btn { height: 40px; width: 148px; border-radius: 999px; margin-top: 8px; }
+.pb-skel-btn { height: 40px; width: 148px; border-radius: 100px; margin-top: 8px; }
 
 /* Reduced-motion (C6, 2026-07-18): snap page transitions. The loading ring is
    gone (WS1); .fw-skeleton goes static under reduced motion, so the overlay's

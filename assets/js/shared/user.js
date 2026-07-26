@@ -30,6 +30,11 @@
     ['profile.subjects', 'identity.subjects'],
     ['profile.careerLeaning', 'identity.careerLeaning'],
     ['careerLeaningSoc', 'identity.careerLeaningSoc'],
+    // S18 Semester Loop — see user-model.js for why these are three scalars and
+    // not one `term` object. Mirror of the `terms` row (0026), never its master.
+    ['termSystem', 'identity.termSystem'],
+    ['termStart', 'identity.termStart'],
+    ['termEnd', 'identity.termEnd'],
     ['personalityVector', 'vectors.personality'],
     ['objectiveVector', 'vectors.objective'],
     ['vectorSchemaId', 'vectors.schemaId'],
@@ -54,6 +59,7 @@
     ['refine', 'journey.refine'],
     ['portalSnapshot', 'journey.portalSnapshot'],
     ['profileAlignment', 'journey.profileAlignment'],
+    ['featureIntros', 'journey.featureIntros'],
   ];
 
   var GROUPS = ['identity', 'vectors', 'assessment', 'focus', 'resume', 'journey'];

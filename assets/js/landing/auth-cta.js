@@ -1,6 +1,6 @@
 /**
  * Auth-aware landing header. One /auth/me check on the marketing page; if the
- * visitor has a session, swap CTAs for a single enlarged "Go to home" link.
+ * visitor has a session, swap CTAs for a single enlarged "Open FlightWay" link.
  * Default markup is the signed-out version, so logged-out users see no flash.
  */
 (function () {
@@ -9,7 +9,7 @@
     var home = document.createElement('a');
     home.href = 'portal.html';
     home.className = 'fw-btn fw-btn-primary fw-btn-lg fw-btn-nav-home';
-    home.textContent = 'Go to home';
+    home.textContent = 'Open FlightWay';
     actions.appendChild(home);
   }
 
@@ -18,7 +18,7 @@
     var home = document.createElement('a');
     home.href = 'portal.html';
     home.className = 'fw-btn fw-btn-primary fw-btn-md fw-btn-nav-home';
-    home.textContent = 'Go to home';
+    home.textContent = 'Open FlightWay';
     ctas.appendChild(home);
   }
 
@@ -29,7 +29,7 @@
     var home = document.createElement('a');
     home.href = 'portal.html';
     home.className = 'fw-btn fw-btn-primary fw-btn-lg';
-    home.textContent = 'Go to home';
+    home.textContent = 'Open FlightWay';
     hero.appendChild(home);
   }
 

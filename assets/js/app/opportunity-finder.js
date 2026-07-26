@@ -95,13 +95,40 @@
     return document.getElementById('oppf-panel');
   }
 
+  var introTried = false;
+
+  // The panel lives inside the roadmap page, so "entering the feature" is the
+  // moment it first shows something real — not page load, which belongs to the
+  // roadmap's own interstitial. maybeShow() no-ops while another modal owns the
+  // screen, so a student who lands on both in one visit meets them on separate
+  // visits rather than stacked.
+  function maybeIntro() {
+    // Only when there is something to introduce: real matches, or the plan
+    // gate (where the interstitial IS the upsell). An empty panel — which is
+    // what a student sees while grounding is off — must stay quiet rather than
+    // hype a list that is not there.
+    if (introTried || (state.status !== 'ready' && state.status !== 'gated' && state.status !== 'capped')) return;
+    introTried = true;
+    if (global.FWFeatureIntro && typeof FWFeatureIntro.maybeShow === 'function') {
+      FWFeatureIntro.maybeShow('opportunities');
+    }
+  }
+
   function rerender() {
     var el = currentSection();
     if (!el || !el.isConnected) return;
     if (state.status === 'ready') renderList(el);
     else if (state.status === 'empty') renderEmpty(el);
     else if (state.status === 'gated') renderGate(el);
+    else if (state.status === 'capped') renderCapped(el);
     else renderSkeleton(el);
+    maybeIntro();
+    // Re-mounted on every render because innerHTML wipes it; the engine keeps
+    // the tip and its rotation counter stable for the page load.
+    if (state.status === 'ready' && global.FWFeatureIntro
+        && typeof FWFeatureIntro.ribbon === 'function' && FWFeatureIntro.isSeen('opportunities')) {
+      FWFeatureIntro.ribbon('opportunities', el);
+    }
   }
 
   function headingHtml() {
@@ -136,7 +163,35 @@
     }
   }
 
-  function itemHtml(op) {
+  // ---- S12: save a result into the Application Tracker -------------------
+  // Free on every plan (§4): the LIST is what costs money and `opportunities.js`
+  // already meters it, so saving something the student has already been shown
+  // costs nothing. `savedUrls` is matched on the URL rather than on a
+  // client-side copy of the server's ref hash — the server derives the ref FROM
+  // the url, so the two agree by construction and there is no second hash
+  // implementation to drift.
+  var savedUrls = null;
+
+  function loadSaved() {
+    if (savedUrls || !(global.FWApplications && typeof FWApplications.list === 'function')) return;
+    savedUrls = Object.create(null);
+    FWApplications.list().then(function (res) {
+      if (!res || !res.ok) return;
+      (res.applications || []).forEach(function (a) { if (a && a.url) savedUrls[a.url] = true; });
+      // Only worth a repaint when something was already tracked.
+      if (Object.keys(savedUrls).length) rerender();
+    });
+  }
+
+  function saveBtnHtml(op, idx) {
+    if (!(global.FWApplications && typeof FWApplications.save === 'function')) return '';
+    var done = !!(savedUrls && savedUrls[String(op.url || '')]);
+    return '<button type="button" class="oppf-save' + (done ? ' is-saved' : '') + '"'
+      + ' data-oppf-save="' + idx + '"' + (done ? ' disabled' : '') + '>'
+      + (done ? 'Tracking' : 'Save to applications') + '</button>';
+  }
+
+  function itemHtml(op, idx) {
     if (!op) return '';
     var url = String(op.url || '');
     if (url.indexOf('https://') !== 0) return '';
@@ -153,7 +208,46 @@
           + (op.deadline ? 'Deadline ' + esc(op.deadline) : '') + '</p>'
         : '')
       + (op.whyThisFits ? '<p class="oppf-why">' + esc(op.whyThisFits) + '</p>' : '')
+      + '<div class="oppf-item-foot">' + saveBtnHtml(op, idx)
+      + '<span class="oppf-save-msg" data-oppf-msg="' + idx + '"></span></div>'
       + '</li>';
+  }
+
+  /**
+   * Delegated because renderList rebuilds the whole list on every re-render.
+   * A dated result also becomes a Deadline Radar row server-side (the endpoint
+   * handles the merge), which is why `deadline` is forwarded here.
+   */
+  function wireSave(el) {
+    el.addEventListener('click', function (e) {
+      var btn = e.target && e.target.closest ? e.target.closest('[data-oppf-save]') : null;
+      if (!btn || btn.disabled) return;
+      var ops = (state.data && state.data.opportunities) || [];
+      var op = ops[Number(btn.getAttribute('data-oppf-save'))];
+      if (!op) return;
+      var msg = el.querySelector('[data-oppf-msg="' + btn.getAttribute('data-oppf-save') + '"]');
+      var restore = global.FWButtonBusy ? FWButtonBusy.start(btn, { label: 'Saving…' }) : function () {};
+      FWApplications.save({
+        source: 'finder',
+        role: op.title,
+        company: op.org || '',
+        url: op.url || '',
+        deadline: op.deadline || '',
+        careerSlug: careerKeyFor(state.tree),
+      }).then(function (res) {
+        restore();
+        if (!res || !res.ok) {
+          if (msg) msg.textContent = (res && res.error) || 'Could not save that — try again.';
+          return;
+        }
+        if (!savedUrls) savedUrls = Object.create(null);
+        if (op.url) savedUrls[String(op.url)] = true;
+        btn.textContent = res.duplicate ? 'Tracking' : 'Tracking';
+        btn.disabled = true;
+        btn.classList.add('is-saved');
+        if (msg) msg.textContent = res.duplicate ? 'Already in your tracker.' : 'Added to your tracker.';
+      });
+    });
   }
 
   function schoolHtml() {
@@ -207,15 +301,36 @@
 
   function renderList(el) {
     var ops = (state.data && state.data.opportunities) || [];
+    var lockedCount = (state.data && state.data.lockedCount) || 0;
+    var lockedHtml = (lockedCount > 0 && global.FWPlanSurface && typeof FWPlanSurface.lockedTailHtml === 'function')
+      ? FWPlanSurface.lockedTailHtml('opportunity-search', lockedCount) : '';
     el.innerHTML = headingHtml()
       + '<ul class="oppf-list">' + ops.map(itemHtml).join('') + '</ul>'
+      + lockedHtml
+      + footerHtml();
+    wireFooter(el);
+    wireSave(el);
+    loadSaved();
+    if (lockedCount > 0) {
+      try { if (global.FWEnt && typeof FWEnt.notePaywallView === 'function') FWEnt.notePaywallView('opportunity-search'); } catch (_) {}
+    }
+  }
+
+  function renderCapped(el) {
+    var cap = state.data && state.data.cap;
+    el.innerHTML = headingHtml()
+      + (global.FWPlanSurface && typeof FWPlanSurface.capCardHtml === 'function'
+        ? FWPlanSurface.capCardHtml('opportunity-search', cap && cap.message) : '')
       + footerHtml();
     wireFooter(el);
   }
 
   function renderEmpty(el) {
     el.innerHTML = headingHtml()
-      + '<p class="oppf-empty">No live opportunity matches right now — check back soon.</p>'
+      + '<p class="oppf-empty">Nothing open right now that matches your gaps.</p>'
+      + '<p class="oppf-empty-hint">We search against the skills your roadmap says you are still missing, so this list '
+      + 'changes as your gaps change — not on a schedule. Set or change your target career and it re-runs against the '
+      + 'new gaps.</p>'
       + footerHtml();
     wireFooter(el);
   }
@@ -259,7 +374,7 @@
         state.data = data;
         state.school = String(data.school || '');
         state.fetchedAtMs = Date.now();
-        state.status = hits ? 'ready' : 'empty';
+        state.status = data.reason === 'capped' ? 'capped' : (hits ? 'ready' : 'empty');
         rerender();
       })
       .catch(function () {
@@ -268,6 +383,16 @@
         state.status = 'empty';
         rerender();
       });
+  }
+
+  // §4 free/paid merge: opportunity-search is no longer binary-premium — a free
+  // plan reaches the server every time, and only goes 'capped' once its one
+  // search this week is spent. FWEnt.boot()/refresh() already pulled the
+  // allowance from /auth/me by the time either caller below logs, so this reads
+  // the same number the capped-response branch in fetchData() would also see.
+  function oppCapState() {
+    var left = global.FWEnt && typeof FWEnt.remaining === 'function' ? FWEnt.remaining('opportunity-search') : undefined;
+    return left === 0 ? 'capped' : 'ok';
   }
 
   function saveSchool(value) {
@@ -302,6 +427,9 @@
         state.status = 'loading';
         state.retries = 0;
         rerender();
+        // A deliberate re-search, not a machine retry — count it. The career
+        // key is unchanged, so the mount() guard would swallow it otherwise.
+        try { if (global.FWEvents) FWEvents.log('opp_search', { cap_state: oppCapState() }); } catch (_) {}
         return fetchData();
       })
       .catch(function () {
@@ -310,6 +438,9 @@
         rerender();
       });
   }
+
+  // Last career an opp_search was logged for — see the guard inside mount().
+  var loggedSearchCareer = '';
 
   function mount(panel, tree) {
     if (!panel || !tree || !global.FWAuth || typeof FWAuth.authFetch !== 'function') return;
@@ -347,11 +478,18 @@
     state.status = 'loading';
     var boot = global.FWEnt && typeof FWEnt.boot === 'function' ? FWEnt.boot() : Promise.resolve();
     Promise.resolve(boot).then(function () {
-      if (global.FWEnt && typeof FWEnt.has === 'function' && !FWEnt.has('premium')) {
-        state.status = 'gated';
-        rerender();
-        return null;
-      }
+      // One search per career, not per fetch: mount() runs on every roadmap
+      // persist, and the v1→v3 tracker re-key starts a second GET for the same
+      // search. §4 free/paid merge: no more binary premium gate here — every
+      // plan reaches fetchData(), which renders 'ready' (with a locked tail),
+      // 'empty' or 'capped' off what the server actually answers.
+      try {
+        var searchCareer = careerKeyFor(tree);
+        if (global.FWEvents && loggedSearchCareer !== searchCareer) {
+          loggedSearchCareer = searchCareer;
+          FWEvents.log('opp_search', { cap_state: oppCapState() });
+        }
+      } catch (_) {}
       return fetchData();
     }).catch(function () {
       state.status = 'empty';

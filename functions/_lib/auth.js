@@ -11,6 +11,14 @@ export const SESSION_COOKIE = 'fw_session';
 export const SESSION_DAYS = 30;
 export const MIN_PASSWORD_LEN = 8;
 export const RATE_LIMIT_MAX = 10;
+// Marco's conversation endpoint. It kept the RATE_LIMIT_MAX default — the
+// LOGIN-ATTEMPT ceiling — while every other AI endpoint got a considered value
+// (mock interview 30, resume 20-30, analysis 20). Ten turns an hour is below
+// what one real conversation costs, and it contradicted the product rule: the
+// business cap is `marco-chat` in plan-limits (5/day free, unlimited paid), so
+// this number's only job is stopping a script. Sixty an hour does that and
+// cannot be reached by a person typing real questions.
+export const RATE_LIMIT_CHAT_MAX = 60;
 export const RATE_LIMIT_ANALYSIS_MAX = 20;
 export const RATE_LIMIT_SYNC_MAX = 30;
 export const RATE_LIMIT_SPLIT_MAX = 20;
@@ -18,6 +26,8 @@ export const RATE_LIMIT_DERIVE_MAX = 8;
 export const RATE_LIMIT_GAP_CHECKLIST_MAX = 15;
 export const RATE_LIMIT_WINDOW_SEC = 3600;
 export const RESET_TOKEN_TTL_SEC = 3600;
+// V2 S4 — email verification link lifetime (D7: soft-verify, 48h TTL).
+export const VERIFY_TOKEN_TTL_SEC = 48 * 3600;
 // Career analyses are considered fresh for 6h (matches the client localStorage TTL).
 export const ANALYSIS_FRESH_MS = 6 * 3600 * 1000;
 // Cap stored analysis JSON to keep D1 rows small and reject pathological payloads.
@@ -239,9 +249,34 @@ export function clientIp(request) {
     || 'unknown';
 }
 
+/**
+ * A rate-limit key segment derived from the caller's IP, with the IP itself
+ * never appearing.
+ *
+ * `checkRateLimit` stores whatever it is handed as part of a KV key NAME
+ * (`auth_rate:<key>`), so a call site that passed `clientIp(request)` directly
+ * was writing the raw IP into KV for the length of the window. That is storage
+ * of an identifier — short-lived and never in D1, but real — and it is the one
+ * thing the privacy policy is trying to be able to say we do not do. Peppering
+ * before the hash means the stored key cannot be reversed even by someone who
+ * can list KV: a rainbow table of the ~4 billion IPv4 addresses does not help
+ * without the secret. 32 hex (128 bits) is collision-safe for a counter bucket.
+ *
+ * The pepper is the session pepper — the same secret session tokens are hashed
+ * with — so there is one secret to rotate, not two. Unknown-IP requests (no
+ * CF-Connecting-IP header) all hash the literal `'unknown'` and share one
+ * bucket, exactly as they shared `prefix:unknown` before.
+ */
+export async function hashedIpKey(env, request) {
+  return (await sha256Hex(`ip:${sessionPepper(env)}:${clientIp(request)}`)).slice(0, 32);
+}
+
 export async function checkRateLimit(env, key, opts = {}) {
   if (!env.COACH_KV) return;
   const max = opts.max ?? RATE_LIMIT_MAX;
+  // Optional per-call window (default 1h). Additive: no existing caller passes
+  // it, so their behaviour is unchanged; S4's "3/day" resend cap needs a day.
+  const windowSec = opts.windowSec ?? RATE_LIMIT_WINDOW_SEC;
   const fullKey = `auth_rate:${key}`;
   const raw = await env.COACH_KV.get(fullKey);
   const count = raw ? Number(raw) : 0;
@@ -251,7 +286,34 @@ export async function checkRateLimit(env, key, opts = {}) {
     err._userFacing = true;
     throw err;
   }
-  await env.COACH_KV.put(fullKey, String(count + 1), { expirationTtl: RATE_LIMIT_WINDOW_SEC });
+  await env.COACH_KV.put(fullKey, String(count + 1), { expirationTtl: windowSec });
+}
+
+/**
+ * Give back one attempt after a failure the USER did not cause.
+ *
+ * checkRateLimit spends up front, which is right for abuse control — but it
+ * means a server-side fault charges the user for work they never received.
+ * That is exactly how a broken Marco became a locked-out Marco: every retry
+ * against the ReferenceError still burned one of ten hourly attempts, so the
+ * moment the bug was fixed the user was rate-limited by their own retries.
+ *
+ * Best-effort and never throws: a refund that fails must not turn a handled
+ * error into an unhandled one. Not a transaction — a concurrent spend can
+ * interleave — which is fine, because erring toward giving the attempt back
+ * is the safe direction for a limit the user did not deserve to spend.
+ */
+export async function refundRateLimit(env, key) {
+  try {
+    if (!env || !env.COACH_KV) return;
+    const fullKey = `auth_rate:${key}`;
+    const raw = await env.COACH_KV.get(fullKey);
+    const count = raw ? Number(raw) : 0;
+    if (!Number.isFinite(count) || count <= 0) return;
+    await env.COACH_KV.put(fullKey, String(count - 1), { expirationTtl: RATE_LIMIT_WINDOW_SEC });
+  } catch (err) {
+    console.warn('rate limit refund failed', err);
+  }
 }
 
 export async function findUserByEmail(env, email) {
@@ -266,6 +328,57 @@ export async function createUser(env, email, passwordHash) {
   await db.prepare(
     'INSERT INTO users (email, password_hash, created_at, updated_at) VALUES (?, ?, ?, ?)',
   ).bind(email, passwordHash, ts, ts).run();
+  // V2 S4 (D10) — default every notification category ON for a new account:
+  // disclosed at signup, one-click unsub, verified-only send. Done as a separate
+  // best-effort UPDATE (not in the INSERT) so a pre-0019 schema — the window
+  // between this push and the migration being applied to the shared D1 — still
+  // creates the account instead of failing signup. verified_at is deliberately
+  // left NULL here: a new account is unverified until it clicks the link, while
+  // the migration grandfathers every PRE-existing account as verified.
+  try {
+    await db.prepare(
+      'UPDATE users SET notify_optin = 1, notify_deadlines = 1, notify_review = 1, notify_product = 1 WHERE email = ?',
+    ).bind(email).run();
+  } catch (_) { /* category columns arrive with migration 0019 */ }
+}
+
+// V2 S5 (D6) — Google-OAuth accounts have no password, but users.password_hash
+// is NOT NULL (0001). This sentinel occupies the column and can never verify: it
+// splits into fewer than four `$`-parts, so verifyPassword() rejects it up front,
+// which is the correct behaviour — a Google-only account cannot password-login.
+// (Account recovery still works: forgot-password sets a real hash and the account
+// then has both sign-in methods.)
+export const OAUTH_ONLY_PASSWORD = 'google-oauth';
+
+// V2 S5 — create a Google-OAuth account: verified immediately (D7: OAuth signups
+// are auto-verified), linked to its google_sub, plan defaults to 'free' (0008),
+// notify categories default ON like every new account (D10). Requires migration
+// 0019 (google_sub + verified_at); the callback that calls this is flag-gated so
+// it is never reached on a pre-0019 schema (see functions/auth/google/callback.js).
+export async function createGoogleUser(env, email, googleSub) {
+  const db = requireDb(env);
+  const ts = nowIso();
+  await db.prepare(
+    'INSERT INTO users (email, password_hash, google_sub, verified_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+  ).bind(email, OAUTH_ONLY_PASSWORD, googleSub, ts, ts, ts).run();
+  // Same best-effort notify-defaults UPDATE as createUser — never fails signup.
+  try {
+    await db.prepare(
+      'UPDATE users SET notify_optin = 1, notify_deadlines = 1, notify_review = 1, notify_product = 1 WHERE email = ?',
+    ).bind(email).run();
+  } catch (_) { /* category columns arrive with migration 0019 */ }
+}
+
+// V2 S5 — link Google to an EXISTING account (email already registered). A
+// verified Google email is strong proof of ownership, so this also promotes the
+// account to verified if it wasn't (COALESCE keeps an existing verified_at). The
+// caller only reaches here after email_verified === true.
+export async function linkGoogleAccount(env, email, googleSub) {
+  const db = requireDb(env);
+  const ts = nowIso();
+  await db.prepare(
+    'UPDATE users SET google_sub = ?, verified_at = COALESCE(verified_at, ?), updated_at = ? WHERE email = ?',
+  ).bind(googleSub, ts, ts, email).run();
 }
 
 export async function updateUserPassword(env, email, passwordHash) {
@@ -414,6 +527,58 @@ export async function consumePasswordResetToken(env, token) {
   ).bind(nowIso(), tokenHash).run();
 
   return normalizeEmail(row.email);
+}
+
+// V2 S4 — email verification (D7, soft-verify). Mirrors the password-reset
+// token recipe: a one-time random token whose SHA-256 is stored on the user row
+// (verify_token_hash), anchored by verify_sent_at for the 48h TTL, and cleared
+// on use. Chosen over a deterministic HMAC so a used/expired link can't be
+// replayed and a resend invalidates the previous link.
+export async function createVerifyToken(env, email) {
+  const token = generateToken(32);
+  const tokenHash = await sha256Hex(token);
+  await env.DB.prepare(
+    'UPDATE users SET verify_token_hash = ?, verify_sent_at = ? WHERE email = ?',
+  ).bind(tokenHash, nowIso(), email).run();
+  return token;
+}
+
+/**
+ * Verify a token. Returns { email, already } on success (already=true when the
+ * account was verified before — an idempotent re-click is a success, not an
+ * error), or null when the token is unknown or past its 48h TTL.
+ */
+export async function consumeVerifyToken(env, token) {
+  if (!token) return null;
+  const tokenHash = await sha256Hex(String(token));
+  const row = await env.DB.prepare(
+    'SELECT email, verify_sent_at, verified_at FROM users WHERE verify_token_hash = ? LIMIT 1',
+  ).bind(tokenHash).first();
+  if (!row) return null;
+  const email = normalizeEmail(row.email);
+  if (row.verified_at) return { email, already: true };
+  const sentMs = row.verify_sent_at ? new Date(row.verify_sent_at).getTime() : 0;
+  if (!sentMs || Date.now() - sentMs > VERIFY_TOKEN_TTL_SEC * 1000) return null;
+  await env.DB.prepare(
+    'UPDATE users SET verified_at = ?, verify_token_hash = NULL, verify_sent_at = NULL WHERE verify_token_hash = ?',
+  ).bind(nowIso(), tokenHash).run();
+  return { email, already: false };
+}
+
+/**
+ * Is this account email-verified? Fail-OPEN: returns true when the column is
+ * absent (a pre-0019 schema, i.e. the window before the migration lands on the
+ * shared D1) so the app never wrongly locks anyone out or nags them about a
+ * feature that isn't live yet. Grandfathered pre-V2 accounts read verified.
+ */
+export async function isEmailVerified(env, email) {
+  try {
+    const row = await env.DB.prepare('SELECT verified_at FROM users WHERE email = ?').bind(email).first();
+    if (!row) return false;
+    return !!row.verified_at;
+  } catch (_) {
+    return true;
+  }
 }
 
 export function quizProfileToSeed(quizProfile) {

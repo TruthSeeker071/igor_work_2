@@ -4,6 +4,7 @@ import {
   authJsonResponse,
   authErrorResponse,
   getSessionEmail,
+  isEmailVerified,
 } from '../_lib/auth.js';
 import { resolveEntitlement } from '../_lib/entitlements.js';
 import { remainingForUser } from '../_lib/plan-limits.js';
@@ -26,7 +27,10 @@ export async function onRequestGet(context) {
     // "3 of 5 left" instead of only hard-blocking. null = unlimited on this plan.
     const ent = await resolveEntitlement(env, email);
     const remaining = await remainingForUser(env, email, ent.effective).catch(() => ({}));
-    const payload = { email, plan: ent.effective, planRaw: ent.plan, paywall: ent.paywall, remaining };
+    // V2 S4 — verification state for the soft-verify banner (D7). Fail-open, so a
+    // pre-0019 schema reports verified rather than nagging about a dark feature.
+    const verified = await isEmailVerified(env, email).catch(() => true);
+    const payload = { email, plan: ent.effective, planRaw: ent.plan, paywall: ent.paywall, remaining, verified };
     if (ent.dev) payload.dev = true;
     return authJsonResponse(200, payload, origin);
   } catch (err) {

@@ -68,11 +68,29 @@
     return String(key || '').replace(/-/g, ' ').replace(/\b\w/g, function (c) { return c.toUpperCase(); });
   }
 
+  // FROZEN ladder — deliberately NOT FWOnetMath.FIT_TIERS.
+  // These bars colour sector scores, which are quiz-answer strengths on a 0-100
+  // self-report scale ("how much does finance interest you"), not cosines
+  // against a career vector. The shared ladder is calibrated to whatever the fit
+  // formula currently produces; when the fit formula moves the shared ladder
+  // (2026-07-21) these bars would have silently recoloured even though not one
+  // answer changed. This is the mean-centered-era ladder, kept as a copy on
+  // purpose: recalibrate it only if the SHEET's own scale changes.
+  var SHEET_TIERS = { mythic: 66, legendary: 56, epic: 46, rare: 34, uncommon: 20 };
+  var SHEET_TIER_COLORS = {
+    mythic: '#FFD24A', legendary: '#F2A82E', epic: '#BD4AE8',
+    rare: '#3FAEF0', uncommon: '#5ED152', common: '#9AA0AD',
+  };
+
   function tierBarStyle(score) {
-    if (global.FWCareerTarget && typeof FWCareerTarget.fitRarity === 'function') {
-      return FWCareerTarget.fitRarity(score).base;
-    }
-    return 'rgb(var(--primary))';
+    var s = Number(score) || 0;
+    var tier = s >= SHEET_TIERS.mythic ? 'mythic'
+      : s >= SHEET_TIERS.legendary ? 'legendary'
+      : s >= SHEET_TIERS.epic ? 'epic'
+      : s >= SHEET_TIERS.rare ? 'rare'
+      : s >= SHEET_TIERS.uncommon ? 'uncommon'
+      : 'common';
+    return SHEET_TIER_COLORS[tier];
   }
 
   function ensureSectorFitSheet(quiz) {

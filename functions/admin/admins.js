@@ -6,7 +6,7 @@
 // removeAdmin both refuse it as a target.
 
 import { originFromEnv, jsonResponse, preflightResponse } from '../_lib.js';
-import { checkRateLimit, clientIp } from '../_lib/auth.js';
+import { checkRateLimit, hashedIpKey } from '../_lib/auth.js';
 import {
   adminGate, adminNotFound, readJsonBody, requireElevation,
   listAdmins, addAdmin, removeAdmin,
@@ -92,7 +92,7 @@ async function mutationGuard(env, request, who) {
   }
   try {
     await checkRateLimit(env, `adminrole:${who.email}`, { max: 30 });
-    await checkRateLimit(env, `adminrole:${clientIp(request)}`, { max: 30 });
+    await checkRateLimit(env, `adminrole:${await hashedIpKey(env, request)}`, { max: 30 });
   } catch (err) {
     return jsonResponse(err.status || 429, { error: err.message || 'Too many attempts.' }, origin, { credentials: true });
   }

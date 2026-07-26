@@ -21,24 +21,41 @@
   }
 
   // Tier boundaries are canonical in FWOnetMath.fitTier (calibrated to the
-  // mean-centered cosine scale); this only owns the color per tier name.
+  // current fit scale); this only owns the color per tier name.
   const RARITY_COLORS = {
     mythic: '#FFD24A', legendary: '#F2A82E', epic: '#BD4AE8',
     rare: '#3FAEF0', uncommon: '#5ED152', common: '#9AA0AD',
   };
+  // resume.html loads this module WITHOUT onet-math.js, so the ladder and the
+  // neutral placeholder need a local copy for that one page. This is the only
+  // copy of either outside FWOnetMath — recalibrate it in the same commit that
+  // recalibrates FIT_TIERS / FIT_NEUTRAL, or resume.html silently keeps the old
+  // ladder.
+  const LOCAL_FIT_TIERS = { mythic: 85, legendary: 75, epic: 60, rare: 45, uncommon: 30 };
+  const LOCAL_FIT_NEUTRAL = 0;
   function localFitTier(s) {
     s = Number(s) || 0;
-    if (s >= 66) return { tier: 'mythic' };
-    if (s >= 56) return { tier: 'legendary' };
-    if (s >= 46) return { tier: 'epic' };
-    if (s >= 34) return { tier: 'rare' };
-    if (s >= 20) return { tier: 'uncommon' };
+    if (s >= LOCAL_FIT_TIERS.mythic) return { tier: 'mythic' };
+    if (s >= LOCAL_FIT_TIERS.legendary) return { tier: 'legendary' };
+    if (s >= LOCAL_FIT_TIERS.epic) return { tier: 'epic' };
+    if (s >= LOCAL_FIT_TIERS.rare) return { tier: 'rare' };
+    if (s >= LOCAL_FIT_TIERS.uncommon) return { tier: 'uncommon' };
     return { tier: 'common' };
   }
   function fitRarity(score) {
     const t = (global.FWOnetMath && FWOnetMath.fitTier)
       ? FWOnetMath.fitTier(score) : localFitTier(score);
     return { tier: t.tier, base: RARITY_COLORS[t.tier] || RARITY_COLORS.common };
+  }
+  // "We have no fit for this yet" — a display placeholder, not a score. Callers
+  // used to pass the literal 50, which reads as legendary the moment the ladder
+  // moves down.
+  function neutralFit() {
+    return (global.FWOnetMath && FWOnetMath.FIT_NEUTRAL != null)
+      ? FWOnetMath.FIT_NEUTRAL : LOCAL_FIT_NEUTRAL;
+  }
+  function neutralRarity() {
+    return fitRarity(neutralFit());
   }
 
   function quizData() {
@@ -142,7 +159,7 @@
         name: target.name,
         score: target.score,
         slug: target.slug,
-        rarity: target.rarity || fitRarity(target.score || 50),
+        rarity: target.rarity || fitRarity(target.score || neutralFit()),
       });
     }
     return out.slice(0, limit || 12);
@@ -231,7 +248,7 @@
           name: row.title,
           score: null,
           slug: canonicalSlug,
-          rarity: fitRarity(50),
+          rarity: neutralRarity(),
         };
       }
     }
@@ -271,7 +288,7 @@
       soc: soc || (hit && hit.soc) || null,
       source: source,
       score: hit ? hit.score : null,
-      rarity: hit ? hit.rarity : fitRarity(50),
+      rarity: hit ? hit.rarity : neutralRarity(),
     };
   }
 
@@ -600,6 +617,8 @@
   global.FWCareerTarget = {
     formatFitPercent: formatFitPercent,
     fitRarity: fitRarity,
+    neutralFit: neutralFit,
+    neutralRarity: neutralRarity,
     showPivotSummary: showPivotSummary,
     resolveTargetCareer: resolveTargetCareer,
     rankedCareerMatches: rankedCareerMatches,

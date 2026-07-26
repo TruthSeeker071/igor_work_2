@@ -3,21 +3,106 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" href="/favicon.ico?v=20260717h" sizes="any">
-  <link rel="icon" type="image/png" href="/assets/favicon.png?v=20260717h">
-  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=20260717h">
-  <title>FlightWay Flight Plan — pricing</title>
-  <meta name="description" content="Flight Plan turns career discovery into momentum: unlimited simulations, a weekly plan, interview prep and receipts that prove it's working. Under the price of one coaching hour.">
-  <meta property="og:title" content="FlightWay Flight Plan — out-plan AI">
-  <meta property="og:description" content="A career coach costs $150/hour. Flight Plan is about $2.30/week.">
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg?v=20260720f">
+  <link rel="icon" href="/favicon.ico?v=20260720a" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/icons/favicon-128.png?v=20260720a">
+  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-180.png?v=20260720a">
+  <title>FlightWay pricing — $29 Interview Sprint, $199 lifetime, or free</title>
+  <meta name="description" content="Pay for the moment you’re in: a $29 Interview Sprint for the next three weeks, $199 once for the whole degree, or $9.99 a month. The weekly Flight Plan itself is free forever.">
+  <!-- See index.html: served by both Pages projects, so the canonical is absolute. -->
+  <link rel="canonical" href="https://flightway.ai/pricing">
+  <meta property="og:site_name" content="FlightWay">
+  <meta property="og:url" content="https://flightway.ai/pricing">
+  <meta property="og:title" content="FlightWay pricing — pay for the moment you’re in">
+  <meta property="og:description" content="A $29 Interview Sprint, $199 once for the whole degree, or $9.99 a month. The weekly loop is free forever.">
   <meta property="og:type" content="website">
-  <link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260720c">
-  <link rel="stylesheet" href="assets/css/flightway-2.css?v=20260720c">
+  <meta property="og:image" content="https://flightway.ai/assets/og/og-pricing.png?v=20260724a">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="FlightWay Flight Plan — out-plan the competition">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="FlightWay pricing — pay for the moment you’re in">
+  <meta name="twitter:description" content="A $29 Interview Sprint, $199 once for the whole degree, or $9.99 a month. The weekly loop is free forever.">
+  <meta name="twitter:image" content="https://flightway.ai/assets/og/og-pricing.png?v=20260724a">
+  <link rel="preload" href="/assets/fonts/inter-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/space-grotesk-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260721p">
+  <link rel="stylesheet" href="assets/css/flightway-2.css?v=20260725g">
+  <!-- pricing.html doesn't load flightway-legal.css, and theme.css leaves
+       anchors inside .fw-footer-bar unstyled, so the footer's links need a
+       rule of their own here. -->
+  <link rel="stylesheet" href="assets/css/quotes.css?v=20260725f">
+  <style>
+    .fw-footer-bar a { color: inherit; text-decoration: none; }
+    .fw-footer-bar a:hover { color: rgb(var(--text)); text-decoration: underline; }
+
+    /* S19 — the moment-led lead. Two cards, not three, so each one gets room to
+       make an argument; they reuse .fw-pricing-card wholesale and only add what
+       differs. Tokens only: contrast:check reads page <style> blocks too. */
+    .fw-moment-grid { display: grid; gap: 24px; margin-top: 8px; align-items: start; }
+    @media (min-width: 900px) { .fw-moment-grid { grid-template-columns: 1fr 1fr; } }
+    .fw-moment-when {
+      margin: 0;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: rgb(var(--primary));
+    }
+    .fw-moment-card h2 {
+      margin-top: 6px;
+      font-family: var(--font-display);
+      font-size: var(--fs-h3);
+      font-weight: 600;
+      letter-spacing: -0.015em;
+    }
+    .fw-moment-card--founding { border-color: rgb(var(--primary) / 0.35); }
+    .fw-proposal-card .fw-price .amount { font-size: clamp(1.6rem, 1.3rem + 1.1vw, 2.2rem); }
+
+    /* Two-column variant of the shared pricing grid: the third column moved up
+       into the moments row, and repeat(3, 1fr) would leave a hole. */
+    @media (min-width: 1024px) { .fw-pricing-grid--two { grid-template-columns: repeat(2, 1fr); } }
+
+    /* The matrix scrolls inside its own box on a phone — the page body never
+       scrolls sideways (the WS-B rule, and what layout:check walks). */
+    .fw-matrix-wrap { margin-top: 44px; overflow-x: auto; border: 1px solid rgb(var(--border)); border-radius: 16px; }
+    .fw-matrix { width: 100%; border-collapse: collapse; font-size: 0.9rem; min-width: 520px; }
+    .fw-matrix th, .fw-matrix td { padding: 13px 18px; text-align: left; vertical-align: top; }
+    .fw-matrix thead th {
+      background: rgb(var(--surface-2));
+      color: rgb(var(--text));
+      font-weight: 600;
+      border-bottom: 1px solid rgb(var(--border));
+    }
+    .fw-matrix tbody tr + tr th, .fw-matrix tbody tr + tr td { border-top: 1px solid rgb(var(--border) / 0.6); }
+    .fw-matrix tbody th { font-weight: 500; color: rgb(var(--text)); }
+    .fw-matrix tbody td { color: rgb(var(--text-muted)); }
+    .fw-matrix tbody td:last-child { color: rgb(var(--text)); }
+
+    .fw-cc-strip {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 26px 28px;
+      border: 1px solid rgb(var(--border));
+      border-radius: 16px;
+      background: rgb(var(--surface));
+    }
+    .fw-cc-strip h2 { font-family: var(--font-display); font-size: var(--fs-h3); font-weight: 600; letter-spacing: -0.015em; }
+    .fw-cc-strip p { margin: 8px 0 0; max-width: 62ch; font-size: 0.95rem; line-height: 1.6; color: rgb(var(--text-muted)); }
+
+    .fw-sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+    }
+  </style>
   <script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
   <script src="assets/js/shared/flags.js?v=20260716h"></script>
 <script src="assets/js/shared/fw-busy.js?v=20260720a" defer></script>
 <script src="assets/js/shared/fw-errors.js?v=20260720a" defer></script>
-  <script src="assets/js/shared/events.js?v=20260716h" defer></script>
+  <script src="assets/js/shared/events.js?v=20260724a" defer></script>
 </head>
 <body>
   <canvas id="fw-data-field" aria-hidden="true"></canvas>
@@ -26,8 +111,14 @@
     <div class="fw-container">
       <nav class="fw-nav-inner">
         <a href="/" class="fw-brand" data-fw-brand data-fw-brand-href="/" aria-label="FlightWay home"></a>
+        <!-- The same four links index.html and every server-rendered page
+             carry, so the marketing nav is one nav everywhere. Four, not five:
+             a fifth item pushes #fw-nav-actions past the right edge at 1280px
+             @150% zoom (the S14 finding that layout:check now pins). -->
         <ul class="fw-nav-links">
-          <li><a href="index.html#features">Features</a></li>
+          <li><a href="/#how-it-works">How it works</a></li>
+          <li><a href="/careers">Careers</a></li>
+          <li><a href="/guides">Guides</a></li>
           <li><a href="pricing.html" aria-current="page">Pricing</a></li>
         </ul>
         <div class="fw-nav-actions" id="fw-nav-actions">
@@ -44,83 +135,207 @@
   <main>
     <section class="fw-hero fw-hero--compact">
       <div class="fw-container fw-hero-content">
-        <p class="fw-eyebrow"><span class="fw-eyebrow-line" aria-hidden="true"></span>Flight Plan</p>
-        <h1 class="fw-h1">Don't compete with AI — out-plan it.</h1>
+        <p class="fw-eyebrow"><span class="fw-eyebrow-line" aria-hidden="true"></span>Pricing</p>
+        <h1 class="fw-h1">Pay for the moment you’re in.</h1>
         <p class="fw-lede">
-          A career coach runs <strong>$80–230 an hour</strong>. Flight Plan is about
-          <strong>$2.30 a week</strong> — momentum, a weekly plan, and receipts that prove it's working.
+          Most students need FlightWay hardest for about six weeks — interview season,
+          application season, the term where it all lands. So the two things built for
+          those moments come first. The subscription is underneath, for when it stops
+          being a moment and starts being the plan.
         </p>
+      </div>
+    </section>
 
-        <div class="fw-price-toggle" role="group" aria-label="Billing period">
-          <button type="button" class="fw-price-toggle-btn is-on" data-period="monthly" aria-pressed="true">Monthly</button>
-          <button type="button" class="fw-price-toggle-btn" data-period="annual" aria-pressed="false">Annual <span class="fw-price-toggle-save">save ~50%</span></button>
+    <!-- The lead (D16): the two acute-moment products, before any subscription.
+         Both are real SKUs that charge today wherever Stripe is configured. -->
+    <section class="fw-section" id="moments">
+      <div class="fw-container">
+        <div class="fw-moment-grid">
+
+          <article class="fw-pricing-card fw-moment-card">
+            <p class="fw-moment-when">For the next three weeks</p>
+            <h2>Interview Sprint</h2>
+            <div class="fw-price"><span class="amount">$29</span><span class="cadence">one time</span></div>
+            <p class="desc">You have interviews coming. You need to be ready for them — not to start a subscription.</p>
+            <ul class="fw-pricing-features">
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Two full weeks of everything below, then it ends on its own</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span data-fw-limit="mock-interview.premium">3</span> scored mock interviews a day, each with a full written debrief</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Interview Season Mode — a six-week program keyed to your target role’s actual format</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Unlimited AI resume tailoring, one per posting you apply to</li>
+            </ul>
+            <button type="button" class="fw-btn fw-btn-primary fw-btn-md fw-intent-cta fw-btn--block"
+              data-tier="sprint" data-source="pricing_sprint">Start the sprint</button>
+            <p class="fw-price-fine">No subscription and nothing to cancel — it expires after 14 days.</p>
+          </article>
+
+          <article class="fw-pricing-card fw-moment-card fw-moment-card--founding">
+            <span class="fw-pricing-badge fw-pricing-badge--alt">Founding 100</span>
+            <p class="fw-moment-when">For the whole degree</p>
+            <h2>Lifetime</h2>
+            <div class="fw-price"><span class="amount">$199</span><span class="cadence">once</span></div>
+            <p class="desc">Pay once, keep everything forever. The first hundred accounts only — and you get a say in what gets built.</p>
+            <ul class="fw-pricing-features">
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Everything in Flight Plan, with no renewal, ever</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Founding-member badge on your account</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>A direct line to us — founding members are who we build the next thing for</li>
+            </ul>
+            <button type="button" class="fw-btn fw-btn-secondary fw-btn-md fw-intent-cta fw-btn--block"
+              data-tier="lifetime" data-source="pricing_lifetime">Claim a founding seat</button>
+            <p class="fw-price-fine">Once the hundred are gone this comes off the page.</p>
+          </article>
+
         </div>
       </div>
     </section>
 
     <section class="fw-section" id="plans">
       <div class="fw-container">
-        <div class="fw-pricing-grid">
+        <div class="fw-heading">
+          <h2>Or keep it running</h2>
+          <p>The weekly loop is free forever. The subscription lifts every cap on the tools that do the work.</p>
+        </div>
+
+        <div class="fw-price-toggle" role="group" aria-label="Billing period">
+          <button type="button" class="fw-price-toggle-btn is-on" data-period="monthly" aria-pressed="true">Monthly</button>
+          <button type="button" class="fw-price-toggle-btn" data-period="annual" aria-pressed="false">Annual <span class="fw-price-toggle-save">save ~50%</span></button>
+        </div>
+
+        <div class="fw-pricing-grid fw-pricing-grid--two">
 
           <article class="fw-pricing-card">
             <h3>Free</h3>
-            <p class="desc">The whole matching engine, free forever — not a trial.</p>
+            <p class="desc">The weekly loop, free forever — not a trial.</p>
             <div class="fw-price"><span class="amount">$0</span><span class="cadence">forever</span></div>
             <ul class="fw-pricing-features">
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Career quiz + the full O*NET career hub</li>
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Every career deep dive, compare and pivot breakdown</li>
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>2-minute looks and 10-minute test flights</li>
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>One AI roadmap — yours to track for good</li>
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>5 Marco messages a day</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>The Weekly Flight Plan — what to do this week, every week</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Deadlines, commitments, applications and your evidence locker</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Career quiz, the full O*NET hub, every deep dive and comparison</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span data-fw-limit="marco-chat.free">10</span> Marco messages a day</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Resume builder free to write, edit and export</li>
             </ul>
-            <a href="quiz.html" class="fw-btn fw-btn-secondary fw-btn-md" style="width:100%">Start free</a>
+            <a href="quiz.html" class="fw-btn fw-btn-secondary fw-btn-md fw-btn--block">Start free</a>
+            <p class="fw-price-fine">Every cap shows as a meter inside the product — you always see what’s left before you reach it.</p>
           </article>
 
           <article class="fw-pricing-card highlighted">
             <span class="fw-pricing-badge">Most popular</span>
             <h3>Flight Plan</h3>
-            <p class="desc">Everything you need to actually get there — and know it's working.</p>
+            <p class="desc">Everything you need to actually get there — and know it’s working.</p>
             <div class="fw-price" data-plan="premium">
               <span class="amount" data-amount-monthly="$9.99" data-amount-annual="$59">$9.99</span>
               <span class="cadence" data-cadence-monthly="/ month" data-cadence-annual="/ year">/ month</span>
             </div>
             <ul class="fw-pricing-features">
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Weekly Flight Plan + accountability nudges</li>
               <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Unlimited Marco, roadmap rebuilds and plan edits</li>
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Mock interviews, resume builder + Opportunity Finder</li>
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>25-minute deep dives + Crossroads replay</li>
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Receipts history — see your coordinates move</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span data-fw-limit="mock-interview.premium">3</span> scored mock interviews a day, with a full debrief on each</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Unlimited AI resume drafts and tailoring, one per posting you apply to</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Every opportunity match, not just the top 2 — searched whenever you want</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Unlimited career simulations, 25-minute deep dives + Crossroads replay</li>
             </ul>
-            <button type="button" class="fw-btn fw-btn-primary fw-btn-md fw-intent-cta" style="width:100%"
+            <button type="button" class="fw-btn fw-btn-primary fw-btn-md fw-intent-cta fw-btn--block"
               data-tier="monthly" data-source="pricing_flightplan">Start free trial</button>
-            <p class="fw-price-fine">Under LinkedIn's $14.99 student price · ~1/10 of one coaching hour.</p>
+            <p class="fw-price-fine">Under LinkedIn’s $14.99 student price · ~1/10 of one coaching hour.</p>
           </article>
-
-          <article class="fw-pricing-card">
-            <span class="fw-pricing-badge fw-pricing-badge--alt">Founding 100</span>
-            <h3>Lifetime</h3>
-            <p class="desc">Pay once, keep Flight Plan forever. First 100 only.</p>
-            <div class="fw-price"><span class="amount">$199</span><span class="cadence">one time</span></div>
-            <ul class="fw-pricing-features">
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Everything in Flight Plan, forever</li>
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Founding-member badge</li>
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Direct line to shape the roadmap</li>
-            </ul>
-            <button type="button" class="fw-btn fw-btn-secondary fw-btn-md fw-intent-cta" style="width:100%"
-              data-tier="lifetime" data-source="pricing_lifetime">Claim a founding seat</button>
-          </article>
-        </div>
-
-        <div class="fw-sprint-card">
-          <div>
-            <h3>Interview Sprint <span class="fw-sprint-price">$29 one-time</span></h3>
-            <p>Two weeks of premium + focused interview prep for one target role. No subscription.</p>
-          </div>
-          <button type="button" class="fw-btn fw-btn-primary fw-btn-md fw-intent-cta"
-            data-tier="sprint" data-source="pricing_sprint">Start the sprint</button>
         </div>
 
         <p class="fw-legal-note" id="fw-checkout-note" hidden role="status"></p>
+      </div>
+    </section>
+
+    <!-- The matrix. Every number in it is a `data-fw-limit` slot: the markup
+         ships today's value so the table reads correctly with JS off, and
+         /config's featureLimits overwrites it at runtime, so retuning a cap can
+         never leave this page selling a number the server does not enforce.
+         `plan:ui-check` asserts both halves. -->
+    <section class="fw-section" id="matrix">
+      <div class="fw-container">
+        <div class="fw-heading">
+          <h2>What’s in each</h2>
+          <p>The loop is free. The tools are metered — and the meter is always visible before you hit it.</p>
+        </div>
+        <div class="fw-matrix-wrap">
+          <table class="fw-matrix">
+            <caption class="fw-sr-only">FlightWay free plan compared with the Flight Plan subscription</caption>
+            <thead>
+              <tr><th scope="col">Feature</th><th scope="col">Free</th><th scope="col">Flight Plan</th></tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">The Weekly Flight Plan</th><td>Free</td><td>Free</td></tr>
+              <tr><th scope="row">Deadline Radar &amp; alerts</th><td>Included</td><td>Included</td></tr>
+              <tr><th scope="row">Commitments, Evidence Locker, Applications</th><td>Included</td><td>Included</td></tr>
+              <tr><th scope="row">Month in Review</th><td>Included</td><td>Included</td></tr>
+              <tr><th scope="row">Quiz, hub, deep dives, comparisons</th><td>Included</td><td>Included</td></tr>
+              <tr><th scope="row">Marco messages</th><td><span data-fw-limit="marco-chat.free">10</span> a day</td><td>Unlimited</td></tr>
+              <tr><th scope="row">AI roadmap generations</th><td><span data-fw-limit="roadmap-generate.free">1</span> a month</td><td>Unlimited</td></tr>
+              <tr><th scope="row">Resume builder (write, edit, export)</th><td>Included</td><td>Included</td></tr>
+              <tr><th scope="row">AI resume drafts</th><td><span data-fw-limit="resume-draft.free">1</span> a month</td><td>Unlimited</td></tr>
+              <tr><th scope="row">AI resume tailoring</th><td><span data-fw-limit="resume-tailor.free">1</span> to try</td><td>Unlimited</td></tr>
+              <tr><th scope="row">Scored mock interviews</th><td><span data-fw-limit="mock-interview.free">1</span> to try</td><td><span data-fw-limit="mock-interview.premium">3</span> a day</td></tr>
+              <tr><th scope="row">Career simulations</th><td><span data-fw-limit="career-sim.free">1</span> a month</td><td>Unlimited</td></tr>
+              <tr><th scope="row">Opportunity search</th><td><span data-fw-limit="opportunity-search.free">1</span> a week, top 2 results</td><td>Unlimited, full lists</td></tr>
+              <tr><th scope="row">Deadline refresh</th><td><span data-fw-limit="deadline-refresh.free">1</span> a week</td><td>On demand</td></tr>
+              <tr><th scope="row">Readiness scorecard</th><td><span data-fw-limit="scorecard-run.free">1</span> to try</td><td>Quarterly, plus on demand</td></tr>
+              <tr><th scope="row">Outreach drafts</th><td><span data-fw-limit="outreach-draft.free">2</span> a month</td><td>Unlimited</td></tr>
+              <tr><th scope="row">Interview Season Mode</th><td>Visible, locked</td><td>The full program</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- S19 (D16): the two Jacob-gated proposals. Hidden unless /config says
+         they are on, and their CTAs are interest capture, never checkout —
+         neither is a purchasable product yet and the copy says so. -->
+    <section class="fw-section" id="proposals" hidden>
+      <div class="fw-container">
+        <div class="fw-heading">
+          <h2>In the works</h2>
+          <p>Two things we’re considering. Neither is on sale yet — tell us if you’d use one and we’ll build it first.</p>
+        </div>
+        <div class="fw-moment-grid">
+          <article class="fw-pricing-card fw-moment-card fw-proposal-card" id="proposal-semester" hidden>
+            <p class="fw-moment-when">Proposed</p>
+            <h2>Semester Pass</h2>
+            <div class="fw-price"><span class="amount">$24.99</span><span class="cadence">one term</span></div>
+            <p class="desc">Everything in Flight Plan for one full term, paid once at the start of it — the way students actually budget. Nothing renews.</p>
+            <button type="button" class="fw-btn fw-btn-secondary fw-btn-md fw-proposal-cta fw-btn--block"
+              data-tier="semester" data-source="pricing_semester">I’d use this</button>
+            <p class="fw-price-fine">Registers your interest. Nothing is charged and nothing is reserved.</p>
+          </article>
+          <article class="fw-pricing-card fw-moment-card fw-proposal-card" id="proposal-gift" hidden>
+            <p class="fw-moment-when">Proposed</p>
+            <h2>Gift FlightWay</h2>
+            <div class="fw-price"><span class="amount">3, 6 or 12</span><span class="cadence">months</span></div>
+            <p class="desc">For a parent, a mentor or a scholarship fund buying it for someone else. They get a code; we never email the recipient anything they did not ask for.</p>
+            <button type="button" class="fw-btn fw-btn-secondary fw-btn-md fw-proposal-cta fw-btn--block"
+              data-tier="gift" data-source="pricing_gift">I’d use this</button>
+            <p class="fw-price-fine">Registers your interest. Nothing is charged and nothing is reserved.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Real consented quotes or nothing at all: the section starts hidden and
+         quotes.js reveals it only when the approved queue is non-empty. -->
+    <section class="fw-section" id="quotes" data-fw-quotes="3" hidden>
+      <div class="fw-container">
+        <div class="fw-heading">
+          <h2>From students using it</h2>
+          <p>Every quote here was written by a student and published with their permission.</p>
+        </div>
+        <div data-fw-quotes-slot></div>
+      </div>
+    </section>
+
+    <section class="fw-section" id="career-centers-strip">
+      <div class="fw-container">
+        <div class="fw-cc-strip">
+          <div>
+            <h2>Buying for a career center?</h2>
+            <p>We’re running small pilots with college career centers — cohort onboarding, counselor visibility, and outcomes you can report. Pilot pricing is per institution.</p>
+          </div>
+          <a href="/career-centers" class="fw-btn fw-btn-secondary fw-btn-md">See the pilot →</a>
+        </div>
 
         <p class="fw-legal-note">
           Pricing is in testing and may change. The AI-proof and fit scores are self-assessments
@@ -134,8 +349,8 @@
   <div class="fw-intent-modal" id="fw-intent-modal" hidden>
     <div class="fw-intent-dialog" role="dialog" aria-modal="true" aria-labelledby="fw-intent-title">
       <button type="button" class="fw-intent-close" id="fw-intent-close" aria-label="Close">&times;</button>
-      <h3 id="fw-intent-title">You're on the launch list</h3>
-      <p id="fw-intent-copy">Drop your email and we'll give you first access to <span id="fw-intent-tier">Flight Plan</span> when it opens. Optional — your interest is already logged.</p>
+      <h3 id="fw-intent-title">You’re on the launch list</h3>
+      <p id="fw-intent-copy">Drop your email and we’ll give you first access to <span id="fw-intent-tier">Flight Plan</span> when it opens. Optional — your interest is already logged.</p>
       <form id="fw-intent-form" class="fw-intent-form">
         <input type="email" id="fw-intent-email" placeholder="you@school.edu" autocomplete="email" aria-label="Email">
         <button type="submit" class="fw-btn fw-btn-primary fw-btn-md">Notify me</button>
@@ -144,19 +359,56 @@
     </div>
   </div>
 
+  <!-- Full footer (was a bare .fw-footer-bar whose only link pointed at
+       index.html#pricing, an anchor that doesn't exist — a dead link). -->
   <footer class="fw-footer">
     <div class="fw-container">
+      <div class="fw-footer-grid">
+        <div>
+          <a href="/" class="fw-brand" data-fw-brand data-fw-brand-href="/" aria-label="FlightWay"></a>
+          <p class="fw-footer-tagline">The talent development platform for students.</p>
+        </div>
+        <div class="fw-footer-col">
+          <h3>Product</h3>
+          <ul>
+            <li><a href="/careers">All careers</a></li>
+            <li><a href="/guides">Guides</a></li>
+            <li><a href="/#features">Features</a></li>
+            <li><a href="/pricing">Pricing</a></li>
+            <li><a href="/quiz">Career Quiz</a></li>
+            <li><a href="/auth#signin">Sign in</a></li>
+          </ul>
+        </div>
+        <div class="fw-footer-col">
+          <h3>Company</h3>
+          <ul>
+            <li><a href="/#how-it-works">How it works</a></li>
+            <li><a href="/career-centers">Career centers</a></li>
+            <li><a href="/community">Community</a></li>
+            <li><a href="/contact">Contact</a></li>
+          </ul>
+        </div>
+        <div class="fw-footer-col">
+          <h3>Legal</h3>
+          <ul>
+            <li><a href="/privacy">Privacy</a></li>
+            <li><a href="/terms">Terms</a></li>
+            <li><a href="/security">Security</a></li>
+          </ul>
+        </div>
+      </div>
       <div class="fw-footer-bar">
         <p>© 2026 FlightWay, Inc. All rights reserved.</p>
-        <p><a href="index.html#pricing">Career-center pricing →</a></p>
+        <p><a href="/career-centers">Career-center pricing →</a></p>
       </div>
     </div>
   </footer>
 
-  <script src="assets/js/shared/brand.js?v=20260717g" defer></script>
+  <script src="assets/js/shared/brand.js?v=20260720i" defer></script>
   <script src="assets/js/shared/theme.js?v=20260703p" defer></script>
   <script src="assets/js/shared/data-field.js?v=20260703p" defer></script>
-  <script src="assets/js/shared/billing.js?v=20260720c" defer></script>
+  <script src="assets/js/shared/billing.js?v=20260724a" defer></script>
+  <script src="assets/js/shared/quotes.js?v=20260725f" defer></script>
   <script>
     (function () {
       function log(type, data) { try { if (window.FWEvents) FWEvents.log(type, data); } catch (_) {} }
@@ -192,7 +444,15 @@
       var emailEl = document.getElementById('fw-intent-email');
       var doneEl = document.getElementById('fw-intent-done');
       var current = { tier: 'monthly', source: 'pricing' };
-      var TIER_NAME = { monthly: 'Flight Plan (monthly)', annual: 'Flight Plan (annual)', lifetime: 'Lifetime', sprint: 'Interview Sprint' };
+      var TIER_NAME = {
+        monthly: 'Flight Plan (monthly)', annual: 'Flight Plan (annual)',
+        lifetime: 'Lifetime', sprint: 'Interview Sprint',
+        // S19 proposals — named here so the modal says what the click was about,
+        // but deliberately absent from the ?tier= checkout resume below: neither
+        // is buyable, so neither may ever reach FWBilling.checkout().
+        semester: 'Semester Pass', gift: 'Gift FlightWay',
+      };
+      var BUYABLE = { monthly: 1, annual: 1, lifetime: 1, sprint: 1 };
 
       function post(payload) {
         return fetch('/waitlist-intent', {
@@ -223,7 +483,38 @@
         if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', settle);
         else settle();
       });
+      // WS-G G3: the caps quoted on this page are the caps the server enforces.
+      // The markup ships today's numbers so the page reads correctly with JS
+      // off, and /config's featureLimits table overwrites them — retuning a cap
+      // can never leave this page selling a number that isn't real.
+      function fillLimits(table) {
+        if (!table) return;
+        document.querySelectorAll('[data-fw-limit]').forEach(function (el) {
+          var parts = (el.getAttribute('data-fw-limit') || '').split('.');
+          var feature = table[parts[0]];
+          var v = feature && feature.limits ? feature.limits[parts[1]] : undefined;
+          if (v === undefined || v === null) return;   // unlimited/unknown → keep the shipped copy
+          el.textContent = String(v);
+        });
+      }
+      // S19 (D16): the two Jacob-gated proposals. Both cards AND their section
+      // stay hidden unless /config says so, so a deployment that never sets the
+      // env vars ships a page with no trace of them — which is what
+      // "design-complete but dark" has to mean on a public pricing page.
+      function revealProposals(cfg) {
+        var any = false;
+        [['semesterPassEnabled', 'proposal-semester'], ['giftEnabled', 'proposal-gift']].forEach(function (pair) {
+          if (!cfg || !cfg[pair[0]]) return;
+          var card = document.getElementById(pair[1]);
+          if (card) { card.hidden = false; any = true; }
+        });
+        var section = document.getElementById('proposals');
+        if (section && any) section.hidden = false;
+      }
+
       fetch('/config').then(function (r) { return r.json(); }).then(function (cfg) {
+        fillLimits(cfg && cfg.featureLimits);
+        revealProposals(cfg);
         if (cfg && cfg.stripeEnabled && cfg.stripeTestMode) {
           note('Checkout is in Stripe test mode on this preview — no real card is charged.');
         }
@@ -254,11 +545,27 @@
         });
       });
 
+      // The proposal CTAs are interest capture and NOTHING else — they never
+      // consult billingReady, because there is no product behind either one. A
+      // separate class rather than a flag on .fw-intent-cta, so no future edit
+      // to the checkout path can accidentally start charging for a thing that
+      // does not exist.
+      document.querySelectorAll('.fw-proposal-cta').forEach(function (cta) {
+        cta.addEventListener('click', function () {
+          current.tier = cta.getAttribute('data-tier') || 'semester';
+          current.source = cta.getAttribute('data-source') || 'pricing_proposal';
+          log('pricing_click', { tier: current.tier, source: current.source });
+          post({ tier: current.tier, source: current.source });
+          if (tierLabelEl) tierLabelEl.textContent = TIER_NAME[current.tier] || 'FlightWay';
+          openModal();
+        });
+      });
+
       // Resume after a sign-in detour: /stripe/checkout is session-gated, so an
       // anonymous click lands on auth.html and comes back as ?tier=…
       try {
         var resumeTier = new URLSearchParams(location.search).get('tier');
-        if (resumeTier && TIER_NAME[resumeTier]) {
+        if (resumeTier && BUYABLE[resumeTier]) {
           billingReady.then(function (ready) { if (ready) startCheckout(resumeTier, null); });
         }
         if (new URLSearchParams(location.search).get('checkout') === 'cancelled') {

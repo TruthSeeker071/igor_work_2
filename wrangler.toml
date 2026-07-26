@@ -2,15 +2,45 @@ name = "flightway"
 compatibility_date = "2025-01-01"
 pages_build_output_dir = "."
 
+# ---------------------------------------------------------------- PREVIEW env
+#
+# For Pages, TOP-LEVEL config is the PREVIEW environment and [env.production] is
+# production. Both Pages projects build preview deployments for the OTHER
+# project's branch, so `flightway` (-> flightway.ai) publishes a public preview
+# of Jacob_Work on every push, at a stable alias:
+#
+#   https://jacob-work.flightway.pages.dev
+#
+# That host got its bindings from this block. KV was isolated (preview_id below
+# points at a different namespace), but the D1 binding had NO
+# preview_database_id — so it silently bound the PRODUCTION database. A public,
+# unauthenticated URL was serving live user data with none of the
+# [env.production.vars] config: PAYWALL_ENABLED unset means entitlements ship
+# dark and every cap is inert, and SESSION_PEPPER unset means session tokens are
+# hashed with the constant in _lib/auth.js that is committed to this repo.
+#
+# The D1 binding is therefore deliberately ABSENT here — but be clear about what
+# that does and does not achieve. Deleting the declaration is NOT sufficient:
+# after this change the preview deployment still reached flightway-db, because
+# the binding also exists in the project's dashboard config and that is what the
+# Git build actually applies. Verified, not assumed — 0bfacc7's preview answered
+# /auth/login from the database with no D1 block in this file.
+#
+# So this block records intent only. Two things do the actual work:
+#   1. functions/_middleware.js refuses to serve any request in an environment
+#      with no SESSION_PEPPER, which is exactly the unconfigured-preview case.
+#   2. The real fix, which lives outside this repo: stop the `flightway` project
+#      building previews at all (Pages -> flightway -> Settings -> Builds &
+#      deployments -> Preview deployments). `flightwayprototype` is the preview
+#      surface and has its own [env.production] config and full secrets.
+#
+# Do not "fix" this by re-adding a D1 binding without a separate preview
+# database. Restoring the production database_id here re-opens the hole.
+
 [[kv_namespaces]]
 binding = "COACH_KV"
 id = "90baa154928941c3b45ff0ecb4894f05"
 preview_id = "d55c51ed0b6244979a96b88172f83cc5"
-
-[[d1_databases]]
-binding = "DB"
-database_name = "flightway-db"
-database_id = "e9aa71fb-dbf8-482d-ba86-5c941cdedee0"
 
 # Optional O*NET R2 (not required — store.js falls back to /data/onet/artifacts/):
 # wrangler r2 bucket create flightway-onet
@@ -34,8 +64,55 @@ database_id = "e9aa71fb-dbf8-482d-ba86-5c941cdedee0"
 # originFromEnv() echoes the request Origin when it matches; otherwise first entry.
 [env.production.vars]
 ALLOWED_ORIGIN = "https://flightwayjacobprototype.pages.dev,https://flightway.ai"
+
+# CAN-SPAM postal address, printed in every marketing email footer via
+# functions/_lib/email-template.js `mailingAddress()`. Not a secret (protocol
+# §6): it is on the face of every email we send. ONE [env.production.vars]
+# block serves BOTH Pages projects, so this single line covers `flightway` and
+# `flightwayprototype`; the cron Worker keeps its own copy in
+# workers/cron/wrangler.toml and must be changed alongside this one.
+#
+# THIS IS NOT AN ADDRESS. It is the company name, and CAN-SPAM §7704(a)(5)
+# requires a valid physical postal address — so setting it here closes the
+# config gap but NOT the legal one, and it silences both the runtime warning in
+# email-template.js and the `verify:env` warning that used to carry the
+# reminder. Replace with a real postal address (a UPS-store box is fine) in
+# BOTH tomls before the first commercial send.
+MAILING_ADDRESS = "FlightWay, 540 Main St, New York, NY 10044"
+
 # Pillar W web grounding master switch. ON activates grounded Google Search for
 # EVERY Pillar W caller (chat, weekly-plan, career-analysis, resume, mock-interview,
 # opportunity-finder) and spends the shared daily search budget. Requires the
 # Gemini key to have "Grounding with Google Search" billing enabled.
 GROUNDING_ENABLED = "true"
+
+# Server-side plan gating. Until this is "true" every account resolves to
+# premium and every gate is inert (entitlements.js "ships dark").
+PAYWALL_ENABLED = "true"
+
+# Stripe SKU price ids (free/paid merge §3). Not secrets — a price id grants
+# nothing on its own, and keeping them in the file means a wrong amount is
+# diagnosable from a diff instead of from a dashboard you can't read back.
+# The two real credentials (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET) are set
+# with `wrangler pages secret put` and are never committed.
+#
+# BOTH sets live here on purpose. One wrangler.toml is shared by two Pages
+# projects that hold DIFFERENT Stripe keys:
+#
+#   flightway           live key  ->  uses the unsuffixed ids below
+#   flightwayprototype  test key  ->  uses the _TEST ids below
+#
+# Stripe keeps test and live objects in separate namespaces, so a live price id
+# under a test key fails with "No such price". priceIdFor() in _lib/stripe.js
+# reads stripeTestMode(env) and picks the matching set, which means the key
+# already installed on each project selects its own prices and neither has to
+# be flipped by hand at deploy time. Do not "clean up" by deleting one set.
+STRIPE_PRICE_MONTHLY = "price_1Tw3EuDTMRlqh3ZnxHsnO22E"
+STRIPE_PRICE_ANNUAL = "price_1Tw3FXDTMRlqh3ZneRfmuHG6"
+STRIPE_PRICE_LIFETIME = "price_1Tw3GFDTMRlqh3ZnhPb4HsS4"
+STRIPE_PRICE_SPRINT = "price_1Tw3GZDTMRlqh3ZnwlwjieVc"
+
+STRIPE_PRICE_MONTHLY_TEST = "price_1Tvk0SDTMRlqh3ZnDrjzIiFl"
+STRIPE_PRICE_ANNUAL_TEST = "price_1Tvk0xDTMRlqh3Zn8MZ4iemf"
+STRIPE_PRICE_LIFETIME_TEST = "price_1Tvk1bDTMRlqh3ZnpH8YWuFg"
+STRIPE_PRICE_SPRINT_TEST = "price_1Tvk1vDTMRlqh3ZnWDK0yNpW"

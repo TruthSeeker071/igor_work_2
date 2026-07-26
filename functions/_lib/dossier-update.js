@@ -40,6 +40,14 @@ export function dossierUpdatePrompt(currentDossier, transcript) {
     '9. If the transcript contains NO durable fact and nothing that adds to or',
     '   contradicts the dossier (off-hand opinions, questions, chit-chat), output',
     '   the current dossier EXACTLY as-is, byte for byte.',
+    // WS-E E3: the dossier is what every advice surface reads instead of the
+    // transcript, so a fact that arrives here as a paraphrase is a fact every
+    // later reply has to be vague about.
+    '10. Keep it dense and literal. Names, numbers, course codes, firms, dates and',
+    '    titles go in VERBATIM as the user said them ("Math 16100", "3.7", "Jane',
+    '    Street", "spring 2027") — never softened into a category ("a math class",',
+    '    "a good GPA", "a trading firm"). No adjectives about the user, no summary',
+    '    sentences, no interpretation: this is a record, not a description.',
     '',
     'SELF-CHECK before output: list (mentally) each durable fact stated by the USER',
     'in the transcript, and verify each one appears somewhere in your output dossier.',

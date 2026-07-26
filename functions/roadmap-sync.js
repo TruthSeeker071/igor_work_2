@@ -28,6 +28,7 @@ export async function onRequest(context) {
   try {
     const { email } = await requireSession(request, env);
     const result = await maybeSyncRoadmap(env, email, {
+      baseUrl: new URL(request.url).origin,
       force: !!payload.force,
       reason: String(payload.reason || 'client').slice(0, 64),
       userPivotNote: payload.userPivotNote ? String(payload.userPivotNote).slice(0, 600) : undefined,

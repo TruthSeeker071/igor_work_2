@@ -95,8 +95,6 @@ export function buildFallbackPortalSnapshot(quiz, careerPool) {
 
   const careerPicks = pool.slice(0, 3).map((c) => ({
     careerId: Number(c.careerId),
-    soc: c.soc ? String(c.soc) : null,
-    title: c.name ? String(c.name).slice(0, 120) : '',
     note: trimText(`Strong quiz fit at ${Math.round(Number(c.score) || 0)}%`, NOTE_MAX),
     fitScore: Math.round(Number(c.score) || 0),
   })).filter((c) => Number.isFinite(c.careerId));
@@ -140,10 +138,6 @@ function normalizeSnapshot(raw, quiz, careerPool, inputsHash, dossierFp, source)
       const fitScore = poolHit ? Math.round(Number(poolHit.score) || 0) : 0;
       return {
         careerId,
-        // soc + title persist the career identity so the weekly-nudge cron can
-        // resolve real job postings from D1 (careerId alone isn't a SOC).
-        soc: poolHit && poolHit.soc ? String(poolHit.soc) : null,
-        title: poolHit && poolHit.name ? String(poolHit.name).slice(0, 120) : '',
         note: trimText(c.note, NOTE_MAX),
         fitScore,
       };

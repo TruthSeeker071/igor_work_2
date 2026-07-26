@@ -32,6 +32,14 @@
     return n.split(/\s+/)[0];
   }
 
+  // "Gold" is the legendary tier, not the number 56. Read at call time from the
+  // canonical ladder so a recalibration reaches Marco too — he shipped four
+  // copies of the literal and would otherwise keep congratulating people at the
+  // old threshold. marco.js only loads on dashboard.html, after onet-math.js.
+  function isGoldScore(score) {
+    return (Number(score) || 0) >= FWOnetMath.FIT_TIERS.legendary;
+  }
+
   // {top, second, isGold} from vector-ranked careers when ONET hub is active.
   function topCareers() {
     var q = quiz();
@@ -55,7 +63,7 @@
         return {
           top: topC ? topC.name : null,
           second: secondC ? secondC.name : null,
-          isGold: topScore >= 56,
+          isGold: isGoldScore(topScore),
           topScore: topScore,
         };
       }
@@ -67,7 +75,7 @@
         return {
           top: cached[0].name || null,
           second: cached[1] ? cached[1].name : null,
-          isGold: (cached[0].score || 0) >= 56,
+          isGold: isGoldScore(cached[0].score),
           topScore: cached[0].score || 0,
         };
       }
@@ -79,7 +87,7 @@
         return {
           top: onetCached[0].name || null,
           second: onetCached[1] ? onetCached[1].name : null,
-          isGold: (onetCached[0].score || 0) >= 56,
+          isGold: isGoldScore(onetCached[0].score),
           topScore: onetCached[0].score || 0,
         };
       }
@@ -89,7 +97,7 @@
       var ranked = FWH.rankCareersFromQuizScores(q.scores || {});
       var top = ranked[0] && ranked[0].career ? ranked[0].career.name : null;
       var second = ranked[1] && ranked[1].career ? ranked[1].career.name : null;
-      var isGold = ranked[0] ? (ranked[0].score >= 56) : false;
+      var isGold = ranked[0] ? isGoldScore(ranked[0].score) : false;
       return { top: top, second: second, isGold: isGold, topScore: ranked[0] ? ranked[0].score : 0 };
     }
     return { top: null, second: null, isGold: false, topScore: 0 };
@@ -97,24 +105,27 @@
 
   // Build the candidate message pool from current state. Only includes lines whose
   // required data is present, so we never render "{name}" or "undefined".
+  //
+  // WS-D D5: one Marco across the product. The coach page's Marco leads with the
+  // answer and skips motivational filler, so the chip does too — every line here
+  // either names something specific about this user or asks a real question.
+  // A waving-hand greeting is a different character.
   function messagePool() {
     var name = firstName();
     var t = topCareers();
-    var who = name || 'there';
     var msgs = [
-      'Where are you headed' + (name ? ', ' + name : '') + '?',
-      'Hey ' + who + '! 👋',
-      "I'm Marco — caught up on your quiz. Ask me anything."
+      (name ? name + ', where' : 'Where') + ' are you headed?',
+      "I've read your quiz. Ask me the hard question.",
     ];
     if (t.top) {
-      msgs.push((name ? name + ', want' : 'Want') + ' to plan your path to ' + t.top + '?');
-      msgs.push('Curious why ' + t.top + ' is your top match?');
+      msgs.push('Want the real path to ' + t.top + '?');
+      msgs.push('Ask me why ' + t.top + ' came out on top.');
     }
     if (t.top && t.second) {
-      msgs.push('Your top overall fits: ' + t.top + ' and ' + t.second + '.');
+      msgs.push('Your two best fits: ' + t.top + ' and ' + t.second + '.');
     }
     if (t.isGold && t.top) {
-      msgs.push(t.top + ' is lighting up gold for you ✨ — let’s talk.');
+      msgs.push(t.top + ' scores unusually high for you. Worth a conversation.');
     }
     return msgs;
   }
@@ -133,7 +144,14 @@
   var root, bubbleText;
   var currentMsg = '';   // the line currently shown in the bubble
 
+  // Marco wears the FlightWay bird here and on the coach page — one face, one
+  // asset (FWBrand owns the geometry). The paper plane stays as a fallback for
+  // the case where brand.js has not executed yet.
   var PLANE = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13"></path><path d="M22 2l-7 20-4-9-9-4 20-7z"></path></svg>';
+
+  function faceHtml() {
+    return (window.FWBrand && typeof FWBrand.icon === 'function') ? FWBrand.icon() : PLANE;
+  }
 
   function render() {
     if (!root) return;
@@ -160,7 +178,7 @@
     root.setAttribute('aria-label', 'Open Marco, your AI career advisor');
     root.innerHTML =
         '<div class="marco-bubble"><span class="marco-bubble-text" id="marco-bubble-text"></span></div>'
-      + '<div class="marco-avatar">' + PLANE + '</div>';
+      + '<div class="marco-avatar">' + faceHtml() + '</div>';
 
     root.addEventListener('click', open);
     root.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });

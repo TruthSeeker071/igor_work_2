@@ -20,6 +20,7 @@ import {
   loadRoadmap,
   saveRoadmap,
   checkRateLimit,
+  refundRateLimit,
   RATE_LIMIT_SPLIT_MAX,
   RATE_LIMIT_GAP_CHECKLIST_MAX,
   sha256Hex,
@@ -38,6 +39,8 @@ import {
 import {
   chooseTreePath,
   followTreePath,
+  uncommitTreePath,
+  latestCompletedWaypointId,
   mergeTreeSplit,
   buildSplitPrompt,
   mergeTreeExtend,
@@ -48,14 +51,19 @@ import {
   buildBranchBuildPrompt,
   applyBranchBuild,
   PLAIN_STYLE_RULES,
+  MAX_STEPS_PER_NODE,
 } from './_lib/roadmap-tree.js';
 import { executeGenerateRoadmap } from './_lib/roadmap-generate.js';
 import { requirePlan } from './_lib/entitlements.js';
-import { checkFeatureLimit } from './_lib/plan-limits.js';
+import { checkFeatureLimit, refundFeatureUse } from './_lib/plan-limits.js';
+import { loadUserBlob, saveUserBlob } from './_lib/user.js';
 import { computeRoadmapInputsHash, recordCareerFocus } from './_lib/roadmap-sync.js';
 import { vectorInputsFingerprint } from './_lib/onet/gap-format.js';
 import { SCHEMA_ID } from './_lib/onet/constants.js';
 import { mergeObjectiveAiPatch, applyObjectiveAiPatch } from './_lib/onet/objective-patch.js';
+import { buildSurfacePrompt } from './_lib/marco-persona.js';
+import { schoolForCacheKey } from './_lib/deadlines.js';
+import { logServerError } from './_lib/events.js';
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const MAX_SLUG_LEN = 64;
@@ -117,6 +125,7 @@ async function callRoadmapChatGemini(env, { dossier, currentRoadmap, userMessage
     userMessage,
     history,
     label: 'career-roadmap-chat',
+    school: schoolForCacheKey({ quiz: null, dossier }),
   });
   if (raw && typeof raw === 'object' && !Array.isArray(raw) && raw.reply) {
     return raw;
@@ -176,6 +185,11 @@ async function handleTreeGraphAction(env, sessionEmail, action, payload, origin)
     if (!currentRoadmap || !isValidRoadmapTree(currentRoadmap)) {
       return authJsonResponse(400, { error: 'No tree roadmap found.' }, origin);
     }
+    // §3A.4: a stale/unknown target would make recomputeActivePathToNode reset
+    // the path to bare ['trunk'], silently discarding the committed branch.
+    if (!(currentRoadmap.nodes || []).some((n) => n.id === targetNodeId)) {
+      return authJsonResponse(400, { error: 'That path is no longer on your roadmap.' }, origin);
+    }
     const roadmap = followTreePath(currentRoadmap, targetNodeId);
     await saveRoadmap(env, sessionEmail, roadmap);
     return authJsonResponse(200, {
@@ -197,8 +211,13 @@ async function handleTreeGraphAction(env, sessionEmail, action, payload, origin)
     if (!branchNode) {
       return authJsonResponse(400, { error: 'Branch waypoint not found.' }, origin);
     }
-    if (!isNodeOnChosenBranch(currentRoadmap, branchNodeId)) {
-      return authJsonResponse(400, { error: 'Commit to this branch before extending it.' }, origin);
+    // The UI dropped structural branch "commit" — any branch tip can be grown with
+    // AI (tracking in the Flight Plan is the new commit and never rewires the tree),
+    // so extending a branch-role node no longer requires it to be on a chosen path.
+    // isNodeOnChosenBranch still covers legacy committed/spine nodes.
+    const isBranchRoleNode = branchNode.pathRole === 'branch';
+    if (!isBranchRoleNode && !isNodeOnChosenBranch(currentRoadmap, branchNodeId)) {
+      return authJsonResponse(400, { error: 'This waypoint can’t be extended.' }, origin);
     }
     const careerName = currentRoadmap.targetCareerName || 'your target career';
     const dossier = await resolveDossier(env, sessionEmail, payload, null, 'Student', careerName);
@@ -206,32 +225,90 @@ async function handleTreeGraphAction(env, sessionEmail, action, payload, origin)
       return authJsonResponse(400, { error: 'No user profile available.' }, origin);
     }
     await checkRateLimit(env, `roadmap-split:${sessionEmail}`, { max: RATE_LIMIT_SPLIT_MAX });
-    const extendPrompt = buildExtendPrompt({ dossier, currentRoadmap, branchNode, careerName });
+    const extendPrompt = buildExtendPrompt({
+      dossier,
+      currentRoadmap,
+      branchNode,
+      careerName,
+      school: schoolForCacheKey({ quiz: null, dossier }),
+    });
     const subtree = await callGeminiJson(env, {
       prompt: extendPrompt,
       temperature: 0.55,
-      maxTokens: 3000,
+      // A full 3-6 waypoint sub-roadmap (5-7 steps each) is ~2-3x the old
+      // "add a step or two" payload, so the token + wall-clock budgets grow
+      // with it while staying well under the 120s client abort.
+      maxTokens: 5200,
       jsonMode: true,
       label: 'roadmap-extend',
       softFail: true,
-      timeoutMs: 30000,
-      deadlineAt: Date.now() + 50000,
+      timeoutMs: 40000,
+      deadlineAt: Date.now() + 60000,
     });
     if (!subtree || typeof subtree !== 'object') {
+      await refundRateLimit(env, `roadmap-split:${sessionEmail}`);
       return authJsonResponse(502, { error: 'Could not extend the branch. Try again.' }, origin);
     }
     const roadmap = mergeTreeExtend(currentRoadmap, branchNodeId, subtree);
     // mergeTreeExtend returns the tree unchanged when the node cap rejects
     // every new node — surface that instead of a false "added steps" success.
     if ((roadmap.nodes || []).length === (currentRoadmap.nodes || []).length) {
+      await refundRateLimit(env, `roadmap-split:${sessionEmail}`);
       return authJsonResponse(409, { error: 'This branch is at its size limit — finish some steps before extending it further.' }, origin);
     }
     await saveRoadmap(env, sessionEmail, roadmap);
+    const addedCount = (roadmap.nodes || []).length - (currentRoadmap.nodes || []).length;
     return authJsonResponse(200, {
       roadmap,
       personalized: true,
-      reply: 'Added new steps to your branch.',
+      reply: addedCount > 1
+        ? `Extended your branch with ${addedCount} new waypoints.`
+        : 'Added a new waypoint to your branch.',
     }, origin);
+  }
+
+  if (action === 'uncommit') {
+    const decisionId = String(payload.decisionId || '').trim();
+    if (!decisionId) {
+      return authJsonResponse(400, { error: 'Missing decisionId.' }, origin);
+    }
+    if (!currentRoadmap || !isValidRoadmapTree(currentRoadmap)) {
+      return authJsonResponse(400, { error: 'No tree roadmap found.' }, origin);
+    }
+    const decision = (currentRoadmap.decisions || []).find((d) => d.id === decisionId);
+    if (!decision) {
+      return authJsonResponse(400, { error: 'Decision not found.' }, origin);
+    }
+    if (!decision.chosenOptionId) {
+      return authJsonResponse(400, { error: 'That fork has no committed branch to change.' }, origin);
+    }
+    // Optional switch target: re-choose a different option off the same fork.
+    const switchOptionId = String(payload.optionId || '').trim();
+    if (switchOptionId) {
+      const target = (decision.options || []).find((o) => o.id === switchOptionId);
+      if (!target) {
+        return authJsonResponse(400, { error: 'Option not found.' }, origin);
+      }
+      if (switchOptionId === decision.chosenOptionId) {
+        return authJsonResponse(400, { error: "You're already on that path." }, origin);
+      }
+    }
+    // Guard: only allowed while the fork waypoint is the user's current position
+    // (most-recently-completed waypoint). Once they've completed anything on the
+    // committed branch, changing the path would rewrite real progress history.
+    if (latestCompletedWaypointId(currentRoadmap) !== decision.nodeId) {
+      return authJsonResponse(409, {
+        error: "You've already moved past this fork — you can only change branches while it's your current waypoint.",
+      }, origin);
+    }
+    const roadmap = uncommitTreePath(currentRoadmap, decisionId, switchOptionId || null);
+    await saveRoadmap(env, sessionEmail, roadmap);
+    let reply = 'Returned to your main path.';
+    if (switchOptionId) {
+      const opt = (decision.options || []).find((o) => o.id === switchOptionId);
+      reply = `Switched to the "${opt?.label || 'other'}" path.`;
+    }
+    return authJsonResponse(200, { roadmap, personalized: true, reply }, origin);
   }
 
   const decisionId = String(payload.decisionId || '').trim();
@@ -265,6 +342,7 @@ async function handleTreeGraphAction(env, sessionEmail, action, payload, origin)
       decisionId,
       optionId,
       careerName,
+      school: schoolForCacheKey({ quiz: null, dossier }),
     });
     const subtree = await callGeminiJson(env, {
       prompt: splitPrompt,
@@ -277,9 +355,18 @@ async function handleTreeGraphAction(env, sessionEmail, action, payload, origin)
       deadlineAt: Date.now() + 50000,
     });
     if (!subtree || typeof subtree !== 'object') {
+      await refundRateLimit(env, `roadmap-split:${sessionEmail}`);
       return authJsonResponse(502, { error: 'Could not generate the new branch. Try again.' }, origin);
     }
     roadmap = mergeTreeSplit(currentRoadmap, decisionId, optionId, subtree);
+    // §3A.1: mergeTreeSplit marks the option chosen and returns a truthy tree
+    // even when every generated node is filtered/capped away. Persisting that
+    // marks the decision permanently chosen toward an empty branch, so refund
+    // and fail rather than return a false "you're now on the X path" success.
+    if ((roadmap.nodes || []).length === (currentRoadmap.nodes || []).length) {
+      await refundRateLimit(env, `roadmap-split:${sessionEmail}`);
+      return authJsonResponse(502, { error: 'Could not generate the new branch. Try again.' }, origin);
+    }
   } else {
     roadmap = chooseTreePath(currentRoadmap, decisionId, optionId);
   }
@@ -478,6 +565,7 @@ async function handleGapChecklists(env, sessionEmail, payload, origin) {
     misses.push(g);
   }));
 
+  const cachedCount = Object.keys(checklists).length;
   if (misses.length) {
     try {
       const raw = await callGeminiJson(env, {
@@ -509,7 +597,15 @@ async function handleGapChecklists(env, sessionEmail, payload, origin) {
     }
   }
 
-  return authJsonResponse(200, { checklists }, origin);
+  // §3A.3: {} used to read the same whether nothing needed generating or the
+  // model produced nothing. `partial` tells them apart; and when generation was
+  // attempted but filled zero misses, refund the slot it spent for no result.
+  const filled = Object.keys(checklists).length - cachedCount;
+  const partial = misses.length > 0 && filled < misses.length;
+  if (misses.length > 0 && filled === 0) {
+    await refundRateLimit(env, `gapchk:${sessionEmail}`);
+  }
+  return authJsonResponse(200, { checklists, partial }, origin);
 }
 
 // Gap-checklist completion → objective vector. Absolute-value semantics on the
@@ -657,7 +753,13 @@ async function handleBranchBuild(env, sessionEmail, payload, origin) {
   const branchChain = branchChainFrom(roadmap.nodes, rootId);
 
   const gen = await callGeminiJson(env, {
-    prompt: buildBranchBuildPrompt({ dossier, currentRoadmap: roadmap, branchChain, careerName }),
+    prompt: buildBranchBuildPrompt({
+      dossier,
+      currentRoadmap: roadmap,
+      branchChain,
+      careerName,
+      school: schoolForCacheKey({ quiz: null, dossier }),
+    }),
     temperature: 0.55,
     maxTokens: 2600,
     jsonMode: true,
@@ -669,6 +771,7 @@ async function handleBranchBuild(env, sessionEmail, payload, origin) {
 
   const updated = applyBranchBuild(roadmap, rootId, gen);
   if (updated === roadmap) {
+    await refundRateLimit(env, `roadmap-split:${sessionEmail}`);
     return authJsonResponse(502, { error: 'Could not personalize this branch. Try again.' }, origin);
   }
   await saveRoadmap(env, sessionEmail, updated);
@@ -701,7 +804,9 @@ async function handleStepElaborate(env, sessionEmail, payload, origin) {
   await checkRateLimit(env, `step-elab:${sessionEmail}`, { max: RATE_LIMIT_GAP_CHECKLIST_MAX });
   const dossier = await resolveDossier(env, sessionEmail, payload, null, 'Student', careerName);
 
-  const prompt = `You are this student's mentor. They're working toward ${careerName}${node ? ` and are on the waypoint "${String(node.title || '').slice(0, 100)}"` : ''}. One item on their plan says:
+  const prompt = `${buildSurfacePrompt('roadmap-advice', { school: schoolForCacheKey({ quiz: null, dossier }), dossier })}
+
+They're working toward ${careerName}${node ? ` and are on the waypoint "${String(node.title || '').slice(0, 100)}"` : ''}. One item on their plan says:
 
 <plan_item>
 ${itemText}
@@ -730,14 +835,138 @@ Plain text only. No markdown.`;
     label: 'step-elaborate',
     softFail: true,
     timeoutMs: 20000,
+    deadlineAt: Date.now() + 45000,
   });
-  if (!reply) return authJsonResponse(502, { error: 'Could not elaborate right now. Try again.' }, origin);
+  if (!reply) {
+    await refundRateLimit(env, `step-elab:${sessionEmail}`);
+    return authJsonResponse(502, { error: 'Could not elaborate right now. Try again.' }, origin);
+  }
 
   const clean = String(reply).trim().slice(0, 1400);
   if (cacheKey) {
     await env.COACH_KV.put(cacheKey, clean, { expirationTtl: STEP_ELAB_TTL_SEC }).catch(() => {});
   }
   return authJsonResponse(200, { reply: clean, cached: false }, origin);
+}
+
+// ---- S10: "Break this down" (micro-steps) --------------------------------
+// A student stuck on "Build a DCF model for a public company" does not need
+// advice about it — they need the first three things to actually do. This turns
+// one step into 2-4 sub-steps and writes them INTO the tree next to their
+// parent, so they check off like any other step and feed the same progress
+// vector. `step-elaborate` (above) answers a question about a step in prose;
+// this one changes the plan.
+//
+// Free, deliberately: §4 meters expensive execution tools, and this is a small
+// JSON call inside a surface the loop depends on. It is bounded by an IP-keyed
+// hourly rate limit instead of a FEATURE_LIMITS row — a plan-limits entry would
+// add a tenth parallel KV read to every `/auth/me` for a free account (see S8's
+// and S9's notes on `remainingForUser`) to police a call that costs a fraction
+// of a roadmap generation.
+const RATE_LIMIT_BREAKDOWN_MAX = 12;
+const MAX_MICRO_STEPS = 4;
+
+function buildBreakdownPrompt({ school, dossier, careerName, node, step }) {
+  return `${buildSurfacePrompt('roadmap-advice', { school, dossier: String(dossier || '').slice(0, 1200) })}
+
+They are working toward ${sanitizeUntrustedText(careerName, 80)} and are on the waypoint "${sanitizeUntrustedText(node?.title, 90)}".
+One step on it is too big to start, so break it into the first concrete moves.
+
+<step>
+${sanitizeUntrustedText(step?.text, 220)}
+</step>
+
+Rules:
+- 2 to ${MAX_MICRO_STEPS} sub-steps, in the order they should be done.
+- Each one is a single action they could sit down and finish, and NAMES its object:
+  a real tool, a real document, a specific person or role, a specific number.
+  Never "research X", never "get comfortable with Y".
+- Each under 120 characters. No numbering, no markdown, no trailing periods needed.
+- Together they must ADD UP to the step above and nothing more. Do not widen the scope.
+
+Return STRICT JSON only: {"substeps":["...","..."]}`;
+}
+
+async function handleStepBreakdown(env, sessionEmail, payload, origin) {
+  const nodeId = String(payload.nodeId || '').trim().slice(0, 48);
+  const stepId = String(payload.stepId || '').trim().slice(0, 48);
+  if (!nodeId || !stepId) return authJsonResponse(400, { error: 'Missing nodeId or stepId.' }, origin);
+
+  const roadmap = await loadRoadmap(env, sessionEmail);
+  // The tree is loaded by session email, so a step id from another account is
+  // simply absent — there is no cross-user id space to guard.
+  const node = (roadmap?.nodes || []).find((n) => n && n.id === nodeId);
+  const step = node ? (node.steps || []).find((s) => s && s.id === stepId) : null;
+  if (!step) return authJsonResponse(404, { error: 'That step is not on your roadmap.' }, origin);
+
+  // A waypoint holds at most MAX_STEPS_PER_NODE steps and normalizeSteps
+  // SILENTLY SLICES past it. Refusing here with honest copy is the difference
+  // between "we can't add more" and generated sub-steps vanishing on save.
+  const room = MAX_STEPS_PER_NODE - (node.steps || []).length;
+  if (room < 2) {
+    return authJsonResponse(200, {
+      ok: true,
+      added: 0,
+      reason: 'full',
+      error: 'This waypoint is already at its step limit. Check a few off first, or ask Marco to rewrite it.',
+    }, origin);
+  }
+
+  await checkRateLimit(env, `step-breakdown:${sessionEmail}`, { max: RATE_LIMIT_BREAKDOWN_MAX });
+
+  const careerName = roadmap?.targetCareerName || 'your target career';
+  const dossier = await resolveDossier(env, sessionEmail, payload, null, 'Student', careerName);
+  const gen = await callGeminiJson(env, {
+    prompt: buildBreakdownPrompt({
+      school: schoolForCacheKey({ quiz: null, dossier }),
+      dossier,
+      careerName,
+      node,
+      step,
+    }),
+    temperature: 0.4,
+    maxTokens: 600,
+    label: 'step-breakdown',
+    softFail: true,
+    timeoutMs: 18000,
+    deadlineAt: Date.now() + 40000,
+  });
+
+  const texts = (Array.isArray(gen?.substeps) ? gen.substeps : [])
+    .map((t) => sanitizeUntrustedText(t, 120))
+    .filter(Boolean)
+    .slice(0, Math.min(MAX_MICRO_STEPS, room));
+  if (texts.length < 2) {
+    await refundRateLimit(env, `step-breakdown:${sessionEmail}`);
+    return authJsonResponse(502, { error: 'Could not break that step down right now. Try again.' }, origin);
+  }
+
+  // Ids are derived from the parent step so provenance is readable in the doc
+  // itself, and the suffix keeps them unique against a second breakdown later.
+  const stamp = Date.now().toString(36).slice(-4);
+  const micro = texts.map((text, i) => ({
+    id: `${stepId}-ms${stamp}${i + 1}`.slice(0, 48),
+    text,
+    done: false,
+    aiBuilt: true,
+  }));
+
+  const at = node.steps.findIndex((s) => s && s.id === stepId);
+  const steps = node.steps.slice();
+  steps.splice(at + 1, 0, ...micro);
+  const nextNode = { ...node, steps };
+  const nextRoadmap = {
+    ...roadmap,
+    nodes: roadmap.nodes.map((n) => (n.id === nodeId ? nextNode : n)),
+    updatedAt: new Date().toISOString(),
+  };
+  await saveRoadmap(env, sessionEmail, nextRoadmap);
+
+  return authJsonResponse(200, {
+    ok: true,
+    added: micro.length,
+    roadmap: await loadRoadmap(env, sessionEmail),
+  }, origin);
 }
 
 // On-demand semester operating plan for ONE waypoint — phases/weeks, cadence,
@@ -778,7 +1007,7 @@ function sanitizePlanShape(plan, steps) {
 // semester plan) and may edit that node's own content; structure (parentId,
 // depth, pathRole, other nodes, decisions, activePath) is pinned server-side
 // regardless of what the model returns.
-function buildWaypointChatPrompt({ dossier, careerName, node, history, userMessage }) {
+function buildWaypointChatPrompt({ dossier, careerName, node, history, userMessage, school }) {
   const hist = (history || []).slice(-6)
     .map((m) => `${m.role}: ${String(m.content || '').slice(0, 400)}`)
     .join('\n');
@@ -791,11 +1020,9 @@ function buildWaypointChatPrompt({ dossier, careerName, node, history, userMessa
     steps: (node.steps || []).map((s) => ({ id: s.id, text: s.text, done: !!s.done })),
     semesterPlan: node.semesterPlan?.plan || null,
   });
-  return `You are Marco, the FlightWay career coach, chatting about ONE waypoint of a student's roadmap toward "${careerName}". Reply with STRICT JSON only.
+  return `${buildSurfacePrompt('roadmap-waypoint', { school, dossier: String(dossier || '').slice(0, 1400) })}
 
-<dossier>
-${String(dossier || '').slice(0, 1400)}
-</dossier>
+This conversation is about ONE waypoint of their roadmap toward "${careerName}". Reply with STRICT JSON only.
 
 Waypoint (JSON):
 ${nodeJson}
@@ -834,6 +1061,9 @@ async function handleWaypointChat(env, sessionEmail, payload, origin, waitUntil,
       node,
       history: chat.messages.slice(0, -1),
       userMessage,
+      // No quiz on this path — the dossier's own school line is the only
+      // source available without a read the waypoint chat cannot afford.
+      school: schoolForCacheKey({ quiz: null, dossier }),
     }),
     temperature: 0.5,
     maxTokens: 2600,
@@ -1037,11 +1267,13 @@ ${PLAIN_STYLE_RULES}`;
     deadlineAt: Date.now() + 50000,
   });
   if (!plan || typeof plan !== 'object' || !Array.isArray(plan.phases) || !plan.phases.length) {
+    await refundRateLimit(env, `waypoint-plan:${sessionEmail}`);
     return authJsonResponse(502, { error: 'Could not build the waypoint plan. Try again.' }, origin);
   }
 
   const clean = sanitizePlanShape(plan, steps);
   if (!clean) {
+    await refundRateLimit(env, `waypoint-plan:${sessionEmail}`);
     return authJsonResponse(502, { error: 'Could not build the waypoint plan. Try again.' }, origin);
   }
 
@@ -1117,13 +1349,18 @@ export async function onRequest(context) {
   const action = String(payload.action || 'generate').toLowerCase();
 
   let sessionEmail;
+  // Set once the generate flow has spent the lifetime allowance + rate slot,
+  // so a server-side failure after the spend can hand both back. A free
+  // plan's roadmap-generate cap is 1 for life — without the refund, one bad
+  // Gemini day permanently consumes a user's only AI roadmap.
+  let genSpent = false;
   try {
     ({ email: sessionEmail } = await requireSession(request, env));
   } catch (err) {
     return authErrorResponse(err, origin);
   }
 
-  if (action === 'follow' || action === 'choose' || action === 'split' || action === 'extend') {
+  if (action === 'follow' || action === 'choose' || action === 'split' || action === 'extend' || action === 'uncommit') {
     try {
       return await handleTreeGraphAction(env, sessionEmail, action, payload, origin);
     } catch (err) {
@@ -1179,6 +1416,18 @@ export async function onRequest(context) {
       const status = err.status === 429 ? 429 : (err.status || 500);
       return authJsonResponse(status, {
         error: err._userFacing ? err.message : 'Could not elaborate on that step.',
+      }, origin);
+    }
+  }
+
+  if (action === 'step-breakdown') {
+    try {
+      return await handleStepBreakdown(env, sessionEmail, payload, origin);
+    } catch (err) {
+      console.error('career-roadmap step-breakdown failed', err);
+      const status = err.status === 429 ? 429 : (err.status || 500);
+      return authJsonResponse(status, {
+        error: err._userFacing ? err.message : 'Could not break that step down.',
       }, origin);
     }
   }
@@ -1342,8 +1591,46 @@ export async function onRequest(context) {
           }
         }
 
+        // A pivot rebuilds the roadmap for real, so it goes through the same
+        // cap table generate does. Today that cap cannot bite here: this whole
+        // chat action is premium-gated above, and roadmap-generate is
+        // unlimited on premium — so the branch below is defense in depth, not
+        // a live wall. It exists because the cap table is the authority: give
+        // premium a regeneration cap tomorrow and the pivot would otherwise
+        // become a silent bypass of it.
+        //
+        // If it ever does bite, a cap mid-conversation is not an error (WS-G):
+        // no 402, no red panel. Marco says it in his own reply, the turn is
+        // recorded like any other, and the client renders the upgrade card
+        // beneath it.
+        let pivotSpent = false;
         try {
           await checkRateLimit(env, `roadmap-gen:${sessionEmail}`);
+        } catch (rateErr) {
+          return authErrorResponse(rateErr, origin);
+        }
+        const pivotCap = await checkFeatureLimit(env, sessionEmail, 'roadmap-generate');
+        if (!pivotCap.ok) {
+          await refundRateLimit(env, `roadmap-gen:${sessionEmail}`);
+          const capReply = "I can't rebuild your plan from scratch again — the free AI build is a one-time thing. What I can still do is work with the plan you have: tell me which part is wrong and I'll rewrite those steps directly.";
+          const capped = await finishRoadmapChat(env, sessionEmail, chat, capReply);
+          return authJsonResponse(200, {
+            intent: 'capped',
+            reply: capReply,
+            roadmap: null,
+            exchangeCount: capped.exchangeCount,
+            reset: capped.reset,
+            personalized: true,
+            cap: {
+              feature: 'roadmap-generate',
+              message: pivotCap.message,
+              upgrade: !!pivotCap.upgrade,
+            },
+          }, origin);
+        }
+        pivotSpent = true;
+
+        try {
           const inputsHash = computeRoadmapInputsHash(serverQuiz || {}, dossier);
           const vectorMeta = serverQuiz ? {
             vectorInputsHash: vectorInputsFingerprint(serverQuiz),
@@ -1394,6 +1681,12 @@ export async function onRequest(context) {
           }, origin);
         } catch (regenErr) {
           console.error('career-roadmap regenerate via chat failed', regenErr && regenErr.stack ? regenErr.stack : regenErr);
+          // Every user-caused rejection above happens before pivotSpent flips,
+          // so anything landing here is ours — hand the allowance back.
+          if (pivotSpent) {
+            await refundFeatureUse(env, sessionEmail, 'roadmap-generate');
+            await refundRateLimit(env, `roadmap-gen:${sessionEmail}`);
+          }
           const msg = regenErr && regenErr._userFacing
             ? regenErr.message
             : 'The roadmap assistant is busy right now. Please try again in a moment.';
@@ -1484,8 +1777,13 @@ export async function onRequest(context) {
     // funnel's payoff — and every regeneration after it is Flight Plan. The
     // cached branch above returns before this, so simply re-opening the roadmap
     // never spends the allowance; only real generation does.
+    // Rate wall FIRST: checkFeatureLimit spends as it checks, and a 429 is
+    // user-caused — it happens outside the try/catch that refunds, so a spend
+    // before it would eat a free user's only AI roadmap and hand back a 429.
+    await checkRateLimit(env, `roadmap-gen:${sessionEmail}`);
     const genCap = await checkFeatureLimit(env, sessionEmail, 'roadmap-generate');
     if (!genCap.ok) {
+      await refundRateLimit(env, `roadmap-gen:${sessionEmail}`);
       return authJsonResponse(402, {
         error: genCap.message,
         upgrade: !!genCap.upgrade,
@@ -1493,8 +1791,7 @@ export async function onRequest(context) {
         feature: 'roadmap-generate',
       }, origin);
     }
-
-    await checkRateLimit(env, `roadmap-gen:${sessionEmail}`);
+    genSpent = true;
 
     const preserveFrom = await loadRoadmap(env, sessionEmail);
     const roadmap = await executeGenerateRoadmap(env, sessionEmail, {
@@ -1518,10 +1815,20 @@ export async function onRequest(context) {
 
     return authJsonResponse(200, { roadmap, personalized: true, remaining: genCap.remaining }, origin);
   } catch (err) {
+    await logServerError(env, 'career-roadmap', err);
     console.error('career-roadmap failed', err && err.stack ? err.stack : err);
+    const status = err.status || 500;
+    // Everything user-caused (bad slug, no session, rate/cap walls) is
+    // rejected BEFORE the spend, so any failure after it is ours — including
+    // an upstream 4xx from a retired model. Both refunds are best-effort and
+    // never throw.
+    if (genSpent) {
+      await refundFeatureUse(env, sessionEmail, 'roadmap-generate');
+      await refundRateLimit(env, `roadmap-gen:${sessionEmail}`);
+    }
     const msg = err && err._userFacing
       ? err.message
       : 'Could not generate roadmap. Please try again.';
-    return authJsonResponse(err.status || 500, { error: msg }, origin);
+    return authJsonResponse(status, { error: msg }, origin);
   }
 }

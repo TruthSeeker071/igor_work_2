@@ -14,6 +14,7 @@ import {
   attachRoadmapMeta,
 } from './roadmap.js';
 import { executeGenerateRoadmap } from './roadmap-generate.js';
+import { checkFeatureLimit, refundFeatureUse } from './plan-limits.js';
 import { runAlignmentCheck } from './profile-alignment.js';
 import { validateOnetCareer, searchOnetCareersByTitle } from './onet/career-lookup.js';
 import { computePivotAnalysis, pivotSummaryLine } from './onet/pivot-analysis.js';
@@ -290,22 +291,14 @@ export async function recordCareerFocus(env, email, { slug, name, source, soc })
 
 function roadmapIsFresh(roadmap, focus, inputsHash) {
   if (!roadmap || !isValidRoadmap(roadmap)) return false;
-  const meta = roadmap.roadmapMeta;
   const slugMatch = roadmap.targetCareerSlug === focus.slug;
   if (!slugMatch) return false;
 
-  if (meta?.inputsHash === inputsHash && meta?.focusSlug === focus.slug) {
-    return true;
-  }
-
-  if (!meta?.inputsHash && roadmap.updatedAt) {
-    const t = Date.parse(roadmap.updatedAt);
-    if (!Number.isNaN(t) && (Date.now() - t) < ROADMAP_FRESH_MS) {
-      return true;
-    }
-  }
-
-  return false;
+  // Same career + valid roadmap = fresh. Input drift (vector moves from
+  // gap-progress, dossier growth from chats) must never trigger a silent
+  // rebuild — that was wiping user roadmaps as a side effect of normal use.
+  // Explicit force/refresh and career changes are the only rebuild paths.
+  return true;
 }
 
 export async function maybeSyncRoadmap(env, email, opts = {}) {
@@ -361,21 +354,60 @@ export async function maybeSyncRoadmap(env, email, opts = {}) {
     }
     : null;
 
-  const generated = await executeGenerateRoadmap(env, email, {
-    careerSlug: focus.slug,
-    careerName: focus.name,
-    dossier,
-    quizScores: quiz?.scores || null,
-    userName: quiz?.name || 'Student',
-    quizFitBreakdown,
-    resumeSummary: quiz?.resumeSummary || '',
-    characterSummary: quiz?.characterSummary || '',
-    customAnswers: Array.isArray(quiz?.customAnswers) ? quiz.customAnswers : [],
-    profileBuildingAnswers: profileBuildingAnswers.length ? profileBuildingAnswers : undefined,
-    userPivotNote: opts.userPivotNote || undefined,
-    preserveFrom: !retargeted && roadmap ? roadmap : null,
-    roadmapMeta: { inputsHash, focusSlug: focus.slug },
-  });
+  // Free/paid merge §2: the metered "AI roadmap generations" allowance is spent
+  // HERE for user-initiated builds, because the primary build flow generates
+  // through this sync path (career-focus → maybeSyncRoadmap), NOT the
+  // interactive action:'generate' path where checkFeatureLimit also lives — so
+  // that path's spend was dead for the flow that actually creates a roadmap.
+  // Opt-in via opts.meter so background syncs (chat, profile-building,
+  // resume-parse, alignment) never cost a user their one free roadmap when a
+  // profile edit merely drifts their inputs. Spent right before generation, so
+  // the cached/fresh short-circuits above never touch the allowance; refunded
+  // below if the generation we caused then fails.
+  let genMetered = false;
+  if (opts.meter) {
+    const cap = await checkFeatureLimit(env, email, 'roadmap-generate');
+    if (!cap.ok) {
+      return {
+        roadmap: roadmap || null, // untouched — a capped build saves nothing
+        cached: true,
+        retargeted: false,
+        focus,
+        focusUpdated: false,
+        capped: true,
+        capMessage: cap.message || '',
+        capUpgrade: !!cap.upgrade,
+        reason: 'capped',
+      };
+    }
+    genMetered = true;
+  }
+
+  let generated;
+  try {
+    generated = await executeGenerateRoadmap(env, email, {
+      baseUrl: opts.baseUrl || undefined,
+      careerSlug: focus.slug,
+      careerName: focus.name,
+      dossier,
+      quizScores: quiz?.scores || null,
+      userName: quiz?.name || 'Student',
+      quizFitBreakdown,
+      resumeSummary: quiz?.resumeSummary || '',
+      characterSummary: quiz?.characterSummary || '',
+      customAnswers: Array.isArray(quiz?.customAnswers) ? quiz.customAnswers : [],
+      profileBuildingAnswers: profileBuildingAnswers.length ? profileBuildingAnswers : undefined,
+      userPivotNote: opts.userPivotNote || undefined,
+      preserveFrom: !retargeted && roadmap ? roadmap : null,
+      roadmapMeta: { inputsHash, focusSlug: focus.slug },
+    });
+  } catch (genErr) {
+    // A generation the user did not cause to fail must cost nothing — mirrors
+    // the interactive path's refund. Best-effort (refundFeatureUse never
+    // throws) and rethrow, so callers still log and degrade exactly as before.
+    if (genMetered) await refundFeatureUse(env, email, 'roadmap-generate');
+    throw genErr;
+  }
 
   return {
     roadmap: generated,

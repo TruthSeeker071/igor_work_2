@@ -10,6 +10,73 @@ const titleCaseSkill = hubCanvas.titleCaseSkill || function (skill) {
   return String(skill || '').replace(/\b\w/g, function (c) { return c.toUpperCase(); });
 };
 
+// ── BOOT PERF ──
+// One permanent [fw-perf] line per hub boot, emitted when the loading veil
+// lifts. Stages are plain `performance.mark`s so any hub module can set one
+// without a shared object (hub-onet-map marks catalog + indexes); every value
+// is milliseconds since navigation start. Declared with function/var only —
+// this block is reachable from top-level boot (hub TDZ trap).
+function hubPerfMark(stage) {
+  try { performance.mark('fw-hub:' + stage); } catch (_) { /* no perf API */ }
+}
+
+function hubPerfAt(stage) {
+  try {
+    var entries = performance.getEntriesByName('fw-hub:' + stage);
+    return entries.length ? Math.round(entries[entries.length - 1].startTime) : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+var hubPerfReported = false;
+var hubFirstPaintMarked = false;
+function hubPerfReport() {
+  if (hubPerfReported) return;
+  hubPerfReported = true;
+  var parts = ['script-eval', 'catalog', 'indexes', 'first-paint', 'veil'].map(function (stage) {
+    var t = hubPerfAt(stage);
+    return stage + '=' + (t == null ? '-' : t + 'ms');
+  });
+  console.info('[fw-perf] hub boot ' + parts.join(' '));
+}
+
+// Run after first paint: idle if the browser offers it, else a short timer.
+function hubAfterPaint(fn, delayMs) {
+  if (typeof window.requestIdleCallback === 'function') {
+    window.requestIdleCallback(fn, { timeout: delayMs || 1500 });
+    return;
+  }
+  setTimeout(fn, delayMs || 1500);
+}
+
+// Panel-only modules, kept off the boot parse budget and injected on first use
+// or on idle — whichever comes first. Idempotent by the promise cache; the
+// buster must match the one this page would have shipped in its script tag.
+var HUB_LAZY_MODULES = {
+  'career-compare': '/assets/js/hub/career-compare.js?v=20260721q',
+  'career-deep-dives': '/assets/js/hub/career-deep-dives.js?v=20260703p',
+};
+var hubLazyLoads = {};
+function ensureHubModule(name) {
+  if (hubLazyLoads[name]) return hubLazyLoads[name];
+  var src = HUB_LAZY_MODULES[name];
+  if (!src) return Promise.resolve(false);
+  hubLazyLoads[name] = new Promise(function (resolve) {
+    var el = document.createElement('script');
+    el.src = src;
+    el.async = true;
+    el.onload = function () { resolve(true); };
+    el.onerror = function () { resolve(false); };
+    (document.head || document.documentElement).appendChild(el);
+  });
+  return hubLazyLoads[name];
+}
+
+function warmHubLazyModules() {
+  Object.keys(HUB_LAZY_MODULES).forEach(function (name) { ensureHubModule(name); });
+}
+
 // ── STATE ──
 const state = {
   zoom: 1, panX: 0, panY: 0,
@@ -109,6 +176,8 @@ function hideHubLoading() {
   el.classList.add('is-hidden');
   el.setAttribute('aria-busy', 'false');
   hubMapReady = true;
+  hubPerfMark('veil');
+  hubPerfReport();
 }
 
 function isHubLoadingVisible() {
@@ -296,6 +365,23 @@ if (!canvas || !ctx) {
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', onHubVisualViewportResize);
   }
+  watchDevicePixelRatio(resize);
+}
+
+// A pure DPR change — OS display scaling, or dragging the window to a monitor
+// with a different scale factor — leaves the layout viewport the same size, so
+// no resize event fires and the backing store keeps its old resolution: the
+// map is then upscaled blurry with no way to notice. The query pins one exact
+// ratio, so it has to re-arm itself after every change.
+function watchDevicePixelRatio(onChange) {
+  if (!window.matchMedia) return;
+  const mq = window.matchMedia('(resolution: ' + (window.devicePixelRatio || 1) + 'dppx)');
+  const once = function () {
+    mq.removeEventListener('change', once);
+    onChange();
+    watchDevicePixelRatio(onChange);
+  };
+  mq.addEventListener('change', once);
 }
 
 function pointerOnCanvas(e) {
@@ -951,6 +1037,10 @@ function loop() {
       if (sectorAnimating || isGoldShimmerActive()) needsRedraw = true;
     }
     render();
+    if (!hubFirstPaintMarked) {
+      hubFirstPaintMarked = true;
+      hubPerfMark('first-paint');
+    }
   } catch (err) {
     console.error('[Career Hub] frame failed', err);
     window.__hubLastRenderError = err;
@@ -962,11 +1052,11 @@ function loop() {
     // F2: sector mode used to keep the loop alive unconditionally (bare
     // inSector), burning a full 60fps repaint while idle. Park it unless
     // something is actually animating: hover-radius springs, gold-orb shimmer,
-    // a satellite bloom mid-spring, or the pointer over the canvas (proximity
-    // glow + blooms are cursor-coupled). Every discrete change re-arms via
-    // requestHubRedraw, and pointerleave fires one so re-entry re-arms.
-    const sectorLive = inSector && (sectorAnimating || isGoldShimmerActive()
-      || (window.FWHubCanvasRender && FWHubCanvasRender.satBloomActive) || state.mouseOn);
+    // or the pointer over the canvas (the proximity glow is cursor-coupled).
+    // Every discrete change re-arms via requestHubRedraw, and pointerleave
+    // fires one so re-entry re-arms. The satellite-bloom spring used to be a
+    // fourth reason to stay awake; with satellites gone the loop parks sooner.
+    const sectorLive = inSector && (sectorAnimating || isGoldShimmerActive() || state.mouseOn);
     rafId = (needsRedraw || sectorLive || overviewAnimating || overviewIdle || camAnim || pendingZoomLog || matchHalo)
       ? requestAnimationFrame(loop) : null;
   } else {
@@ -1105,7 +1195,7 @@ function openPanel(career) {
     if (pBar) {
       pBar.style.width = (career.personalityFit || 0) + '%';
       pBar.style.background = zoneHex || rar.base;
-      const highFit = career.fitScore != null && career.fitScore >= 56;
+      const highFit = career.fitScore != null && career.fitScore >= FWOnetMath.FIT_TIERS.legendary;
       pBar.classList.toggle('panel-fit-bar-fill--glow', highFit);
       if (highFit) {
         pBar.style.boxShadow = '0 0 14px rgba(' + (rar.glow || '255,205,70') + ',0.55)';
@@ -1156,7 +1246,16 @@ function openPanel(career) {
   } else {
     skillsWrap.innerHTML = '<span class="panel-skills-empty">Skills data loading…</span>';
   }
-  document.getElementById('panel-description').textContent = career.description;
+  const descEl = document.getElementById('panel-description');
+  descEl.textContent = career.description;
+  // Descriptions load off the boot path now (onet-catalog defers them to idle),
+  // so a panel opened in the first moments can beat them. Pull them on demand
+  // and fill this line when they land, if this career is still selected.
+  if (!career.description && window.FWOnetCatalog && typeof FWOnetCatalog.loadDescriptions === 'function') {
+    FWOnetCatalog.loadDescriptions().then(function () {
+      if (state.selectedId === career.id) descEl.textContent = career.description || '';
+    }).catch(function () { /* description stays empty */ });
+  }
   renderPanelRelatedCareers(career);
   renderPanelFragments(career);
   // Career Tester — live in both hub modes; slug via the panel resolver
@@ -1174,10 +1273,18 @@ function openPanel(career) {
   }
   const compareBtn = document.getElementById('panel-compare');
   if (compareBtn) {
-    const canCompare = !!(career.soc && window.FWCareerCompare);
+    // career-compare.js is injected on demand (see HUB_LAZY_MODULES), so the
+    // button's availability keys off the career, not off the module being
+    // parsed yet; the click awaits the load.
+    const canCompare = !!career.soc;
     compareBtn.hidden = !canCompare;
     compareBtn.onclick = canCompare
-      ? function () { FWCareerCompare.open({ soc: career.soc, name: career.name || career.title || '' }); }
+      ? function () {
+          ensureHubModule('career-compare').then(function () {
+            if (!window.FWCareerCompare) return;
+            FWCareerCompare.open({ soc: career.soc, name: career.name || career.title || '' });
+          });
+        }
       : null;
   }
   const deepBtn = document.getElementById('panel-deep-dive');
@@ -1613,7 +1720,9 @@ function renderSuggest(query) {
   const items = suggestionItems(query);
   const q = (query || '').trim();
   if (!items.length && q) {
-    suggestEl.innerHTML = '<div class="ss-empty" role="status">No careers found for “' + q.replace(/</g, '&lt;') + '”</div>';
+    suggestEl.innerHTML = '<div class="ss-empty" role="status">No careers found for “' + q.replace(/</g, '&lt;') + '”'
+      + '<span class="ss-empty-hint">The map is built from real occupation titles, not job-ad wording. '
+      + 'Try the field instead — “data”, “health”, “law”.</span></div>';
     suggestEl.hidden = false;
     searchInput.setAttribute('aria-expanded', 'true');
     return;
@@ -1788,7 +1897,15 @@ function finishHubBootFromInit(ok) {
       startMatchHalo(bootCareer);
     }
   }
-  warmHubFragments();
+  // Fragment warming is a D1 scan plus (signed-in) a synchronous Gemini
+  // generation with a 60s budget — both were contending with the boot-critical
+  // catalog/artifact fetches. Nothing on screen waits for them (syncDerivedRows
+  // folds rows in whenever they land), so they run once the map is up. Panel-only
+  // modules warm on the same idle beat.
+  hubAfterPaint(function () {
+    warmHubFragments();
+    warmHubLazyModules();
+  });
 }
 
 // Merge freshly-fetched derived rows into the live catalog and request a
@@ -1840,6 +1957,7 @@ function warmHubFragments() {
   } catch (_) { /* best-effort */ }
 }
 
+hubPerfMark('script-eval');
 startHubBootWatchdog();
 
 if (window.FWOnetHub) {

@@ -163,7 +163,11 @@ export async function onRequest(context) {
     // Serve from cache first; only ask Gemini for the misses.
     const explanations = {};
     const misses = [];
-    const cacheKeyFor = (it) => `stretch:${email}:${it.slug}:${hashKey(it.drivers.join('|') + '|' + it.soc)}`;
+    // v2 = distinctive fit (FIT_MATH_VERSION 2). The cached prose is written
+    // about drivers and candidates that fit chose, so a scoring change has to
+    // retire it; nothing else in the key can see the formula move. 7-day TTL
+    // reaps the v1 entries.
+    const cacheKeyFor = (it) => `stretch:v4:${email}:${it.slug}:${hashKey(it.drivers.join('|') + '|' + it.soc)}`;
 
     if (kv) {
       await Promise.all(items.map(async (it) => {

@@ -313,19 +313,20 @@ export function createWaypointStepPatch({ gapLabel, dimIndex, boost = 6, current
 
 /**
  * Create a revert patch for undoing a waypoint step completion.
- * Reduces the relevant dimension by the same boost amount (4-8%).
+ * The complete patch stores the absolute value base+boost; the client passes
+ * the stable pre-boost base as currentValue, so the exact inverse is to restore
+ * that base (matching the resume bleedBase restore pattern), NOT to subtract the
+ * boost again (which would leave the dimension at base-boost, below its origin).
  */
-export function createWaypointStepRevertPatch({ gapLabel, dimIndex, boost = 6, currentValue = 0 }) {
+export function createWaypointStepRevertPatch({ gapLabel, dimIndex, currentValue = 0 }) {
   if (dimIndex == null || !Number.isInteger(dimIndex) || dimIndex < 0 || dimIndex >= DIM_COUNT) {
     return null;
   }
-  const clampedBoost = Math.max(4, Math.min(8, Math.round(boost)));
-  const nextValue = clamp100(currentValue - clampedBoost);
-  if (nextValue === currentValue) return null;
+  const baseValue = clamp100(currentValue);
   return {
     dimensions: [{
       index: dimIndex,
-      value: nextValue,
+      value: baseValue,
       reason: `Undid step for: ${gapLabel}`,
       source: 'waypoint-step-revert',
     }],

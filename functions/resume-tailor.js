@@ -14,8 +14,8 @@
 
 import { originFromEnv, jsonResponse, preflightResponse } from './_lib.js';
 import { callGeminiJson } from './_lib/gemini-json.js';
-import { getSessionEmail, checkRateLimit, clientIp } from './_lib/auth.js';
-import { requirePlan } from './_lib/entitlements.js';
+import { getSessionEmail, checkRateLimit, hashedIpKey } from './_lib/auth.js';
+import { checkFeatureLimit, refundFeatureUse } from './_lib/plan-limits.js';
 import { validateResume } from './_lib/resume-schema.js';
 
 const CACHE_TTL = 60 * 60 * 24 * 7; // 7d
@@ -148,9 +148,9 @@ export async function onRequestGet(context) {
   const email = await getSessionEmail(request, env);
   if (!email) return jsonResponse(401, { error: 'Not signed in.' }, origin);
 
-  const ent = await requirePlan(env, email, 'premium');
-  if (!ent.ok) return jsonResponse(402, { error: 'The resume builder is a Flight Plan feature.', upgrade: true }, origin);
-
+  // V2 §4: READING your saved tailored versions is free — the meter is on
+  // creating one, below. Locking the list would hide work a free user already
+  // spent their one taste on.
   const resumeId = clampStr(new URL(request.url).searchParams.get('resumeId'), 64);
   if (!resumeId) return jsonResponse(400, { error: 'Missing resumeId.' }, origin);
 
@@ -178,9 +178,6 @@ export async function onRequestPost(context) {
   const email = await getSessionEmail(request, env);
   if (!email) return jsonResponse(401, { error: 'Not signed in.' }, origin);
 
-  const ent = await requirePlan(env, email, 'premium');
-  if (!ent.ok) return jsonResponse(402, { error: 'The resume builder is a Flight Plan feature.', upgrade: true }, origin);
-
   let body;
   try { body = await request.json(); } catch { return jsonResponse(400, { error: 'Invalid JSON body.' }, origin); }
   const resumeId = clampStr(body?.resumeId, 64);
@@ -190,7 +187,7 @@ export async function onRequestPost(context) {
   if (jobText.length < 40) return jsonResponse(400, { error: 'Paste the full job posting (at least a few lines).' }, origin);
 
   try {
-    await checkRateLimit(env, `rtailor:${clientIp(request)}`, { max: 20 });
+    await checkRateLimit(env, `rtailor:${await hashedIpKey(env, request)}`, { max: 20 });
   } catch (err) {
     return jsonResponse(err.status || 429, { error: err.message || 'Too many attempts.' }, origin);
   }
@@ -223,8 +220,18 @@ export async function onRequestPost(context) {
   const map = indexBullets(base);
   if (!map.size) return jsonResponse(400, { error: 'Add some experience bullets to this resume before tailoring.' }, origin);
 
+  let planSpent = false;
   try {
+    // Abuse wall first, then the §4 lifetime taste — a throttled caller must
+    // never burn the one tailoring a free account ever gets.
     await dailyLimit(env, email);
+    const tailorCap = await checkFeatureLimit(env, email, 'resume-tailor');
+    if (!tailorCap.ok) {
+      return jsonResponse(429, {
+        error: tailorCap.message, upgrade: !!tailorCap.upgrade, feature: 'resume-tailor', remaining: 0,
+      }, origin);
+    }
+    planSpent = true;
 
     const prompt = [
       'You tailor an existing resume to a specific job posting. You may ONLY select and reword the',
@@ -302,6 +309,7 @@ export async function onRequestPost(context) {
     if (env.COACH_KV) await env.COACH_KV.put(cacheKey, JSON.stringify(payload), { expirationTtl: CACHE_TTL });
     return jsonResponse(200, payload, origin);
   } catch (err) {
+    if (planSpent) await refundFeatureUse(env, email, 'resume-tailor');
     const status = err.status || 500;
     return jsonResponse(status, { error: err._userFacing ? err.message : 'Tailoring is unavailable right now.' }, origin);
   }

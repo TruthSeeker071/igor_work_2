@@ -12,10 +12,44 @@
   var RANK = { free: 0, premium: 1, lifetime: 2 };
   // remaining: per-feature allowance left today. null = unlimited on this plan,
   // undefined (absent key) = not known yet. Free/paid merge §2.
-  var state = { plan: 'free', paywall: false, loaded: false, dev: false, remaining: {} };
+  // limits: the enforced cap table, served whole by /config (WS-G). Read it —
+  // never hand-write a cap in UI copy, or it drifts the first time one is retuned.
+  var state = { plan: 'free', paywall: false, loaded: false, dev: false, remaining: {}, limits: {} };
   var bootPromise = null;
+  // Features whose paywall_view we've already logged this page load. A data-*
+  // flag on the gated element cannot do this job: opportunity-finder's
+  // renderGate() and portal-flightplan both build a FRESH node every rerender,
+  // so the flag is never there to see and the funnel would count renders, not
+  // views. Null-proto so a slug like 'constructor' can't read as already-seen.
+  var loggedGates = Object.create(null);
 
   function rank(p) { return RANK[String(p == null ? 'free' : p).toLowerCase()] || 0; }
+
+  /**
+   * Is this element actually on screen? getClientRects() is empty for anything
+   * display:none or under a `hidden` ancestor, and non-empty for position:fixed
+   * overlays (which is why offsetParent is the wrong test here).
+   */
+  function isRendered(el) {
+    try {
+      return !!(el && typeof el.getClientRects === 'function' && el.getClientRects().length);
+    } catch (_) { return true; } // can't tell → count it; under-counting is worse
+  }
+
+  /**
+   * Record that a paywall was SEEN, once per feature per page load. Exported
+   * because a surface can be gated long before it is revealed (the mock-interview
+   * overlay), and only that surface knows the moment it becomes visible.
+   */
+  function notePaywallView(featureKey) {
+    try {
+      var fk = featureKey || 'premium';
+      if (loggedGates[fk] || !global.FWEvents) return false;
+      loggedGates[fk] = 1;
+      FWEvents.log('paywall_view', { feature: fk });
+      return true;
+    } catch (_) { return false; }
+  }
 
   function afetch(url) {
     if (global.FWAuth && typeof FWAuth.authFetch === 'function') return FWAuth.authFetch(url, { method: 'GET' });
@@ -41,6 +75,9 @@
     if (bootPromise) return bootPromise;
     bootPromise = fetch('/config').then(function (r) { return r.json(); }).then(function (cfg) {
       state.paywall = !!(cfg && cfg.paywallEnabled);
+      // Before the dark-paywall early return: pricing.html quotes free-plan caps
+      // whether or not the paywall is live, so the table must always land.
+      if (cfg && cfg.featureLimits && typeof cfg.featureLimits === 'object') state.limits = cfg.featureLimits;
       if (!state.paywall) { state.plan = 'premium'; state.loaded = true; return state; }
       return pullMe().then(function () { return state; });
     }).catch(function () {
@@ -64,9 +101,16 @@
   function lock(el, featureKey) {
     if (!el) return false;
     el.setAttribute('data-fw-gated', featureKey || 'premium');
+    // Instrument here, not in gate(): gate() is just lock() behind has(), so
+    // one emit covers both entry points — but ONLY if the student can see it.
+    // interview-mode.js pre-gates the body of a hidden overlay on every
+    // coach.html load, which would make the denominator "free page loads"
+    // rather than "paywalls seen", and would then suppress the real view when
+    // the panel finally opens. A surface nobody saw is not a paywall view.
+    if (isRendered(el)) notePaywallView(featureKey || 'premium');
     el.innerHTML = '<div class="fw-ent-gate">'
       + '<p class="fw-ent-gate-title">A Flight Plan feature</p>'
-      + '<p class="fw-ent-gate-sub">Unlock interview prep, the resume builder, unlimited sims, weekly plans and receipts.</p>'
+      + '<p class="fw-ent-gate-sub">Unlock interview prep, the resume builder, unlimited sims and weekly plans.</p>'
       + '<a class="fw-ent-gate-cta" href="pricing.html">See Flight Plan &rarr;</a>'
       + '</div>';
     return true;
@@ -94,6 +138,44 @@
     state.remaining[featureKey] = (n === null || typeof n === 'number') ? n : undefined;
   }
 
+  /**
+   * The enforced cap for a feature on a plan: a number, null for unlimited, or
+   * undefined when /config hasn't answered yet (or names no such feature).
+   * Defaults to the CURRENT plan, so a caller that wants the free-tier number
+   * for marketing copy must pass 'free' explicitly.
+   */
+  function limitFor(featureKey, plan) {
+    var f = state.limits[featureKey];
+    if (!f || !f.limits) return undefined;
+    var v = f.limits[String(plan == null ? state.plan : plan).toLowerCase()];
+    return v === undefined ? undefined : v;
+  }
+
+  /**
+   * The cap table's own label for a feature ("Marco messages"), or ''. Pass a
+   * count to get the singular where the table declares one — every V2 §4 taste
+   * is a 1, and "1 free career simulations" reads like a bug.
+   */
+  function featureLabel(featureKey, count) {
+    var f = state.limits[featureKey];
+    if (!f) return '';
+    if (count === 1 && f.one) return f.one;
+    return f.label || '';
+  }
+
+  /**
+   * 'day' | 'week' | 'month' | 'lifetime' | undefined — when this cap reopens.
+   * The served value may be a per-PLAN map (§4's mock interview: a lifetime
+   * taste on free, 3/day on premium), so resolve it against a plan; defaults to
+   * the current one.
+   */
+  function resetPeriod(featureKey, plan) {
+    var f = state.limits[featureKey];
+    var rp = f && f.resetPeriod;
+    if (!rp || typeof rp === 'string') return rp;
+    return rp[String(plan == null ? state.plan : plan).toLowerCase()] || rp.free;
+  }
+
   /** Force a fresh /auth/me read (plan + counters). Resolves to the state object. */
   function refresh() {
     return boot().then(pullMe);
@@ -104,9 +186,13 @@
     has: has,
     gate: gate,
     lock: lock,
+    notePaywallView: notePaywallView,
     refresh: refresh,
     remaining: remaining,
     setRemaining: setRemaining,
+    limitFor: limitFor,
+    featureLabel: featureLabel,
+    resetPeriod: resetPeriod,
     isDev: function () { return !!state.dev; },
     plan: function () { return state.plan; },
     paywallEnabled: function () { return state.paywall; },

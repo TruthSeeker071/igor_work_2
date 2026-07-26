@@ -8,8 +8,9 @@
 //   POST { tier: 'monthly'|'annual'|'lifetime'|'sprint' } → { url }
 
 import { originFromEnv, jsonResponse, preflightResponse } from '../_lib.js';
-import { getSessionEmail, checkRateLimit, clientIp } from '../_lib/auth.js';
+import { getSessionEmail, checkRateLimit, hashedIpKey } from '../_lib/auth.js';
 import { SKUS, stripeConfigured, priceIdFor, createCheckoutSession } from '../_lib/stripe.js';
+import { refereePromoFor } from '../_lib/referral.js';
 
 export async function onRequestOptions(context) {
   return preflightResponse(originFromEnv(context.env, context.request));
@@ -39,7 +40,7 @@ export async function onRequestPost(context) {
   if (!sku) return jsonResponse(400, { error: 'Unknown plan tier.' }, origin);
 
   try {
-    await checkRateLimit(env, `checkout:${clientIp(request)}`, { max: 20 });
+    await checkRateLimit(env, `checkout:${await hashedIpKey(env, request)}`, { max: 20 });
   } catch (err) {
     return jsonResponse(err.status || 429, { error: err.message || 'Too many attempts.' }, origin);
   }
@@ -77,6 +78,14 @@ export async function onRequestPost(context) {
     // than charging on click (§3/§9).
     form.subscription_data = { metadata };
     if (sku.trialDays) form.subscription_data.trial_period_days = sku.trialDays;
+
+    // S15 (D24), the referee half of "give a month, get a month". Subscriptions
+    // only: the coupon is one free MONTH, and applying it to a one-time Lifetime
+    // or Sprint purchase would discount something that has no month to give.
+    // `discounts` is mutually exclusive with `allow_promotion_codes`, which this
+    // endpoint deliberately never sets.
+    const promo = await refereePromoFor(env, email);
+    if (promo) form.discounts = [{ promotion_code: promo }];
   } else {
     // One-time SKUs: carry the tier onto the PaymentIntent so lifetime and
     // sprint stay distinguishable at webhook time without a price-ID lookup.

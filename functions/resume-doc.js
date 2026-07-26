@@ -1,15 +1,15 @@
-// FlightWay 2.0 — Resume Builder v2, Phase 2: base resume CRUD (premium, no AI).
+// FlightWay 2.0 — Resume Builder v2, Phase 2: base resume CRUD (free, no AI).
 //   GET    → list of the student's resumes + full latest doc.
 //   POST   { id?, title?, json } → validate against schema v1, upsert (cap 3/email).
 //   DELETE { id } → remove a resume + its tailored versions.
-// Session-gated + requirePlan('premium') + rate-limited, house pattern (mirrors
-// functions/artifacts.js response shape and functions/resume-builder.js requirePlan usage).
+// Session-gated + rate-limited, house pattern (mirrors
+// functions/artifacts.js response shape). V2 §4: resume build/edit is FREE —
+// the resume a student builds here is the switching cost, so the CRUD is not walled.
 // Every query parameterized and WHERE email = ? scoped — cross-user isolation is
 // an auth boundary, treat with care.
 
 import { originFromEnv, jsonResponse, preflightResponse } from './_lib.js';
-import { getSessionEmail, checkRateLimit, clientIp } from './_lib/auth.js';
-import { requirePlan } from './_lib/entitlements.js';
+import { getSessionEmail, checkRateLimit, hashedIpKey } from './_lib/auth.js';
 import { validateResume } from './_lib/resume-schema.js';
 
 const MAX_RESUMES = 3;
@@ -36,9 +36,6 @@ export async function onRequestGet(context) {
   const origin = originFromEnv(env, request);
   const email = await getSessionEmail(request, env);
   if (!email) return jsonResponse(401, { error: 'Not signed in.' }, origin);
-
-  const ent = await requirePlan(env, email, 'premium');
-  if (!ent.ok) return jsonResponse(402, { error: 'The resume builder is a Flight Plan feature.', upgrade: true }, origin);
 
   // ?id=… → one full document (email-scoped), so the client can switch between
   // saved resumes without the latest-only limitation.
@@ -79,11 +76,8 @@ export async function onRequestPost(context) {
   const email = await getSessionEmail(request, env);
   if (!email) return jsonResponse(401, { error: 'Not signed in.' }, origin);
 
-  const ent = await requirePlan(env, email, 'premium');
-  if (!ent.ok) return jsonResponse(402, { error: 'The resume builder is a Flight Plan feature.', upgrade: true }, origin);
-
   try {
-    await checkRateLimit(env, `rdoc:${clientIp(request)}`, { max: 30 });
+    await checkRateLimit(env, `rdoc:${await hashedIpKey(env, request)}`, { max: 30 });
   } catch (err) {
     return jsonResponse(err.status || 429, { error: err.message || 'Too many attempts.' }, origin);
   }
@@ -135,9 +129,6 @@ export async function onRequestDelete(context) {
   const origin = originFromEnv(env, request);
   const email = await getSessionEmail(request, env);
   if (!email) return jsonResponse(401, { error: 'Not signed in.' }, origin);
-
-  const ent = await requirePlan(env, email, 'premium');
-  if (!ent.ok) return jsonResponse(402, { error: 'The resume builder is a Flight Plan feature.', upgrade: true }, origin);
 
   let body;
   try { body = await request.json(); } catch { return jsonResponse(400, { error: 'Invalid JSON body.' }, origin); }

@@ -1,0 +1,190 @@
+/* ==========================================================================
+   Feature onboarding — interstitial + hint ribbon (assets/js/shared/feature-intro.js)
+   Own veil layer above the page, below nothing else: z-index sits over
+   FWConfirm (220) because the intro is only ever shown when no other modal is
+   open, and a page's own drawers must never paint through it.
+   ========================================================================== */
+
+.fw-intro-root {
+  position: fixed;
+  inset: 0;
+  z-index: 260;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(16px, 4vw, 48px);
+}
+
+.fw-intro-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(var(--bg) / 0.82);
+  backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.fw-intro-root.is-open .fw-intro-backdrop { opacity: 1; }
+
+.fw-intro-card {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  background: rgb(var(--panel));
+  border: 1px solid rgb(var(--border));
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  padding: clamp(22px, 3.2vw, 38px);
+  text-align: left;
+  opacity: 0;
+  transform: translateY(14px) scale(0.985);
+  transition: opacity 0.4s ease, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.fw-intro-root.is-open .fw-intro-card {
+  opacity: 1;
+  transform: none;
+}
+
+.fw-intro-visual {
+  display: block;
+  width: 100%;
+  margin-bottom: 16px;
+  color: rgb(var(--primary));
+}
+
+.fw-intro-scene {
+  display: block;
+  width: min(220px, 60%);
+  height: auto;
+  margin: 0 auto;
+}
+
+.fw-intro-scene-faint { opacity: 0.28; }
+.fw-intro-scene-hot { opacity: 0.9; }
+
+.fw-intro-eyebrow {
+  margin: 0 0 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(var(--text-muted));
+}
+
+.fw-intro-headline {
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 1.1rem + 1vw, 1.85rem);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  margin: 0 0 20px;
+  color: rgb(var(--text));
+  text-wrap: balance;
+}
+
+.fw-intro-benefits {
+  list-style: none;
+  margin: 0 0 26px;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.fw-intro-benefit {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 12px;
+  align-items: start;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: rgb(var(--text) / 0.82);
+}
+
+.fw-intro-benefit-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+  color: rgb(var(--primary));
+}
+
+.fw-intro-benefit-icon svg { width: 18px; height: 18px; }
+
+.fw-intro-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.fw-intro-skip {
+  background: none;
+  border: none;
+  padding: 6px 2px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  color: rgb(var(--text-muted));
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition, 0.18s);
+}
+
+.fw-intro-skip:hover { color: rgb(var(--text)); }
+
+.fw-intro-cta { margin-left: auto; }
+
+/* The page behind must not scroll while the intro owns the screen. */
+body.fw-intro-open { overflow: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fw-intro-backdrop,
+  .fw-intro-card {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── Hint ribbon ─────────────────────────────────────────────────────────── */
+
+.fw-hint-ribbon {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 9px 10px 9px 14px;
+  border: 1px solid rgb(var(--border));
+  border-radius: var(--radius-sm);
+  background: rgb(var(--primary) / 0.06);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: rgb(var(--text) / 0.78);
+}
+
+.fw-hint-ribbon-text { flex: 1 1 auto; }
+
+.fw-hint-ribbon-close {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: rgb(var(--text-muted));
+  cursor: pointer;
+  transition: color var(--transition, 0.18s), background var(--transition, 0.18s);
+}
+
+.fw-hint-ribbon-close:hover {
+  color: rgb(var(--text));
+  background: rgb(var(--text) / 0.07);
+}
+
+.fw-hint-ribbon-close svg { width: 14px; height: 14px; }

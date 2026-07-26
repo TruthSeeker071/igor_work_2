@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg?v=20260720f">
+  <link rel="icon" href="/favicon.ico?v=20260720a" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/icons/favicon-128.png?v=20260720a">
+  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-180.png?v=20260720a">
+  <title>FlightWay Commons — coming soon</title>
+  <meta name="description" content="FlightWay Commons will be a peer-advice community grouped by school and by career, moderated by default. It isn't built yet — join the list to hear when it opens.">
+  <!-- Absolute canonical: served by both Pages projects, same reasoning as pricing.html. -->
+  <link rel="canonical" href="https://flightway.ai/community">
+  <meta property="og:site_name" content="FlightWay">
+  <meta property="og:url" content="https://flightway.ai/community">
+  <meta property="og:title" content="FlightWay Commons — coming soon">
+  <meta property="og:description" content="A peer-advice community for students, grouped by school and by career. Not built yet, and there's no launch date — join the list.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://flightway.ai/assets/og/og-default.png?v=20260724a">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="FlightWay — career development for students">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="FlightWay Commons — coming soon">
+  <meta name="twitter:description" content="A peer-advice community for students, grouped by school and by career. Not built yet, and there's no launch date — join the list.">
+  <meta name="twitter:image" content="https://flightway.ai/assets/og/og-default.png?v=20260724a">
+  <link rel="preload" href="/assets/fonts/inter-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/space-grotesk-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260721p">
+  <link rel="stylesheet" href="assets/css/flightway-2.css?v=20260725g">
+  <!-- Same as pricing.html: this page doesn't load flightway-legal.css, and
+       theme.css leaves anchors inside .fw-footer-bar unstyled. -->
+  <style>
+    .fw-footer-bar a { color: inherit; text-decoration: none; }
+    .fw-footer-bar a:hover { color: rgb(var(--text)); text-decoration: underline; }
+
+    /* "What Commons won't be" — a single note card, same bordered-surface-on-
+       page-background pattern used everywhere else on this page. */
+    .fw-note-card {
+      max-width: 640px;
+      margin: 44px auto 0;
+      border: 1px solid rgb(var(--border));
+      border-radius: 16px;
+      background: rgb(var(--surface));
+      padding: 28px 30px;
+      text-align: center;
+    }
+    .fw-note-card p { color: rgb(var(--text-muted)); line-height: 1.65; }
+
+    /* Waitlist form: deliberately NOT .fw-intent-form — that component is a
+       hardcoded-dark plate regardless of theme (see contrast:check's own
+       description), which would fail this page in light mode. Built from the
+       allowed colour tokens instead. */
+    .fw-waitlist-wrap { max-width: 480px; margin: 40px auto 0; text-align: center; }
+    .fw-waitlist-form { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    .fw-waitlist-form input {
+      flex: 1 1 220px;
+      box-sizing: border-box;
+      padding: 11px 13px;
+      border: 1px solid rgb(var(--border));
+      border-radius: 10px;
+      background: rgb(var(--surface));
+      color: rgb(var(--text));
+      font-family: var(--font-body);
+      font-size: 0.9375rem;
+      line-height: 1.5;
+    }
+    .fw-waitlist-form input:focus-visible {
+      outline: 2px solid rgb(var(--primary));
+      outline-offset: 1px;
+      border-color: rgb(var(--primary));
+    }
+    #fw-waitlist-submit:disabled { opacity: 0.6; cursor: default; }
+    .fw-waitlist-status { margin: 14px 0 0; font-size: 0.875rem; line-height: 1.6; color: rgb(var(--text-muted)); }
+    .fw-waitlist-status.is-ok { color: rgb(var(--primary)); }
+    .fw-waitlist-done {
+      margin: 14px 0 0;
+      font-size: 0.9375rem;
+      line-height: 1.6;
+      color: rgb(var(--text));
+    }
+    .fw-seed-count { margin: 12px 0 0; font-size: 0.8125rem; color: rgb(var(--text-muted)); }
+  </style>
+  <script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
+  <script src="assets/js/shared/flags.js?v=20260716h"></script>
+  <script src="assets/js/shared/fw-busy.js?v=20260720a" defer></script>
+  <script src="assets/js/shared/fw-errors.js?v=20260720a" defer></script>
+  <script src="assets/js/shared/events.js?v=20260724a" defer></script>
+</head>
+<body>
+  <canvas id="fw-data-field" aria-hidden="true"></canvas>
+
+  <header class="fw-nav" id="fw-nav">
+    <div class="fw-container">
+      <nav class="fw-nav-inner">
+        <a href="/" class="fw-brand" data-fw-brand data-fw-brand-href="/" aria-label="FlightWay home"></a>
+        <ul class="fw-nav-links">
+          <li><a href="/#how-it-works">How it works</a></li>
+          <li><a href="/careers">Careers</a></li>
+          <li><a href="/guides">Guides</a></li>
+          <li><a href="/pricing">Pricing</a></li>
+        </ul>
+        <div class="fw-nav-actions" id="fw-nav-actions">
+          <button type="button" class="fw-theme-toggle" aria-label="Switch to light mode" aria-pressed="true">
+            <span class="fw-theme-icon" aria-hidden="true"></span>
+          </button>
+          <a href="auth.html#signin" class="fw-btn fw-btn-ghost fw-btn-sm">Sign in</a>
+          <a href="quiz.html" class="fw-btn fw-btn-primary fw-btn-sm">Get started</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="fw-hero fw-hero--compact">
+      <div class="fw-container fw-hero-content">
+        <p class="fw-eyebrow"><span class="fw-eyebrow-line" aria-hidden="true"></span>COMING SOON</p>
+        <h1 class="fw-h1">FlightWay Commons</h1>
+        <p class="fw-lede">
+          This isn't built yet, and there's no launch date. Commons is an idea for a peer-advice space —
+          we're putting it here early so the people who'd actually use it can tell us if we're building the
+          right thing.
+        </p>
+      </div>
+    </section>
+
+    <section class="fw-section fw-reveal" id="what-it-will-be">
+      <div class="fw-container">
+        <div class="fw-heading fw-reveal-item">
+          <h2>What it will be</h2>
+          <p>Three ideas we're building toward, plus one thing it will not be.</p>
+        </div>
+        <div class="fw-features-grid fw-reveal-stagger">
+          <article class="fw-feature-card fw-reveal-item">
+            <span class="fw-feature-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 8l10 5 10-5-10-5Z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+            </span>
+            <h3>Grouped by school and by career</h3>
+            <p>Advice threads organized around the two things that actually change what someone should tell you — where you go and where you're headed.</p>
+          </article>
+          <article class="fw-feature-card fw-reveal-item">
+            <span class="fw-feature-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            </span>
+            <h3>A step or two ahead, not a lifetime</h3>
+            <p>Answers from students who were in your position one or two years ago and actually remember what the question felt like.</p>
+          </article>
+          <article class="fw-feature-card fw-reveal-item">
+            <span class="fw-feature-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 12 2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+            </span>
+            <h3>Moderated by default</h3>
+            <p>Real names are optional, but every space is moderated from day one — not bolted on after it becomes a problem.</p>
+          </article>
+        </div>
+        <div class="fw-note-card fw-reveal-item">
+          <p><strong>What it deliberately won't be:</strong> not a job board, not anonymous by default, and not a replacement for your career center — it's peer advice, not professional advice.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="fw-section fw-reveal" id="waitlist">
+      <div class="fw-container">
+        <div class="fw-heading fw-reveal-item">
+          <h2>Join the list</h2>
+          <p>No launch date yet. We'll email you if that changes.</p>
+        </div>
+        <div class="fw-waitlist-wrap fw-reveal-item">
+          <form id="fw-waitlist-form" class="fw-waitlist-form" novalidate>
+            <label for="fw-waitlist-email" class="fw-vh">Email address</label>
+            <input id="fw-waitlist-email" name="email" type="email" required maxlength="200" placeholder="you@school.edu" autocomplete="email">
+            <button type="submit" class="fw-btn fw-btn-primary fw-btn-md" id="fw-waitlist-submit">Join the waitlist</button>
+          </form>
+          <p class="fw-waitlist-status" id="fw-waitlist-status" role="status" aria-live="polite"></p>
+          <p class="fw-waitlist-done" id="fw-waitlist-done" hidden>You're on the list — we'll email you if there's something to try.</p>
+          <p class="fw-seed-count" id="fw-seed-count" hidden></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="fw-section fw-reveal" id="today">
+      <div class="fw-container">
+        <div class="fw-heading fw-reveal-item">
+          <h2>What exists today</h2>
+          <p>
+            Commons is an idea. The <a href="/quiz">career quiz</a> and the <a href="/guides">guides</a> are
+            real, free, and live right now.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="fw-footer">
+    <div class="fw-container">
+      <div class="fw-footer-grid">
+        <div>
+          <a href="/" class="fw-brand" data-fw-brand data-fw-brand-href="/" aria-label="FlightWay"></a>
+          <p class="fw-footer-tagline">The talent development platform for students.</p>
+        </div>
+        <div class="fw-footer-col">
+          <h3>Product</h3>
+          <ul>
+            <li><a href="/careers">All careers</a></li>
+            <li><a href="/guides">Guides</a></li>
+            <li><a href="/#features">Features</a></li>
+            <li><a href="/pricing">Pricing</a></li>
+            <li><a href="/quiz">Career Quiz</a></li>
+            <li><a href="/auth#signin">Sign in</a></li>
+          </ul>
+        </div>
+        <div class="fw-footer-col">
+          <h3>Company</h3>
+          <ul>
+            <li><a href="/#how-it-works">How it works</a></li>
+            <li><a href="/career-centers">Career centers</a></li>
+            <li><a href="/community">Community</a></li>
+            <li><a href="/contact">Contact</a></li>
+          </ul>
+        </div>
+        <div class="fw-footer-col">
+          <h3>Legal</h3>
+          <ul>
+            <li><a href="/privacy">Privacy</a></li>
+            <li><a href="/terms">Terms</a></li>
+            <li><a href="/security">Security</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="fw-footer-bar">
+        <p>© 2026 FlightWay, Inc. All rights reserved.</p>
+        <p><a href="/career-centers">Career-center pricing →</a></p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/js/shared/brand.js?v=20260720i" defer></script>
+  <script src="assets/js/shared/theme.js?v=20260703p" defer></script>
+  <script src="assets/js/shared/data-field.js?v=20260703p" defer></script>
+  <script>
+    (function () {
+      function log(type, data) { try { if (window.FWEvents) FWEvents.log(type, data); } catch (_) {} }
+      // Seed-interest counter. count is a number or null; null (cache miss on
+      // a broken DB) or a failed request must render NOTHING — a page that
+      // says "0 students" because the count endpoint hiccuped tells a visitor
+      // the opposite of the truth, so silence is the only safe fallback here.
+      var countEl = document.getElementById('fw-seed-count');
+      fetch('/waitlist-intent?tier=community')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          var count = data && data.count;
+          if (typeof count === 'number' && isFinite(count) && count > 0) {
+            countEl.textContent = count === 1
+              ? '1 student is on the list.'
+              : count + ' students are on the list.';
+            countEl.hidden = false;
+          } else if (count === 0) {
+            countEl.textContent = 'Be the first.';
+            countEl.hidden = false;
+          }
+          // null, non-finite, or anything else: leave it empty and hidden.
+        })
+        .catch(function () { /* leave it empty and hidden */ });
+
+      var form = document.getElementById('fw-waitlist-form');
+      var statusEl = document.getElementById('fw-waitlist-status');
+      var submitEl = document.getElementById('fw-waitlist-submit');
+      var doneEl = document.getElementById('fw-waitlist-done');
+
+      function say(msg, ok) {
+        statusEl.textContent = msg;
+        statusEl.classList.toggle('is-ok', !!ok);
+      }
+
+      if (form) form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var email = document.getElementById('fw-waitlist-email').value.trim();
+        if (!email || email.indexOf('@') < 0) { say('Please enter an email address.'); return; }
+
+        submitEl.disabled = true;
+        say('Sending…');
+        fetch('/waitlist-intent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tier: 'community', source: 'community', email: email }),
+        })
+          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+          .then(function (res) {
+            if (!res.ok) throw new Error((res.data && res.data.error) || 'Something went wrong.');
+            log('waitlist_joined', { list: 'community' });
+            form.hidden = true;
+            say('');
+            doneEl.hidden = false;
+          })
+          .catch(function (err) {
+            submitEl.disabled = false;
+            say(err.message || 'Something went wrong. Please try again.');
+          });
+      });
+    })();
+  </script>
+</body>
+</html>

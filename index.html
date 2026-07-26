@@ -3,18 +3,168 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" href="/favicon.ico?v=20260717h" sizes="any">
-  <link rel="icon" type="image/png" href="/assets/favicon.png?v=20260717h">
-  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=20260717h">
-  <title>FlightWay — Your dream, turbocharged</title>
-  <meta name="description" content="FlightWay matches you against 5,000+ real careers, shows you exactly why each one fits, and turns the best match into a step-by-step roadmap.">
-  <meta property="og:title" content="FlightWay — Your dream, turbocharged">
-  <meta property="og:description" content="Career matches you can actually check — see why you fit, then get a roadmap.">
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg?v=20260720f">
+  <link rel="icon" href="/favicon.ico?v=20260720a" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/icons/favicon-128.png?v=20260720a">
+  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-180.png?v=20260720a">
+  <title>FlightWay — know what to do this week</title>
+  <meta name="description" content="Most career tools tell you what you might be. FlightWay matches you against 750+ real careers, shows why each one fits, and turns the best into a weekly plan.">
+  <!-- Absolute canonical: this exact file is served by BOTH Pages projects
+       (flightway.ai from `main`, flightwayjacobprototype.pages.dev from
+       `Jacob_Work`). Without this the two hosts compete as duplicate content
+       and Google picks the winner. Hardcoded, not derived from location.host —
+       the whole point is that the preview host must point away from itself. -->
+  <link rel="canonical" href="https://flightway.ai/">
+  <meta property="og:site_name" content="FlightWay">
+  <meta property="og:url" content="https://flightway.ai/">
+  <meta property="og:title" content="FlightWay — know what to do this week">
+  <meta property="og:description" content="Career matches you can actually check, then a weekly plan that names what to do next — and asks whether you did it.">
   <meta property="og:type" content="website">
-  <link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260720c">
+  <!-- og-default.png is a brand-new asset (Session S2), so it gets its own
+       first ?v= stamp here rather than reusing another file's — nothing else
+       on this page changed today. -->
+  <meta property="og:image" content="https://flightway.ai/assets/og/og-default.png?v=20260724a">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="FlightWay — career development for students">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="FlightWay — know what to do this week">
+  <meta name="twitter:description" content="Career matches you can actually check, then a weekly plan that names what to do next — and asks whether you did it.">
+  <meta name="twitter:image" content="https://flightway.ai/assets/og/og-default.png?v=20260724a">
+  <!-- Structured data (S14, D20). Three blocks rather than one @graph, matching
+       the pattern the career and guide pages already use so `seo:check` and
+       `verify:meta` can parse each block independently.
+
+       Deliberately NO WebSite.potentialAction/SearchAction: it declares a URL
+       template that runs a site search, and this site has no search endpoint —
+       /careers filters an already-rendered list client-side. Declaring one
+       would be a structured-data claim that 404s the moment anything follows
+       it. The plan marked it optional; this is why it stays off.
+
+       The logo URL carries the same ?v= stamp as the <link rel="icon"> above,
+       so `verify:busters` polices the two staying in agreement. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "FlightWay",
+    "legalName": "FlightWay, Inc.",
+    "url": "https://flightway.ai/",
+    "logo": "https://flightway.ai/assets/icons/favicon-128.png?v=20260720a",
+    "image": "https://flightway.ai/assets/og/og-default.png?v=20260724a",
+    "description": "FlightWay is a career-development platform for students. A free quiz scores you against 780+ real occupations using U.S. Department of Labor O*NET data and shows the reasoning behind every match, then turns the one you pick into a weekly plan.",
+    "email": "hello@flightway.ai",
+    "contactPoint": [{
+      "@type": "ContactPoint",
+      "contactType": "customer support",
+      "email": "hello@flightway.ai",
+      "url": "https://flightway.ai/contact",
+      "availableLanguage": ["en"]
+    }]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "FlightWay",
+    "url": "https://flightway.ai/",
+    "inLanguage": "en-US",
+    "description": "Career matches you can check, and a weekly plan for acting on them.",
+    "publisher": {
+      "@type": "Organization",
+      "name": "FlightWay",
+      "url": "https://flightway.ai/"
+    }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is FlightWay?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "A career-development web app for students. It scores you against 780+ real occupations, shows the reasoning behind every match, and turns the career you pick into a roadmap with a few concrete tasks each week."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What do I actually get each week?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Two or three specific tasks pulled off your own roadmap — a named course, a deliverable to finish, a person to contact — plus any deadlines coming up and whatever you committed to last week. You check them off, and the following week is built from what you did."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Do I need to know what career I want first?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. That is what the quiz is for. If you already have something in mind you can say so, and FlightWay starts from that instead of ignoring it."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is the career quiz free?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. Taking the quiz and seeing your top three matches costs nothing and does not require an account. A free account saves your results and shows all ten matches."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How long does the quiz take?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "About ninety seconds. It is ten questions, and you can come back later to sharpen the result with more detail about your coursework and projects."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Where does FlightWay’s career data come from?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "O*NET release 30.3, the occupational database published by the U.S. Department of Labor, Employment and Training Administration. It is public data describing what occupations involve and what they require. FlightWay is not endorsed by USDOL/ETA."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How is my fit score calculated?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Your answers build a profile across 161 O*NET dimensions, and fit is a mean-centered correlation between the shape of that profile and the shape of the occupation. Centering subtracts the profile all work has in common, which is what stops every career from looking like a match. Every match opens to show the dimensions that raised and lowered it."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does the score mean I am qualified for the job?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. The number shown is fit only, meaning whether the work suits you. Readiness, which is what your coursework, projects and resume actually prove, is scored separately and is never blended into fit."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does FlightWay replace my school’s career advisor?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No, and it is not built to. Your career center holds information that is not in any dataset, including which employers recruit at your school and which alumni are reachable. FlightWay covers breadth and week-to-week follow-through."
+        }
+      }
+    ]
+  }
+  </script>
+  <link rel="preload" href="/assets/fonts/inter-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/space-grotesk-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260721p">
+  <link rel="stylesheet" href="assets/css/quotes.css?v=20260725f">
   <script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
   <script src="assets/js/shared/flags.js?v=20260716h"></script>
-  <script src="assets/js/shared/events.js?v=20260716h" defer></script>
+  <script src="assets/js/shared/events.js?v=20260724a" defer></script>
   <style>
     /* Landing-only sections (How it works + comparison) — scoped here so the
        shared theme stylesheet (loaded by all 11 pages) stays untouched. */
@@ -136,6 +286,92 @@
       padding-bottom: 0.18em;
       margin-bottom: -0.18em;
     }
+
+    /* Landing FAQ (S14). Plain <details>-free markup on purpose: the FAQPage
+       JSON-LD in <head> marks up these exact questions and answers, and Google
+       requires the marked-up text to be visible to the reader — collapsing it
+       behind a toggle that needs JS is the one way to make the structured data
+       a lie. */
+    .fw-faq-list { display: grid; gap: 14px; margin-top: 44px; max-width: 860px; }
+    .fw-faq-item {
+      border: 1px solid rgb(var(--border));
+      border-radius: 14px;
+      background: rgb(var(--surface));
+      padding: 20px 22px;
+    }
+    .fw-faq-item h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin: 0 0 8px;
+      line-height: 1.45;
+    }
+    .fw-faq-item p {
+      margin: 0;
+      color: rgb(var(--text-muted));
+      line-height: 1.6;
+      font-size: 0.95rem;
+    }
+    .fw-faq-more { margin-top: 26px; font-size: 0.95rem; color: rgb(var(--text-muted)); }
+    .fw-faq-more a { color: rgb(var(--primary)); }
+
+    /* S19 (D3) — the dev-first landing. Page-scoped for the same reason the
+       sections above are: flightway-theme.css is linked by eleven pages, so a
+       rule there is an eleven-page cache-buster restamp. Tokens only —
+       contrast:check reads these blocks too. */
+    .fw-hero-note { margin-top: 18px; font-size: 0.85rem; color: rgb(var(--text-muted)); }
+
+    .fw-explain { display: grid; gap: 28px; margin-top: 48px; align-items: start; }
+    @media (min-width: 900px) { .fw-explain { grid-template-columns: 1.25fr 1fr; gap: 40px; } }
+    .fw-explain-copy p { margin: 0 0 16px; font-size: 1rem; line-height: 1.7; color: rgb(var(--text-muted)); }
+    .fw-explain-copy strong { color: rgb(var(--text)); font-weight: 600; }
+    .fw-explain-more { font-size: 0.9rem; }
+    .fw-explain-more a { color: rgb(var(--primary)); }
+    .fw-explain-panel {
+      border: 1px solid rgb(var(--border));
+      border-radius: 16px;
+      background: rgb(var(--surface));
+      padding: 22px 24px;
+    }
+    .fw-explain-panel-head {
+      margin: 0 0 14px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: rgb(var(--text-muted));
+    }
+    .fw-explain-rows { list-style: none; margin: 0; padding: 0; }
+    .fw-explain-rows li {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 14px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgb(var(--border) / 0.6);
+      font-size: 0.9rem;
+      color: rgb(var(--text));
+    }
+    .fw-explain-rows li:last-child { border-bottom: none; }
+    /* Direction is carried by the WORD, never by colour alone — the same house
+       rule the scorecard's status chips follow. */
+    .fw-explain-up { color: rgb(var(--text-muted)); font-weight: 600; white-space: nowrap; }
+    .fw-explain-down { color: rgb(var(--text-muted)); font-weight: 600; white-space: nowrap; opacity: .8; }
+    .fw-explain-panel-foot { margin: 14px 0 0; font-size: 0.78rem; line-height: 1.5; color: rgb(var(--text-muted)); }
+
+    .fw-start-card {
+      margin-top: 8px;
+      padding: 44px 32px;
+      border: 1px solid rgb(var(--primary) / 0.35);
+      border-radius: 20px;
+      background: linear-gradient(rgb(var(--primary) / 0.05), rgb(var(--primary) / 0.05)), rgb(var(--surface));
+      text-align: center;
+    }
+    .fw-start-card h2 { font-family: var(--font-display); font-size: var(--fs-h2, 1.9rem); font-weight: 600; letter-spacing: -0.02em; }
+    .fw-start-card p { margin: 12px auto 0; max-width: 56ch; color: rgb(var(--text-muted)); line-height: 1.6; }
+    .fw-start-card .fw-btn { margin-top: 26px; }
+    .fw-start-fine { font-size: 0.85rem; }
+    .fw-start-fine a { color: rgb(var(--primary)); }
   </style>
 </head>
 <body>
@@ -145,9 +381,17 @@
     <div class="fw-container">
       <nav class="fw-nav-inner">
         <a href="/" class="fw-brand" data-fw-brand data-fw-brand-href="/" aria-label="FlightWay home"></a>
+        <!-- Four links, not five. S14 added Guides and `layout:check` went red at
+             1280px @150% zoom (853px effective): a fifth item pushes
+             #fw-nav-actions past the right edge. Features came out rather than
+             Guides — it is an in-page anchor that "How it works" already
+             introduces, it survives in the mobile menu and the footer, and the
+             result is byte-for-byte the same nav that every server-rendered
+             /careers and /guides page shows. -->
         <ul class="fw-nav-links">
           <li><a href="#how-it-works">How it works</a></li>
-          <li><a href="#features">Features</a></li>
+          <li><a href="/careers">Careers</a></li>
+          <li><a href="/guides">Guides</a></li>
           <li><a href="pricing.html">Pricing</a></li>
         </ul>
         <div class="fw-nav-actions" id="fw-nav-actions">
@@ -165,10 +409,12 @@
     <div class="fw-mobile-menu" id="fw-mobile-menu">
       <ul>
         <li><a href="#how-it-works">How it works</a></li>
+        <li><a href="/careers">Careers</a></li>
+        <li><a href="/guides">Guides</a></li>
         <li><a href="#features">Features</a></li>
         <li><a href="pricing.html">Pricing</a></li>
         <li>
-          <button type="button" class="fw-theme-toggle fw-btn fw-btn-secondary fw-btn-md" style="width:100%;margin-top:8px" aria-label="Switch to light mode" aria-pressed="true">
+          <button type="button" class="fw-theme-toggle fw-btn fw-btn-secondary fw-btn-md fw-btn--block fw-mobile-theme-toggle" aria-label="Switch to light mode" aria-pressed="true">
             <span class="fw-theme-icon" aria-hidden="true"></span>
             Toggle theme
           </button>
@@ -188,16 +434,16 @@
           <span class="fw-eyebrow-line" aria-hidden="true"></span>
           Built for students
         </p>
-        <h1 class="fw-hero-title" aria-label="Your dream, turbocharged.">
+        <h1 class="fw-hero-title" aria-label="Know what to do this week.">
           <span class="fw-mask-line">
-            <span class="fw-mask"><span class="fw-mask-inner" style="--fw-i:0">Your</span></span><span class="fw-mask"><span class="fw-mask-inner" style="--fw-i:1">dream,</span></span>
+            <span class="fw-mask"><span class="fw-mask-inner" style="--fw-i:0">Know</span></span><span class="fw-mask"><span class="fw-mask-inner" style="--fw-i:1">what</span></span><span class="fw-mask"><span class="fw-mask-inner" style="--fw-i:2">to</span></span><span class="fw-mask"><span class="fw-mask-inner" style="--fw-i:3">do</span></span>
           </span>
           <span class="fw-mask-line">
-            <span class="fw-mask"><span class="fw-mask-inner peach" style="--fw-i:2">turbocharged.</span></span>
+            <span class="fw-mask"><span class="fw-mask-inner peach" style="--fw-i:4">this week.</span></span>
           </span>
         </h1>
         <p class="fw-hero-sub fw-hero-fade" style="--fw-delay:0.65s">
-          Take a short quiz, see how you compare against 5,000+ real careers — with the exact reasons behind every match — and turn the one that fits into a step-by-step roadmap.
+          Most career tools hand you a label and stop. FlightWay scores you against 750+ real careers, shows the reasoning behind every match, and turns the one you pick into a plan that names two or three specific things to do this week — then keeps track of what you said you would finish.
         </p>
         <div class="fw-hero-ctas fw-hero-fade" id="fw-hero-ctas" style="--fw-delay:0.8s">
           <a href="quiz.html" class="fw-btn fw-btn-primary fw-btn-lg">
@@ -209,67 +455,135 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </a>
         </div>
+        <p class="fw-hero-note fw-hero-fade" style="--fw-delay:0.95s">
+          Free to start · about 90 seconds · no account needed to see your top three
+        </p>
       </div>
     </section>
 
+    <!-- S19 (D3): the dev-first act, and the reason this id keeps its name —
+         "how it works" is linked from the nav and footer of every page on the
+         site, and what it now describes is the WEEK, not the onboarding. -->
     <section class="fw-section fw-reveal" id="how-it-works">
       <div class="fw-container">
         <div class="fw-heading fw-reveal-item">
-          <h2>How it works</h2>
-          <p>Three steps from "not sure" to a plan you can actually follow.</p>
+          <h2>How your week works</h2>
+          <p>The part most career tools skip: what happens after you know the answer.</p>
         </div>
         <div class="fw-hiw-grid fw-reveal-stagger">
           <article class="fw-hiw-card fw-reveal-item">
             <div class="fw-hiw-visual" aria-hidden="true">
               <svg width="200" height="110" viewBox="0 0 200 110" fill="none">
-                <rect x="30" y="12" width="140" height="24" rx="8" stroke="rgb(var(--border))" fill="rgb(var(--surface))"/>
+                <rect x="30" y="12" width="140" height="24" rx="8" stroke="rgb(var(--primary))" fill="rgb(var(--primary) / 0.12)"/>
+                <path d="M40 24l4 4 7-8" stroke="rgb(var(--primary))" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <rect x="58" y="20" width="86" height="8" rx="4" fill="rgb(var(--primary) / 0.45)"/>
                 <rect x="30" y="43" width="140" height="24" rx="8" stroke="rgb(var(--primary))" fill="rgb(var(--primary) / 0.12)"/>
                 <path d="M40 55l4 4 7-8" stroke="rgb(var(--primary))" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
                 <rect x="58" y="51" width="72" height="8" rx="4" fill="rgb(var(--primary) / 0.45)"/>
                 <rect x="30" y="74" width="140" height="24" rx="8" stroke="rgb(var(--border))" fill="rgb(var(--surface))"/>
-                <rect x="40" y="20" width="60" height="8" rx="4" fill="rgb(var(--text-muted) / 0.35)"/>
                 <rect x="40" y="82" width="80" height="8" rx="4" fill="rgb(var(--text-muted) / 0.35)"/>
               </svg>
             </div>
             <div class="fw-hiw-body">
-              <h3><span class="fw-hiw-step" aria-hidden="true">1</span>Tell us where you're leaning</h3>
-              <p>A short quiz about your interests and strengths — including what you already think you want. If you have a career in mind, we start there instead of ignoring it.</p>
+              <h3><span class="fw-hiw-step" aria-hidden="true">1</span>Monday: three things</h3>
+              <p>Your Flight Plan reads your roadmap and names the two or three tasks that actually move it this week. Not "build your network" — a named course, a specific deliverable, one person to email.</p>
             </div>
           </article>
           <article class="fw-hiw-card fw-reveal-item">
             <div class="fw-hiw-visual" aria-hidden="true">
               <svg width="200" height="110" viewBox="0 0 200 110" fill="none">
-                <circle cx="100" cy="50" r="26" stroke="rgb(var(--primary))" stroke-width="2" fill="rgb(var(--primary) / 0.12)"/>
-                <text x="100" y="56" text-anchor="middle" font-size="15" font-weight="700" fill="rgb(var(--primary))">87%</text>
-                <circle cx="38" cy="28" r="9" fill="rgb(var(--text-muted) / 0.3)"/>
-                <circle cx="160" cy="24" r="7" fill="rgb(var(--text-muted) / 0.3)"/>
-                <circle cx="170" cy="76" r="10" fill="rgb(var(--text-muted) / 0.3)"/>
-                <circle cx="34" cy="80" r="6" fill="rgb(var(--text-muted) / 0.3)"/>
-                <line x1="47" y1="32" x2="76" y2="43" stroke="rgb(var(--text-muted) / 0.4)"/>
-                <line x1="153" y1="27" x2="125" y2="41" stroke="rgb(var(--text-muted) / 0.4)"/>
-                <line x1="160" y1="73" x2="125" y2="59" stroke="rgb(var(--text-muted) / 0.4)"/>
-                <line x1="40" y1="78" x2="75" y2="59" stroke="rgb(var(--text-muted) / 0.4)"/>
+                <rect x="42" y="20" width="116" height="76" rx="10" stroke="rgb(var(--border))" fill="rgb(var(--surface))"/>
+                <path d="M42 40h116" stroke="rgb(var(--border))"/>
+                <path d="M66 14v12M134 14v12" stroke="rgb(var(--text-muted) / 0.6)" stroke-width="2" stroke-linecap="round"/>
+                <rect x="56" y="52" width="20" height="14" rx="4" fill="rgb(var(--text-muted) / 0.25)"/>
+                <rect x="90" y="52" width="20" height="14" rx="4" fill="rgb(var(--text-muted) / 0.25)"/>
+                <rect x="124" y="52" width="20" height="14" rx="4" fill="rgb(var(--primary))"/>
+                <rect x="56" y="74" width="20" height="14" rx="4" fill="rgb(var(--text-muted) / 0.25)"/>
+                <rect x="90" y="74" width="20" height="14" rx="4" fill="rgb(var(--text-muted) / 0.25)"/>
+                <circle cx="152" cy="46" r="11" fill="rgb(var(--surface))" stroke="rgb(var(--primary))" stroke-width="2"/>
+                <path d="M152 41v5l3 3" stroke="rgb(var(--primary))" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
             <div class="fw-hiw-body">
-              <h3><span class="fw-hiw-step" aria-hidden="true">2</span>See your matches — and why</h3>
-              <p>We compare your profile against 5,000+ real careers from the U.S. Department of Labor's O*NET database. Every match shows the specific factors behind it, so it's a data point you can judge — not a verdict.</p>
+              <h3><span class="fw-hiw-step" aria-hidden="true">2</span>All week: it chases</h3>
+              <p>Put a date on a step and it becomes a commitment you get reminded about. Real application and fellowship deadlines land on your radar before they pass. Marco opens with what you said you would finish — not a blank box.</p>
             </div>
           </article>
           <article class="fw-hiw-card fw-reveal-item">
             <div class="fw-hiw-visual" aria-hidden="true">
               <svg width="200" height="110" viewBox="0 0 200 110" fill="none">
-                <path d="M30 88 C70 88 70 55 100 55 C130 55 130 22 170 22" stroke="rgb(var(--primary))" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="1 7"/>
-                <circle cx="30" cy="88" r="7" fill="rgb(var(--primary))"/>
-                <circle cx="100" cy="55" r="7" stroke="rgb(var(--primary))" stroke-width="2" fill="rgb(var(--surface))"/>
-                <circle cx="170" cy="22" r="7" stroke="rgb(var(--primary))" stroke-width="2" fill="rgb(var(--surface))"/>
-                <path d="M166 22h8M170 18v8" stroke="rgb(var(--primary))" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M34 92h132" stroke="rgb(var(--border))" stroke-width="2" stroke-linecap="round"/>
+                <rect x="46" y="66" width="20" height="26" rx="5" fill="rgb(var(--text-muted) / 0.3)"/>
+                <rect x="78" y="54" width="20" height="38" rx="5" fill="rgb(var(--text-muted) / 0.4)"/>
+                <rect x="110" y="38" width="20" height="54" rx="5" fill="rgb(var(--primary) / 0.55)"/>
+                <rect x="142" y="22" width="20" height="70" rx="5" fill="rgb(var(--primary))"/>
+                <path d="M44 62 76 50l32-14 34-16" stroke="rgb(var(--primary))" stroke-width="2" stroke-linecap="round" stroke-dasharray="1 6"/>
               </svg>
             </div>
             <div class="fw-hiw-body">
-              <h3><span class="fw-hiw-step" aria-hidden="true">3</span>Turn it into a plan</h3>
-              <p>Pick a direction and get a personalized roadmap — skills to build, classes to take, milestones to hit — with a coach that keeps it up to date as you go.</p>
+              <h3><span class="fw-hiw-step" aria-hidden="true">3</span>Every month: the proof</h3>
+              <p>What moved, what stalled, what you added to your evidence locker, which applications advanced. Career development you can actually show someone — a recruiter, an advisor, or yourself in March.</p>
             </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- The explainability act. It stays because it is the wedge: it is the one
+         thing the label-and-stop tools structurally cannot do. -->
+    <section class="fw-section fw-reveal" id="explain">
+      <div class="fw-container">
+        <div class="fw-heading fw-reveal-item">
+          <h2>And you can check the answer</h2>
+          <p>Every match opens up. No black box, no personality type, no four letters.</p>
+        </div>
+        <div class="fw-explain fw-reveal-stagger">
+          <div class="fw-explain-copy fw-reveal-item">
+            <p>Your answers build a profile across <strong>161 dimensions</strong> from O*NET — the occupational database published by the U.S. Department of Labor. Fit is the correlation between the shape of your profile and the shape of the occupation, mean-centered so that the things all work has in common cannot make everything look like a match.</p>
+            <p>That number is <strong>fit only</strong>: whether the work would suit you. What your coursework and projects actually prove is scored separately as readiness, and the two are never blended — a score you cannot take apart is a score you cannot argue with.</p>
+            <p class="fw-explain-more"><a href="/guides/do-career-tests-work">Do career tests work?</a> · <a href="/careers">Browse all 750+ careers</a></p>
+          </div>
+          <div class="fw-explain-panel fw-reveal-item" aria-hidden="true">
+            <p class="fw-explain-panel-head">Why this match — example</p>
+            <ul class="fw-explain-rows">
+              <li><span>Analytical thinking</span><span class="fw-explain-up">raised it</span></li>
+              <li><span>Tolerance for ambiguity</span><span class="fw-explain-up">raised it</span></li>
+              <li><span>Mathematics knowledge</span><span class="fw-explain-up">raised it</span></li>
+              <li><span>Sustained public speaking</span><span class="fw-explain-down">lowered it</span></li>
+            </ul>
+            <p class="fw-explain-panel-foot">An illustration of the breakdown every match opens to show.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="fw-section fw-reveal" id="features">
+      <div class="fw-container">
+        <div class="fw-heading fw-reveal-item">
+          <h2>Everything you need to pick a path and fly it</h2>
+          <p>Stop stitching together quizzes, job boards and guesswork. Your matches, your roadmap, your deadlines and your evidence live in one place.</p>
+        </div>
+        <div class="fw-features-grid fw-reveal-stagger">
+          <article class="fw-feature-card fw-reveal-item">
+            <span class="fw-feature-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"/></svg>
+            </span>
+            <h3>A roadmap, then a week</h3>
+            <p>A personalized roadmap turns a vague ambition into semester-scale waypoints — and the weekly plan turns those into what you do between now and Sunday.</p>
+          </article>
+          <article class="fw-feature-card fw-reveal-item">
+            <span class="fw-feature-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
+            </span>
+            <h3>Deadlines that find you</h3>
+            <p>Internships, fellowships and competitions worth your time, with their real closing dates tracked — so the ones you miss are the ones you decided to skip.</p>
+          </article>
+          <article class="fw-feature-card fw-reveal-item">
+            <span class="fw-feature-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+            </span>
+            <h3>Proof that compounds</h3>
+            <p>Every project, application and mock interview goes in the locker and moves your readiness. By spring you have a record, not a feeling.</p>
           </article>
         </div>
       </div>
@@ -279,67 +593,115 @@
       <div class="fw-container">
         <div class="fw-heading fw-reveal-item">
           <h2>A better way to figure it out</h2>
-          <p>Most career help is either expensive, one-shot, or unexplained. FlightWay is none of those.</p>
+          <p>Most career help is expensive, one-shot, or unexplained — and none of it is there on a Tuesday.</p>
         </div>
         <div class="fw-vs-grid fw-reveal-stagger">
           <article class="fw-vs-card fw-reveal-item">
             <h3>Career coaches</h3>
             <ul>
               <li><svg class="fw-vs-mark no" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>Expensive — often $100+ per session</li>
-              <li><svg class="fw-vs-mark no" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>Not there at 11pm when you're actually deciding</li>
+              <li><svg class="fw-vs-mark no" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>Not there at 11pm when you’re actually deciding</li>
             </ul>
             <h3>One-shot career tests</h3>
             <ul>
               <li><svg class="fw-vs-mark no" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>Hand you a label, then stop</li>
               <li><svg class="fw-vs-mark no" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>Never explain why you got the result you got</li>
-              <li><svg class="fw-vs-mark no" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>No next step after the result</li>
+            </ul>
+            <h3>Job boards and LinkedIn</h3>
+            <ul>
+              <li><svg class="fw-vs-mark no" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>Assume you already know what to apply for</li>
+              <li><svg class="fw-vs-mark no" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>Nothing between "apply" and next semester</li>
             </ul>
           </article>
           <article class="fw-vs-card fw-vs-flightway fw-reveal-item">
             <div class="fw-vs-brand">
               <h3>FlightWay</h3>
-              <span class="fw-vs-tag">Matching + roadmap</span>
+              <span class="fw-vs-tag">Direction + follow-through</span>
             </div>
             <ul>
               <li><svg class="fw-vs-mark yes" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Free to start — take the quiz, see your matches</li>
               <li><svg class="fw-vs-mark yes" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Every match explains itself — see the exact factors behind the number</li>
-              <li><svg class="fw-vs-mark yes" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Built on the U.S. Department of Labor's O*NET data, not a black box</li>
-              <li><svg class="fw-vs-mark yes" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Gets sharper as you add your resume, classes, and goals</li>
-              <li><svg class="fw-vs-mark yes" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Ends in a step-by-step roadmap, not just a label</li>
+              <li><svg class="fw-vs-mark yes" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Built on the U.S. Department of Labor’s O*NET data, not a black box</li>
+              <li><svg class="fw-vs-mark yes" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Tells you what to do this week, then asks whether you did it</li>
+              <li><svg class="fw-vs-mark yes" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Gets sharper as you add your resume, classes and goals</li>
+              <li><svg class="fw-vs-mark yes" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Free for students, forever — the weekly loop is not a trial</li>
             </ul>
           </article>
         </div>
       </div>
     </section>
 
-    <section class="fw-section fw-reveal" id="features">
+    <!-- Real consented quotes or nothing at all: quotes.js reveals this section
+         only when the approved queue is non-empty. No placeholder testimonial
+         ever renders here — inventing proof is the exact gap this replaces. -->
+    <section class="fw-section fw-reveal" id="quotes" data-fw-quotes="3" hidden>
       <div class="fw-container">
         <div class="fw-heading fw-reveal-item">
-          <h2>Everything you need to pick a path and fly it</h2>
-          <p>Stop stitching together quizzes, job boards, and guesswork. FlightWay puts your matches, your roadmap, and your progress in one place.</p>
+          <h2>From students using it</h2>
+          <p>Every quote here was written by a student and published with their permission.</p>
         </div>
-        <div class="fw-features-grid fw-reveal-stagger">
-          <article class="fw-feature-card fw-reveal-item">
-            <span class="fw-feature-icon" aria-hidden="true">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"/></svg>
-            </span>
-            <h3>Guided career paths</h3>
-            <p>Personalized roadmaps turn a vague ambition into concrete next steps, skills to build, and roles to target.</p>
+        <div data-fw-quotes-slot></div>
+      </div>
+    </section>
+
+    <section class="fw-section fw-reveal" id="faq">
+      <div class="fw-container">
+        <div class="fw-heading fw-reveal-item">
+          <h2>Questions people ask</h2>
+          <p>Short answers, and links to the longer version where there is one.</p>
+        </div>
+        <div class="fw-faq-list fw-reveal-stagger">
+          <article class="fw-faq-item fw-reveal-item">
+            <h3>What is FlightWay?</h3>
+            <p>A career-development web app for students. It scores you against 780+ real occupations, shows the reasoning behind every match, and turns the career you pick into a roadmap with a few concrete tasks each week.</p>
           </article>
-          <article class="fw-feature-card fw-reveal-item">
-            <span class="fw-feature-icon" aria-hidden="true">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
-            </span>
-            <h3>Opportunity engine</h3>
-            <p>Matched internships, jobs, and events surface automatically — so you spend your time applying, not searching.</p>
+          <article class="fw-faq-item fw-reveal-item">
+            <h3>What do I actually get each week?</h3>
+            <p>Two or three specific tasks pulled off your own roadmap — a named course, a deliverable to finish, a person to contact — plus any deadlines coming up and whatever you committed to last week. You check them off, and the following week is built from what you did.</p>
           </article>
-          <article class="fw-feature-card fw-reveal-item">
-            <span class="fw-feature-icon" aria-hidden="true">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-            </span>
-            <h3>Progress you can see</h3>
-            <p>A readiness meter and weekly flight plan show exactly how far you've come and what to do next.</p>
+          <article class="fw-faq-item fw-reveal-item">
+            <h3>Do I need to know what career I want first?</h3>
+            <p>No. That is what the quiz is for. If you already have something in mind you can say so, and FlightWay starts from that instead of ignoring it.</p>
           </article>
+          <article class="fw-faq-item fw-reveal-item">
+            <h3>Is the career quiz free?</h3>
+            <p>Yes. Taking the quiz and seeing your top three matches costs nothing and does not require an account. A free account saves your results and shows all ten matches.</p>
+          </article>
+          <article class="fw-faq-item fw-reveal-item">
+            <h3>How long does the quiz take?</h3>
+            <p>About ninety seconds. It is ten questions, and you can come back later to sharpen the result with more detail about your coursework and projects.</p>
+          </article>
+          <article class="fw-faq-item fw-reveal-item">
+            <h3>Where does FlightWay’s career data come from?</h3>
+            <p>O*NET release 30.3, the occupational database published by the U.S. Department of Labor, Employment and Training Administration. It is public data describing what occupations involve and what they require. FlightWay is not endorsed by USDOL/ETA.</p>
+          </article>
+          <article class="fw-faq-item fw-reveal-item">
+            <h3>How is my fit score calculated?</h3>
+            <p>Your answers build a profile across 161 O*NET dimensions, and fit is a mean-centered correlation between the shape of that profile and the shape of the occupation. Centering subtracts the profile all work has in common, which is what stops every career from looking like a match. Every match opens to show the dimensions that raised and lowered it.</p>
+          </article>
+          <article class="fw-faq-item fw-reveal-item">
+            <h3>Does the score mean I am qualified for the job?</h3>
+            <p>No. The number shown is fit only, meaning whether the work suits you. Readiness, which is what your coursework, projects and resume actually prove, is scored separately and is never blended into fit.</p>
+          </article>
+          <article class="fw-faq-item fw-reveal-item">
+            <h3>Does FlightWay replace my school’s career advisor?</h3>
+            <p>No, and it is not built to. Your career center holds information that is not in any dataset, including which employers recruit at your school and which alumni are reachable. FlightWay covers breadth and week-to-week follow-through.</p>
+          </article>
+        </div>
+        <p class="fw-faq-more">More in the <a href="/guides">guides</a> — including <a href="/guides/do-career-tests-work">whether career tests work</a> and <a href="/guides/career-advisor-vs-coach-vs-ai">how an advisor, a coach and an AI tool differ</a>.</p>
+      </div>
+    </section>
+
+    <section class="fw-section fw-reveal" id="start">
+      <div class="fw-container">
+        <div class="fw-start-card fw-reveal-item">
+          <h2>Start in about 90 seconds</h2>
+          <p>Ten questions, then your top three matches with the reasoning behind each one. No account needed to see them.</p>
+          <a href="quiz.html" class="fw-btn fw-btn-primary fw-btn-lg">
+            Take the quiz
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+          <p class="fw-start-fine">Already have a direction? <a href="/pricing">See what the paid tiers add</a> · Career center? <a href="/career-centers">Run a pilot</a></p>
         </div>
       </div>
     </section>
@@ -356,6 +718,8 @@
         <div class="fw-footer-col">
           <h3>Product</h3>
           <ul>
+            <li><a href="/careers">All careers</a></li>
+            <li><a href="/guides">Guides</a></li>
             <li><a href="#features">Features</a></li>
             <li><a href="pricing.html">Pricing</a></li>
             <li><a href="quiz.html">Career Quiz</a></li>
@@ -365,17 +729,20 @@
         <div class="fw-footer-col">
           <h3>Company</h3>
           <ul>
-            <li><a href="#">About</a></li>
-            <li><a href="#">Careers</a></li>
-            <li><a href="#">Contact</a></li>
+            <!-- No About or Careers page exists yet, so this column only
+                 links to pages that are actually live. -->
+            <li><a href="/#how-it-works">How it works</a></li>
+            <li><a href="/career-centers">Career centers</a></li>
+            <li><a href="/community">Community</a></li>
+            <li><a href="/contact">Contact</a></li>
           </ul>
         </div>
         <div class="fw-footer-col">
           <h3>Legal</h3>
           <ul>
-            <li><a href="#">Privacy</a></li>
-            <li><a href="#">Terms</a></li>
-            <li><a href="#">Security</a></li>
+            <li><a href="/privacy">Privacy</a></li>
+            <li><a href="/terms">Terms</a></li>
+            <li><a href="/security">Security</a></li>
           </ul>
         </div>
       </div>
@@ -386,11 +753,12 @@
     </div>
   </footer>
 
-  <script src="assets/js/shared/brand.js?v=20260717g" defer></script>
+  <script src="assets/js/shared/brand.js?v=20260720i" defer></script>
   <script src="assets/js/shared/theme.js?v=20260703p" defer></script>
   <script src="assets/js/shared/data-field.js?v=20260703p" defer></script>
   <script src="assets/js/landing/reveal.js?v=20260703p" defer></script>
   <script src="assets/js/landing/landing.js?v=20260703p" defer></script>
-  <script src="assets/js/landing/auth-cta.js?v=20260703p" defer></script>
+  <script src="assets/js/landing/auth-cta.js?v=20260720a" defer></script>
+  <script src="assets/js/shared/quotes.js?v=20260725f" defer></script>
 </body>
 </html>

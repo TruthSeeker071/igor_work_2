@@ -10,7 +10,7 @@ import {
   formEncode, verifyWebhookSignature, signWebhookPayload,
   sprintGrant, subscriptionGrant, lifetimeGrant,
   SKUS, SPRINT_DAYS, TRIAL_DAYS, RENEWAL_GRACE_DAYS,
-  stripeConfigured, stripeTestMode, priceIdFor,
+  stripeConfigured, stripeTestMode, priceIdFor, subscriptionPeriodEnd,
 } from '../functions/_lib/stripe.js';
 import { onRequestPost as webhookPost } from '../functions/stripe/webhook.js';
 
@@ -35,8 +35,35 @@ assert(!SKUS.lifetime.trialDays && !SKUS.sprint.trialDays, 'one-time SKUs never 
 assert(stripeConfigured({ STRIPE_SECRET_KEY: 'sk_test_x' }) && !stripeConfigured({}), 'stripeConfigured reads the key');
 assert(stripeTestMode({ STRIPE_SECRET_KEY: 'sk_test_x' }) && !stripeTestMode({ STRIPE_SECRET_KEY: 'sk_live_x' }),
   'test-mode detection distinguishes sk_test_ from sk_live_');
+// Restricted keys (rk_…) are how you get scoped access to someone else's Stripe
+// account, so they must be classified too — an unrecognised rk_test_ key would
+// make the validation run look like a real charge in the UI.
+assert(stripeTestMode({ STRIPE_SECRET_KEY: 'rk_test_x' }) && !stripeTestMode({ STRIPE_SECRET_KEY: 'rk_live_x' }),
+  'restricted keys are classified too: rk_test_ is test mode, rk_live_ is not');
+assert(stripeConfigured({ STRIPE_SECRET_KEY: 'rk_live_x' }), 'a restricted key still counts as configured');
+assert(!stripeTestMode({ STRIPE_SECRET_KEY: '' }) && !stripeTestMode({}), 'no key is never test mode');
 assert(priceIdFor({ STRIPE_PRICE_SPRINT: 'price_s' }, 'sprint') === 'price_s' && priceIdFor({}, 'nope') === '',
   'price ids come from per-SKU env vars');
+
+// One wrangler.toml, two Pages projects, two different Stripe keys: the mode of
+// the key must select the price set, or the prototype's test key gets handed
+// live price ids and every checkout there dies on "No such price".
+{
+  const BOTH = {
+    STRIPE_PRICE_SPRINT: 'price_live', STRIPE_PRICE_SPRINT_TEST: 'price_test',
+    STRIPE_PRICE_MONTHLY: 'price_live_m', STRIPE_PRICE_MONTHLY_TEST: 'price_test_m',
+  };
+  assert(priceIdFor({ ...BOTH, STRIPE_SECRET_KEY: 'sk_live_x' }, 'sprint') === 'price_live',
+    'a live key selects the unsuffixed price id');
+  assert(priceIdFor({ ...BOTH, STRIPE_SECRET_KEY: 'sk_test_x' }, 'sprint') === 'price_test',
+    'a test key selects the _TEST price id');
+  assert(priceIdFor({ ...BOTH, STRIPE_SECRET_KEY: 'rk_test_x' }, 'monthly') === 'price_test_m',
+    'restricted test keys select the _TEST set too');
+  assert(priceIdFor({ STRIPE_PRICE_SPRINT: 'price_live', STRIPE_SECRET_KEY: 'sk_test_x' }, 'sprint') === 'price_live',
+    'a missing _TEST var degrades to the live id rather than returning empty');
+  assert(priceIdFor({ ...BOTH }, 'sprint') === 'price_live',
+    'no key at all is not test mode, so the live id is used');
+}
 
 console.log('webhook signature (Web Crypto, no SDK):');
 {
@@ -85,6 +112,22 @@ console.log('grants — what each SKU buys:');
   assert(subscriptionGrant({ status: 'canceled' }, 'premium').plan === 'free', 'canceled downgrades to free');
   assert(subscriptionGrant({ status: 'unpaid' }, 'premium').plan === 'free', 'unpaid downgrades to free');
   assert(subscriptionGrant({ status: 'canceled' }, 'lifetime').skip, 'a lifetime holder is never downgraded');
+
+  // Basil (API 2025-03-31) moved current_period_end onto the subscription
+  // ITEMS. A webhook destination on any modern API version sends only that
+  // shape, so reading the legacy field alone silently produced never-expiring
+  // premium on every subscription.updated.
+  const itemsOnly = { status: 'active', items: { data: [{ current_period_end: end }] } };
+  assert(Date.parse(subscriptionGrant(itemsOnly, 'free').expiresAt) === end * 1000 + RENEWAL_GRACE_DAYS * DAY,
+    'item-level billing periods (Basil+) produce the same expiry as the legacy field');
+  assert(subscriptionPeriodEnd({ current_period_end: end }) === end
+    && subscriptionPeriodEnd(itemsOnly) === end,
+    'both payload shapes resolve to the same period end');
+  assert(subscriptionPeriodEnd({ items: { data: [{ current_period_end: end }, { current_period_end: end + 500 }] } }) === end + 500,
+    'a multi-item subscription ends at its LAST period, never a shorter one (§9)');
+  assert(subscriptionGrant({ status: 'active' }, 'free').expiresAt === null,
+    'neither shape present → open-ended premium, not an instant expiry (never lock out a payer)');
+  assert(subscriptionPeriodEnd(null) === 0 && subscriptionPeriodEnd({}) === 0, 'no subscription → no period end');
 }
 
 // ---------------------------------------------------------- webhook end-to-end
@@ -116,6 +159,15 @@ function fakeDb(seedUsers = []) {
               if (/UPDATE users SET stripe_customer_id/.test(sql)) {
                 const u = users.get(a[1]); if (u) u.stripe_customer_id = a[0];
                 return { meta: { changes: u ? 1 : 0 } };
+              }
+              // Refund revoke: literals in the SET, one bind (email), and the
+              // plan_source='stripe' guard in the WHERE. Matched first because
+              // its bind shape differs from the grant writes below.
+              if (/UPDATE users SET plan = 'free'/.test(sql)) {
+                const u = users.get(a[0]);
+                if (!u || u.plan_source !== 'stripe') return { meta: { changes: 0 } };
+                u.plan = 'free'; u.plan_expires_at = null; u.plan_source = null;
+                return { meta: { changes: 1 } };
               }
               // Since migration 0016 the bind order is (plan, expiry, source, email),
               // and the downgrade variant carries the comp guard in its WHERE.
@@ -211,6 +263,35 @@ console.log('webhook end-to-end (fake D1, stubbed Stripe API):');
   const ignored = await deliver(baseEnv(), { id: 'evt_ig', type: 'invoice.payment_failed', data: { object: {} } });
   assert(ignored.status === 200 && ignored.body.ignored === 'invoice.payment_failed',
     'invoice.payment_failed is acknowledged but never downgrades (§3)');
+
+  // A refund reverses the sale, so it reverses the entitlement — otherwise a
+  // refunded lifetime stays premium forever with no in-product remedy.
+  const refundEvent = (id, over = {}) => ({
+    id, type: 'charge.refunded',
+    data: { object: { id: 'ch_' + id, customer: 'cus_1', refunded: true, metadata: { email: 'buyer@x.com' }, ...over } },
+  });
+
+  const envR = { ...baseEnv(), DB: fakeDb([{ email: 'buyer@x.com', plan: 'lifetime', plan_source: 'stripe', stripe_customer_id: 'cus_1' }]) };
+  const refunded = await deliver(envR, refundEvent('evt_rf'));
+  assert(refunded.status === 200 && envR.DB.users.get('buyer@x.com').plan === 'free',
+    'a full refund revokes the plan it paid for');
+  assert(envR.DB.users.get('buyer@x.com').plan_source === null, 'and clears plan_source with it');
+
+  // Partial refunds (goodwill credit, proration) must not strip paid access.
+  const envP = { ...baseEnv(), DB: fakeDb([{ email: 'buyer@x.com', plan: 'lifetime', plan_source: 'stripe' }]) };
+  await deliver(envP, refundEvent('evt_rp', { refunded: false, amount_refunded: 500 }));
+  assert(envP.DB.users.get('buyer@x.com').plan === 'lifetime', 'a PARTIAL refund leaves the entitlement alone');
+
+  // A comp is a gift, not a purchase — a refund has no claim on it.
+  const envC = { ...baseEnv(), DB: fakeDb([{ email: 'buyer@x.com', plan: 'lifetime', plan_source: 'comp' }]) };
+  await deliver(envC, refundEvent('evt_rc'));
+  assert(envC.DB.users.get('buyer@x.com').plan === 'lifetime' && envC.DB.users.get('buyer@x.com').plan_source === 'comp',
+    'a refund never revokes a comp');
+
+  // Same for a legacy/beta grant nobody paid for.
+  const envB = { ...baseEnv(), DB: fakeDb([{ email: 'buyer@x.com', plan: 'premium', plan_source: null }]) };
+  await deliver(envB, refundEvent('evt_rb'));
+  assert(envB.DB.users.get('buyer@x.com').plan === 'premium', 'a refund never revokes a beta/legacy grant');
 }
 
 process.exit(fail ? 1 : 0);

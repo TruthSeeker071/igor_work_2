@@ -25,6 +25,10 @@ let researchGrounding = {
 // Destination for each mocked grounding-redirect token; null = dead token.
 let redirectTargets = {};
 
+// Status the mocked API answers a RESEARCH call with. 200 unless a test is
+// exercising a rejected request (a retired/unknown model name).
+let researchStatus = 200;
+
 globalThis.fetch = async (url, opts) => {
   if (!opts || !opts.body) {
     // A source-URL resolution hop, not a Gemini call.
@@ -36,6 +40,14 @@ globalThis.fetch = async (url, opts) => {
   const body = JSON.parse(opts.body);
   const isResearch = Array.isArray(body.tools);
   calls.push({ url: String(url), body, isResearch });
+  if (isResearch && researchStatus !== 200) {
+    return {
+      ok: false,
+      status: researchStatus,
+      json: async () => ({ error: { message: 'models/x is not found for API version v1beta' } }),
+      text: async () => 'models/x is not found for API version v1beta',
+    };
+  }
   const cand = isResearch
     ? { content: { parts: [{ text: researchText }] }, finishReason: 'STOP', groundingMetadata: researchGrounding }
     : { content: { parts: [{ text: JSON.stringify({ ok: calls.length }) }] }, finishReason: 'STOP' };
@@ -278,6 +290,36 @@ await test('sources: redirect URLs resolved to their destination, deduped, dead 
     researchGrounding = prevGrounding;
     redirectTargets = {};
   }
+});
+
+// ---------- a rejected research REQUEST is a config error, not weather ----------
+// Research is primary-model-only by convention (career-analysis.js:213 and
+// chat.js build their cascades the same way — a fallback attempt drops
+// google_search). That makes a retired primary model a silent, all-day
+// grounding outage, so the one thing it must not do is look like a blip.
+await test('retired model: a 404 research call is loud, refunds the budget, and still answers', async () => {
+  const env = baseEnv({ GROUNDING_ENABLED: 'true' });
+  const errs = [];
+  const realErr = console.error;
+  console.error = (...a) => { errs.push(a.map(String).join(' ')); };
+  researchStatus = 404;
+  try {
+    const out = await groundedJson(env, { ...JSON_OPTS, research: ['anything current'], budgetKey: 'u@x.com' });
+    assert.ok(out, 'the user still gets an ungrounded answer');
+    assert.equal((out.sources || []).length, 0, 'with no sources');
+  } finally {
+    researchStatus = 200;
+    console.error = realErr;
+  }
+  assert.ok(
+    errs.some((l) => /grounding is OFF/.test(l) && /grounding model/.test(l)),
+    'the log names the model and says grounding is off, at error level',
+  );
+  // Google bills a request it served; it did not serve this one.
+  assert.equal(Number(env.COACH_KV.store.get(`gw:budget:user:u@x.com:${day}`)) || 0, 0,
+    'the user budget was handed back');
+  assert.equal(Number(env.COACH_KV.store.get(`gw:budget:global:${day}`)) || 0, 0,
+    'the global budget was handed back');
 });
 
 if (failures) {

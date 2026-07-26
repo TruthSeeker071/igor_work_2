@@ -27,3 +27,24 @@ DEV_TEST_EMAILS=
 # so no SQL write can mint or remove it. Unset → nobody is root and every
 # /admin/* endpoint answers 404.
 ROOT_ADMIN_EMAIL=
+
+# Weekly-digest unsubscribe tokens (V2 S2). The SAME value must be set on both
+# Pages projects AND the standalone flightway-cron Worker: the cron builds the
+# link and Pages verifies it, so if the three stores disagree every unsubscribe
+# link 403s. Unset → falls back to SESSION_PEPPER (Pages) or a committed
+# constant (cron), which is exactly how they came to disagree. Warned loudly at
+# runtime now; `npm run verify:env` prints the rotate-everywhere command.
+UNSUB_SECRET=
+
+# CAN-SPAM §7704(a)(5): every commercial email must carry a valid physical
+# postal address. Unset → the footer falls back to the company name, which is
+# not an address. Blocks the first bulk send, not today's deployment.
+MAILING_ADDRESS=
+
+# Optional (V2 S2): Cloudflare Turnstile on the contact form. BOTH halves or
+# NEITHER — the site key is served publicly on /config so the widget can render,
+# the secret is verified server-side in functions/contact.js. Unset (the default
+# everywhere today) → no challenge, no external script request, forms unchanged.
+# Free: Cloudflare dashboard → Turnstile → add site.
+TURNSTILE_SITE_KEY=
+TURNSTILE_SECRET_KEY=

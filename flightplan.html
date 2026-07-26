@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Signed-in only: page-boot bounces a visitor to /auth before anything renders, so a crawler sees a blank shell under a FlightWay title. -->
+<meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg?v=20260720f">
+  <link rel="icon" href="/favicon.ico?v=20260720a" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/icons/favicon-128.png?v=20260720a">
+  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-180.png?v=20260720a">
+<title>FlightWay — Flight Plan</title>
+<meta name="description" content="What to do this week, the deadlines coming at you, and the tools to act on both.">
+<link rel="preload" href="/assets/fonts/inter-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/space-grotesk-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260721p">
+<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260724i">
+<link rel="stylesheet" href="assets/css/flightway-2.css?v=20260725g">
+<link rel="stylesheet" href="assets/css/feature-intro.css?v=20260721a">
+<script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
+<script src="assets/js/shared/global-shim.js?v=20260703p"></script>
+<script src="assets/js/shared/flags.js?v=20260716h"></script>
+<script src="assets/js/shared/entitlements.js?v=20260724e" defer></script>
+<script src="assets/js/shared/plan-surface.js?v=20260725e" defer></script>
+<script src="assets/js/shared/events.js?v=20260724a" defer></script>
+<link rel="stylesheet" href="assets/css/share.css?v=20260725b">
+<link rel="stylesheet" href="assets/css/scorecard.css?v=20260725c">
+<link rel="stylesheet" href="assets/css/network.css?v=20260725d">
+<link rel="stylesheet" href="assets/css/season.css?v=20260725e">
+<link rel="stylesheet" href="assets/css/nps.css?v=20260725f">
+<script src="assets/vendor/lucide-lite.js?v=20260724d" defer></script>
+<style>
+  /* Deadline Radar (S9 UI) — scoped to #flightplan-radar. Client half of
+     functions/deadlines.js; see assets/js/app/deadline-radar.js. */
+  /* S11 — the Month in Review entry point in the page header. */
+  .fp-review-link {
+    display: inline-flex; align-items: center; gap: 6px; margin-top: 10px;
+    font-size: 13px; font-weight: 600; color: rgb(var(--text-muted));
+    text-decoration: none; transition: var(--transition);
+  }
+  .fp-review-link:hover { color: rgb(var(--text)); }
+  .fp-review-link svg { width: 14px; height: 14px; }
+
+  .fp-radar-toolbar { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  .fp-radar-refresh-wrap { display: flex; flex-direction: column; gap: 4px; }
+  .fp-radar-refresh {
+    display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 999px;
+    border: 1px solid rgb(var(--border)); background: rgb(var(--surface-2)); color: rgb(var(--text));
+    font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: var(--transition);
+  }
+  .fp-radar-refresh:hover:not(:disabled) { background: rgb(var(--surface-hover)); border-color: rgb(var(--border-strong)); }
+  .fp-radar-refresh:disabled { opacity: .55; cursor: not-allowed; }
+  .fp-radar-refresh-icon svg { width: 14px; height: 14px; }
+  .fp-radar-refresh-note { margin: 0; font-size: 11.5px; color: rgb(var(--text-muted)); }
+  .fp-radar-add-toggle {
+    padding: 7px 14px; border-radius: 999px; border: 1px dashed rgb(var(--border-strong));
+    background: transparent; color: rgb(var(--primary)); font: inherit; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: var(--transition);
+  }
+  .fp-radar-add-toggle:hover { background: rgb(var(--primary) / 0.08); }
+
+  .fp-radar-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; padding: 14px; margin-bottom: 14px; border-radius: 12px; border: 1px solid rgb(var(--border)); background: rgb(var(--surface-2) / 0.5); }
+  .fp-radar-form-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: rgb(var(--text-muted)); min-width: 0; }
+  .fp-radar-form-label { font-weight: 600; }
+  .fp-radar-input {
+    padding: 8px 10px; border-radius: 8px; border: 1px solid rgb(var(--border)); background: rgb(var(--surface));
+    color: rgb(var(--text)); font: inherit; font-size: 13px; min-width: 0; box-sizing: border-box;
+  }
+  .fp-radar-form-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; }
+  .fp-radar-form-save {
+    padding: 8px 18px; border-radius: 999px; border: 1px solid rgb(var(--primary)); background: rgb(var(--primary));
+    color: rgb(var(--primary-fg)); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+  }
+  .fp-radar-form-save:hover { background: rgb(var(--primary-hover)); border-color: rgb(var(--primary-hover)); }
+  /* Status hue lives on borders and tints, never on the text itself — the
+     house rule (auth-pages.css .auth-alert, flightway-theme .fw-toast--error).
+     `--ok` is 74 222 128, which on the LIGHT surface is about 1.7:1: a label
+     nobody can read. contrast:check cannot see a page-local <style>, so this
+     one is on us. */
+  .fp-radar-form-error {
+    grid-column: 1 / -1; margin: 0; font-size: 12.5px; color: rgb(var(--text));
+    padding-left: 9px; border-left: 3px solid rgb(var(--err));
+  }
+
+  .fp-radar-result { margin: 0 0 12px; font-size: 12.5px; color: rgb(var(--text-muted)); }
+
+  .fp-radar-list { display: flex; flex-direction: column; gap: 10px; }
+  .fp-radar-row {
+    padding: 12px 14px; border-radius: 12px; border: 1px solid rgb(var(--border)); background: rgb(var(--surface));
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .fp-radar-row--done { opacity: .6; }
+  .fp-radar-row--done .fp-radar-title { text-decoration: line-through; }
+  .fp-radar-row-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .fp-radar-chip {
+    font-size: 10.5px; font-weight: 700; padding: 2px 9px; border-radius: 999px; white-space: nowrap;
+    border: 1px solid transparent; color: rgb(var(--text));
+  }
+  .fp-radar-chip--urgent { background: rgb(var(--err) / 0.14); border-color: rgb(var(--err) / 0.45); }
+  .fp-radar-chip--soon { background: rgb(var(--warn) / 0.16); border-color: rgb(var(--warn) / 0.45); }
+  .fp-radar-chip--normal { background: rgb(var(--surface-2)); border-color: rgb(var(--border)); color: rgb(var(--text-muted)); }
+  .fp-radar-title { font-size: 14px; font-weight: 600; color: rgb(var(--text)); text-decoration: none; min-width: 0; }
+  a.fp-radar-title:hover { text-decoration: underline; }
+  .fp-radar-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 12px; color: rgb(var(--text-muted)); }
+  .fp-radar-date { font-weight: 600; }
+  .fp-radar-actions { display: flex; gap: 8px; margin-top: 2px; }
+  .fp-radar-btn {
+    padding: 5px 12px; border-radius: 999px; border: 1px solid rgb(var(--border)); background: rgb(var(--surface-2));
+    color: rgb(var(--text)); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; transition: var(--transition);
+  }
+  .fp-radar-btn:hover { background: rgb(var(--surface-hover)); }
+  .fp-radar-btn--done { border-color: rgb(var(--ok) / 0.5); background: rgb(var(--ok) / 0.10); }
+  .fp-radar-btn--dismiss { color: rgb(var(--text-muted)); }
+  /* `--primary` as text IS house-consistent (.fp-empty-cta does it), so this one stays. */
+  .fp-radar-btn--undo { border-color: rgb(var(--primary) / 0.4); color: rgb(var(--primary)); }
+
+  /* Commitments panel (S10 UI) — scoped to #flightplan-commitments. Client
+     half of assets/js/shared/commitments.js + assets/js/app/commitments-panel.js.
+     Same house rule as the radar block above: --ok/--warn/--err only on
+     border-color/background, never as a text color value. */
+  .fp-commit-group { margin-bottom: 16px; }
+  .fp-commit-group:last-child { margin-bottom: 0; }
+  .fp-commit-group-title {
+    margin: 0 0 8px; font-size: 11.5px; font-weight: 700; letter-spacing: .04em;
+    text-transform: uppercase; color: rgb(var(--text-muted));
+  }
+  .fp-commit-list { display: flex; flex-direction: column; gap: 10px; }
+  .fp-commit-row {
+    padding: 12px 14px; border-radius: 12px; border: 1px solid rgb(var(--border)); background: rgb(var(--surface));
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .fp-commit-row-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .fp-commit-chip {
+    font-size: 10.5px; font-weight: 700; padding: 2px 9px; border-radius: 999px;
+    border: 1px solid transparent; color: rgb(var(--text)); white-space: nowrap;
+  }
+  .fp-commit-chip--overdue { background: rgb(var(--err) / 0.14); border-color: rgb(var(--err) / 0.45); }
+  .fp-commit-chip--urgent { background: rgb(var(--err) / 0.10); border-color: rgb(var(--err) / 0.35); }
+  .fp-commit-chip--soon { background: rgb(var(--warn) / 0.16); border-color: rgb(var(--warn) / 0.45); }
+  .fp-commit-chip--normal { background: rgb(var(--surface-2)); border-color: rgb(var(--border)); color: rgb(var(--text-muted)); }
+  .fp-commit-chip--done { background: rgb(var(--ok) / 0.12); border-color: rgb(var(--ok) / 0.4); }
+  .fp-commit-text { font-size: 14px; font-weight: 600; color: rgb(var(--text)); min-width: 0; }
+  .fp-commit-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 12px; color: rgb(var(--text-muted)); }
+  .fp-commit-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+  .fp-commit-btn {
+    padding: 5px 12px; border-radius: 999px; border: 1px solid rgb(var(--border)); background: rgb(var(--surface-2));
+    color: rgb(var(--text)); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; transition: var(--transition);
+  }
+  .fp-commit-btn:hover { background: rgb(var(--surface-hover)); }
+  .fp-commit-btn:disabled { opacity: .55; cursor: not-allowed; }
+  .fp-commit-btn--done { border-color: rgb(var(--ok) / 0.5); background: rgb(var(--ok) / 0.10); }
+  .fp-commit-btn--reschedule { color: rgb(var(--text-muted)); }
+  .fp-commit-reschedule {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 4px; padding-top: 8px;
+    border-top: 1px dashed rgb(var(--border));
+  }
+  .fp-commit-date-wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+  .fp-commit-date-input {
+    padding: 6px 8px; border-radius: 8px; border: 1px solid rgb(var(--border)); background: rgb(var(--surface));
+    color: rgb(var(--text)); font: inherit; font-size: 12px; min-width: 0; max-width: 100%; box-sizing: border-box;
+  }
+  /* Same house rule as .fp-radar-form-error: hue on the border, text stays on --text. */
+  .fp-commit-error {
+    margin: 0; font-size: 12.5px; color: rgb(var(--text));
+    padding-left: 9px; border-left: 3px solid rgb(var(--err));
+  }
+</style>
+</head>
+<body class="portal-page flightplan-page" data-fw-intro="flightplan">
+<div id="fw-page-veil" class="fw-page-veil" aria-live="polite" aria-busy="true">
+</div>
+
+<canvas id="fw-data-field" aria-hidden="true"></canvas>
+
+<nav>
+  <div class="nav-inner">
+    <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay home"></a>
+    <div class="nav-links app-nav" aria-label="App">
+      <a href="portal.html" class="app-nav-tab" data-app-nav="home"><span class="app-nav-label">Home</span></a>
+      <a href="flightplan.html" class="app-nav-tab is-active" data-app-nav="plan" aria-current="page"><span class="app-nav-label">Flight Plan</span></a>
+      <a href="roadmap.html" class="app-nav-tab" data-app-nav="roadmap"><span class="app-nav-label">Roadmap</span></a>
+      <a href="coach.html" class="app-nav-tab" data-app-nav="advisor"><span class="app-nav-label">Marco</span></a>
+      <a href="dashboard.html" class="app-nav-tab" data-app-nav="explore"><span class="app-nav-label">Explore</span></a>
+      <a href="auth.html#signin" class="app-nav-tab nav-signin-link" id="nav-signin-link">Sign in</a>
+      <button type="button" class="fw-theme-toggle" aria-label="Switch to dark mode" aria-pressed="false">
+        <span class="fw-theme-icon" aria-hidden="true"></span>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<div id="page-flightplan" class="page active">
+  <section class="portal-wrap">
+    <header class="fp-head">
+      <h1 class="fp-title">Flight Plan</h1>
+      <p class="fp-sub">What to do this week, what is closing soon, and the tools to act on both.</p>
+      <!-- S11: the Month in Review's in-app entry point. The 1st-of-month email
+           links straight to /review, but a page reachable only from an email is
+           half a feature — this is how someone finds it the other 30 days. -->
+      <a class="fp-review-link" href="review.html">
+        <i data-lucide="clipboard-list" aria-hidden="true"></i>Month in Review
+      </a>
+    </header>
+
+    <!-- This Week hero. portal-flightplan.js mounts the weekly card here (hero
+         mode): the three tasks with check-offs, the progress ring, and the next
+         dated opportunity. Empty until a roadmap exists — the card says so. -->
+    <div class="fp-hero" id="flightplan-hero" aria-label="This week"></div>
+
+    <div class="fp-modules">
+      <!-- S9 fills this from the `deadlines` table. Shipping the empty state now
+           so the page has its real shape and the copy tells the truth about when
+           dates appear, rather than a module that pops into existence later. -->
+      <section class="fp-module" id="deadlines" aria-labelledby="fp-radar-title">
+        <div class="fp-module-head">
+          <span class="fp-module-icon" aria-hidden="true"><i data-lucide="calendar-days"></i></span>
+          <h2 class="fp-module-title" id="fp-radar-title">Deadline Radar</h2>
+        </div>
+        <div class="fp-module-body" id="flightplan-radar">
+          <p class="fp-empty">No tracked deadlines yet. Once your roadmap is built, we scan for real application windows in your field and the ones that matter land here.</p>
+          <a class="fp-empty-cta" href="roadmap.html">Build my roadmap &rarr;</a>
+        </div>
+      </section>
+
+      <!-- S10 fills this from commitments (dueAt/effort on roadmap steps). -->
+      <section class="fp-module" id="commitments" aria-labelledby="fp-commit-title">
+        <div class="fp-module-head">
+          <span class="fp-module-icon" aria-hidden="true"><i data-lucide="target"></i></span>
+          <h2 class="fp-module-title" id="fp-commit-title">Commitments due</h2>
+        </div>
+        <div class="fp-module-body" id="flightplan-commitments">
+          <p class="fp-empty">Nothing due. When you put a date on a roadmap step, it shows up here and we chase it.</p>
+          <a class="fp-empty-cta" href="roadmap.html?focus=1">Open my roadmap &rarr;</a>
+        </div>
+      </section>
+    </div>
+
+    <!-- S18. term-panel.js fills the body from GET/POST /semester: the
+         start-of-term ritual (three outcomes, dated across the term onto the
+         roadmap) and the end-of-term review. It sits ABOVE the execution modules
+         because it is the frame around them — "week 6 of 15" changes how the
+         three tasks in the hero read. Free on every plan: §4 puts no meter on
+         it. `calendar-days` is already in lucide-lite.js. -->
+    <section class="fp-module fp-module--wide" id="semester" aria-labelledby="fp-term-title">
+      <div class="fp-module-head">
+        <span class="fp-module-icon" aria-hidden="true"><i data-lucide="calendar-days"></i></span>
+        <h2 class="fp-module-title" id="fp-term-title">Your term</h2>
+      </div>
+      <div class="fp-module-body" id="flightplan-term"></div>
+    </section>
+
+    <!-- Evidence: artifacts.js renders its card into the inner slot. Wrapped in a
+         static section so the Evidence door's #evidence fragment resolves in the
+         markup rather than needing a verify:meta exemption. -->
+    <section class="fp-module fp-module--wide" id="evidence" aria-labelledby="fp-evidence-title">
+      <div class="fp-module-head">
+        <span class="fp-module-icon" aria-hidden="true"><i data-lucide="scroll-text"></i></span>
+        <h2 class="fp-module-title" id="fp-evidence-title">Evidence Locker</h2>
+      </div>
+      <div class="fp-module-body" id="flightplan-evidence"></div>
+    </section>
+
+    <!-- S16. scorecard-panel.js fills the body from GET/POST /scorecard: score +
+         band against real live postings, a trend once there is a second read,
+         the requirement checklist, up to 3 actions that become roadmap steps,
+         and up to 5 tracked postings. -->
+    <section class="fp-module fp-module--wide" id="scorecard" aria-labelledby="fp-scorecard-title">
+      <div class="fp-module-head">
+        <span class="fp-module-icon" aria-hidden="true"><i data-lucide="compass"></i></span>
+        <h2 class="fp-module-title" id="fp-scorecard-title">Readiness scorecard</h2>
+      </div>
+      <div class="fp-module-body" id="flightplan-scorecard"></div>
+    </section>
+
+    <!-- S17. network-panel.js fills the body from GET/POST /outreach: the
+         archetype cards we suggest for this career + school, the list the
+         student keeps, one drafted message per person, and the status they
+         report back. FlightWay never sends any of it — the panel says so where
+         they are about to act, which §5 S17 requires in UI copy. `user-round`
+         is already in lucide-lite.js and is deliberately NOT `users` (that one
+         is the Invite section below: a crowd, not one person). -->
+    <section class="fp-module fp-module--wide" id="network" aria-labelledby="fp-network-title">
+      <div class="fp-module-head">
+        <span class="fp-module-icon" aria-hidden="true"><i data-lucide="user-round"></i></span>
+        <h2 class="fp-module-title" id="fp-network-title">Network mapper</h2>
+      </div>
+      <div class="fp-module-body" id="flightplan-network"></div>
+    </section>
+
+    <!-- S18. season-panel.js fills the body from GET/POST /interview-season: the
+         six-week arc for this student's career family, which week it is, the
+         score trend across the program, and the link into this week's session.
+         Premium (§4) and locked-VISIBLE on free — the server truncates weeks
+         2-6 before serialization, so the blurred tail is a count of things that
+         are not in the payload. `target` is already in lucide-lite.js. -->
+    <section class="fp-module fp-module--wide" id="season" aria-labelledby="fp-season-title">
+      <div class="fp-module-head">
+        <span class="fp-module-icon" aria-hidden="true"><i data-lucide="target"></i></span>
+        <h2 class="fp-module-title" id="fp-season-title">Interview Season</h2>
+      </div>
+      <div class="fp-module-body" id="flightplan-season"></div>
+    </section>
+
+    <!-- S15 (D24). invite-panel.js fills the body from GET /referral — link,
+         counter and the credit ceiling all come from the server, so nothing here
+         hard-writes a number (§3 rule 11). `users` is already in lucide-lite.js;
+         a data-lucide the lite bundle does not carry renders as nothing. -->
+    <section class="fp-module fp-module--wide" id="invite" aria-labelledby="fp-invite-title">
+      <div class="fp-module-head">
+        <span class="fp-module-icon" aria-hidden="true"><i data-lucide="users"></i></span>
+        <h2 class="fp-module-title" id="fp-invite-title">Invite a friend</h2>
+      </div>
+      <div class="fp-module-body fw-invite" data-fw-invite></div>
+    </section>
+
+    <section class="fp-doors" aria-labelledby="fp-doors-title">
+      <h2 class="fp-doors-title" id="fp-doors-title">Do the work</h2>
+      <div class="fp-doors-row">
+        <a class="fp-door" href="resume.html">
+          <span class="fp-door-icon" aria-hidden="true"><i data-lucide="file-text"></i></span>
+          <span class="fp-door-body">
+            <span class="fp-door-label">Resume Builder</span>
+            <span class="fp-door-desc">Build and tailor a recruiter-ready resume from your real experience.</span>
+          </span>
+          <span class="fp-door-arrow" aria-hidden="true">&rarr;</span>
+        </a>
+        <a class="fp-door" href="roadmap.html?focus=1">
+          <span class="fp-door-icon" aria-hidden="true"><i data-lucide="briefcase"></i></span>
+          <span class="fp-door-body">
+            <span class="fp-door-label">Opportunities</span>
+            <span class="fp-door-desc">Real internships, fellowships and competitions matched to your skill gaps.</span>
+          </span>
+          <span class="fp-door-arrow" aria-hidden="true">&rarr;</span>
+        </a>
+        <a class="fp-door" href="coach.html#practice">
+          <span class="fp-door-icon" aria-hidden="true"><i data-lucide="mic"></i></span>
+          <span class="fp-door-body">
+            <span class="fp-door-label">Mock Interview</span>
+            <span class="fp-door-desc">Practise the questions for your target role and get scored on the answers.</span>
+          </span>
+          <span class="fp-door-arrow" aria-hidden="true">&rarr;</span>
+        </a>
+        <a class="fp-door" href="#evidence">
+          <span class="fp-door-icon" aria-hidden="true"><i data-lucide="scroll-text"></i></span>
+          <span class="fp-door-body">
+            <span class="fp-door-label">Evidence Locker</span>
+            <span class="fp-door-desc">Everything you have finished, logged as proof you can point at.</span>
+          </span>
+          <span class="fp-door-arrow" aria-hidden="true">&rarr;</span>
+        </a>
+        <a class="fp-door" href="applications.html">
+          <span class="fp-door-icon" aria-hidden="true"><i data-lucide="clipboard-list"></i></span>
+          <span class="fp-door-body">
+            <span class="fp-door-label">Applications</span>
+            <span class="fp-door-desc">Track every application from saved to offer, and tailor or practise for each one.</span>
+          </span>
+          <span class="fp-door-arrow" aria-hidden="true">&rarr;</span>
+        </a>
+        <a class="fp-door" href="#scorecard">
+          <span class="fp-door-icon" aria-hidden="true"><i data-lucide="compass"></i></span>
+          <span class="fp-door-body">
+            <span class="fp-door-label">Readiness Scorecard</span>
+            <span class="fp-door-desc">See how you stack up against real live postings for your target career.</span>
+          </span>
+          <span class="fp-door-arrow" aria-hidden="true">&rarr;</span>
+        </a>
+        <a class="fp-door" href="#network">
+          <span class="fp-door-icon" aria-hidden="true"><i data-lucide="user-round"></i></span>
+          <span class="fp-door-body">
+            <span class="fp-door-label">Network Mapper</span>
+            <span class="fp-door-desc">Who to contact for this career, how to find them, and a first message you send yourself.</span>
+          </span>
+          <span class="fp-door-arrow" aria-hidden="true">&rarr;</span>
+        </a>
+        <a class="fp-door" href="#season">
+          <span class="fp-door-icon" aria-hidden="true"><i data-lucide="target"></i></span>
+          <span class="fp-door-body">
+            <span class="fp-door-label">Interview Season</span>
+            <span class="fp-door-desc">Six weeks of scored mock interviews, each one aimed at a different part of the rubric.</span>
+          </span>
+          <span class="fp-door-arrow" aria-hidden="true">&rarr;</span>
+        </a>
+        <a class="fp-door" href="#semester">
+          <span class="fp-door-icon" aria-hidden="true"><i data-lucide="calendar-days"></i></span>
+          <span class="fp-door-body">
+            <span class="fp-door-label">Your term</span>
+            <span class="fp-door-desc">Three outcomes for the term, dated across it, and a review of what actually moved.</span>
+          </span>
+          <span class="fp-door-arrow" aria-hidden="true">&rarr;</span>
+        </a>
+      </div>
+    </section>
+  </section>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-left">
+      <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay"></a>
+      <p>&copy; 2026 FlightWay. All rights reserved.</p>
+    </div>
+    <div class="footer-links">
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+      <a href="/security">Security</a>
+      <a href="/contact">Contact</a>
+      <a href="/invite">Invite a friend</a>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/js/shared/page-veil.js?v=20260721a" defer></script>
+<script src="assets/js/shared/page-boot.js?v=20260703p" defer></script>
+<script src="assets/js/shared/fw-errors.js?v=20260720a" defer></script>
+<script src="assets/js/shared/auth.js?v=20260725b" defer></script>
+<script src="assets/js/shared/nps.js?v=20260725f" defer></script>
+<script src="assets/js/shared/fw-busy.js?v=20260720a" defer></script>
+<script src="assets/js/shared/user.js?v=20260725e" defer></script>
+<script src="assets/js/shared/google-auth.js?v=20260725b" defer></script>
+<script src="assets/js/shared/auth-nav.js?v=20260724d" defer></script>
+<script src="assets/js/shared/user-chip.js?v=20260721a" defer></script>
+<script src="assets/js/shared/fw-toast.js?v=20260718i" defer></script>
+<script src="assets/js/app/portal-flightplan.js?v=20260725f" defer></script>
+<script src="assets/js/shared/commitments.js?v=20260724g" defer></script>
+<script src="assets/js/app/commitments-panel.js?v=20260724g" defer></script>
+<script src="assets/js/app/deadline-radar.js?v=20260724f" defer></script>
+<script src="assets/js/app/artifacts.js?v=20260724i" defer></script>
+<script src="assets/js/app/invite-panel.js?v=20260725b" defer></script>
+<script src="assets/js/shared/applications.js?v=20260724i" defer></script>
+<script src="assets/js/app/scorecard-panel.js?v=20260725c" defer></script>
+<script src="assets/js/app/network-panel.js?v=20260725d" defer></script>
+<script src="assets/js/app/term-panel.js?v=20260725e" defer></script>
+<script src="assets/js/app/season-panel.js?v=20260725e" defer></script>
+<script src="assets/js/shared/feature-intro.js?v=20260725e" defer></script>
+<script src="assets/js/app/notify-optin.js?v=20260724b" defer></script>
+<script src="assets/js/shared/data-field.js?v=20260703p" defer></script>
+<script src="assets/js/shared/brand.js?v=20260720i" defer></script>
+<script src="assets/js/shared/app-nav.js?v=20260724d" defer></script>
+<script src="assets/js/shared/theme.js?v=20260703p" defer></script>
+<script>
+  // Deferred scripts finish before DOMContentLoaded, so globals exist here.
+  document.addEventListener('DOMContentLoaded', function () {
+    FWPageBoot.authBootThen(function () {
+      if (!FWPageBoot.requireAuth('flightplan.html')) return;
+      if (window.FWFlightPlanCard) FWFlightPlanCard.inject();
+      if (window.FWCommitmentsPanel) FWCommitmentsPanel.mount();
+      if (window.FWArtifacts) FWArtifacts.injectCard();
+      if (window.FWScorecard) FWScorecard.mount();
+      if (window.FWNetwork) FWNetwork.mount();
+      if (window.FWTerm) FWTerm.mount();
+      if (window.FWSeason) FWSeason.mount();
+      if (window.FWAppNav) FWAppNav.sync('plan');
+      if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+      if (window.FWPageVeil) FWPageVeil.notifyRender();
+    });
+  });
+</script>
+</body>
+</html>

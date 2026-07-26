@@ -7,7 +7,9 @@ export function deriveZoneProfilesFromAggregates(aggregates, topK = 15) {
   const zones = Object.keys(aggregates || {});
   for (const zone of zones) {
     const entry = aggregates[zone];
-    const lvMean = Array.isArray(entry) ? entry : entry?.lvMean;
+    // Prefer the representativeness-weighted centroid (zone-weighting.mjs) so
+    // the top dimensions describe the zone's core careers, not its outliers.
+    const lvMean = Array.isArray(entry) ? entry : (entry?.lvMeanW || entry?.lvMean);
     if (!Array.isArray(lvMean)) continue;
     const ranked = lvMean
       .map((v, i) => ({ index: i, score: Number(v) || 0 }))

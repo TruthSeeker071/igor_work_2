@@ -45,6 +45,24 @@
   var quietTimer = null;
   var settleTimer = null;
   var holdCount = 0;       // >0 while a page's async content is still loading
+  var revealSubs = [];     // onReveal callbacks, fired once, after the reveal
+
+  // Anything that must not appear over the veil (the feature interstitial)
+  // waits here instead of guessing a timeout. Subscribing after the reveal
+  // fires on the next tick, so a late subscriber behaves like an early one.
+  function flushRevealSubs() {
+    var subs = revealSubs;
+    revealSubs = [];
+    subs.forEach(function (fn) {
+      try { fn(); } catch (_) { /* a subscriber must not break the reveal */ }
+    });
+  }
+
+  function onReveal(fn) {
+    if (typeof fn !== 'function') return;
+    if (revealed) { setTimeout(fn, 0); return; }
+    revealSubs.push(fn);
+  }
 
   function settle() {
     if (settled) return;
@@ -67,6 +85,7 @@
         el.setAttribute('aria-busy', 'false');
       }
       settleTimer = setTimeout(settle, ENTRANCE_MS);
+      flushRevealSubs();
     };
     var wait = MIN_VEIL_MS - (Date.now() - bootAt);
     if (wait > 0) setTimeout(run, wait); else run();
@@ -117,5 +136,6 @@
     reveal: doReveal,
     hold: hold,
     release: release,
+    onReveal: onReveal,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

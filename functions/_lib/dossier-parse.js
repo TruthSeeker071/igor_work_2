@@ -9,6 +9,11 @@ const FIELD_PREFIXES = [
   'year:',
   'subjects_major:',
   'career_leaning:',
+  // S18 Semester Loop — the academic calendar, stated in conversation and synced
+  // through user-sync.js FIELDS onto identity.termSystem/termStart/termEnd.
+  'term_system:',
+  'term_start:',
+  'term_end:',
   'quiz_strengths:',
   'quiz_weaknesses:',
   'interests:',

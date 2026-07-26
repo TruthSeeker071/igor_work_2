@@ -65,7 +65,10 @@ export async function onRequestPut(context) {
     // Accept v1 (today's clients) and v2 (post-rollout tokens/tabs) bodies;
     // the rebuild below works on the v1 view.
     const profile = denormalizeUser(normalizeUser(payload.profile));
-    const baseUrl = originFromEnv(env, request);
+    // The request's own origin, not originFromEnv — that returns the CORS
+    // allow-origin, which is '*' for an Origin-less client and turns the
+    // artifact fetch below into `new URL(path, '*')` → a 500.
+    const baseUrl = new URL(request.url).origin;
     const zoneProfiles = await getZoneDimensionProfiles(env, baseUrl);
     setZoneDimensionProfiles(zoneProfiles);
     // Keep the client's vector object (and updatedAt) when the rebuild is a

@@ -118,3 +118,20 @@ export function planProgress(tasks) {
   const list = Array.isArray(tasks) ? tasks : [];
   return { done: list.filter((t) => t.done).length, total: list.length };
 }
+
+/**
+ * A waypoint's title for display on the Flight Plan card.
+ *
+ * Prefers the FULL title over `shortTitle`: shortTitle is cut to 36 chars on a
+ * word boundary for the cramped roadmap-tree node labels, which on a full-width
+ * card renders as a sentence that stops dead ("Master foundational coding in").
+ * If the full title still needs cutting it gets an ellipsis, so a truncation
+ * reads as deliberate rather than as a bug.
+ */
+export function waypointDisplayTitle(node, max = 80) {
+  const full = String((node && (node.title || node.shortTitle)) || '').trim();
+  if (full.length <= max) return full;
+  const cut = full.slice(0, max - 1);
+  const lastSpace = cut.lastIndexOf(' ');
+  return (lastSpace > max * 0.5 ? cut.slice(0, lastSpace) : cut).replace(/[,;:]$/, '') + '…';
+}

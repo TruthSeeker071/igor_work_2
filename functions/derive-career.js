@@ -2,8 +2,9 @@
  * /derive-career — runtime AI-derived "fragment" careers.
  *
  * GET  ?all(=1)  → { fragments: [rows sans vector/importance] } — full union of
- *                    static-sidecar + all D1-derived rows (getDerivedCareers),
- *                    capped at 500, no session; hub boot reads this once.
+ *                    static-sidecar + all D1-derived rows (getAllDerivedRows,
+ *                    re-keyed to the live catalog), capped at 500, no session;
+ *                    hub boot reads this once.
  * GET  ?base=SOC → { fragments: [rows sans vector/importance] }  (cheap D1 read,
  *                    no session; the fragment strip in the hub drawer reads this)
  * GET  ?soc=SOC  → { row } for a single derived career sans vectors (deep-dive
@@ -23,11 +24,11 @@ import {
 } from './_lib/auth.js';
 import {
   generateFragmentsForBase,
+  getAllDerivedRows,
   getFragmentsForSoc,
   getRuntimeDerivedBySoc,
   stripVectors,
 } from './_lib/derive-career.js';
-import { getDerivedCareers } from './_lib/onet/store.js';
 import { requirePlan } from './_lib/entitlements.js';
 
 const SOC_RE = /^\d{2}-\d{4}\.\d{2}$/;
@@ -50,7 +51,7 @@ export async function onRequest(context) {
       const base = String(url.searchParams.get('base') || '').trim();
       const soc = String(url.searchParams.get('soc') || '').trim();
       if (all !== null && !base && !soc) {
-        const derived = await getDerivedCareers(env, baseUrl);
+        const derived = await getAllDerivedRows(env, baseUrl);
         return authJsonResponse(200, { fragments: derived.map(stripVectors).slice(0, 500) }, origin);
       }
       if (soc) {

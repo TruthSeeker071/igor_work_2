@@ -6,13 +6,8 @@
 import { originFromEnv } from './_lib.js';
 import { callGeminiJson } from './_lib/gemini-json.js';
 import { SIM_SECRETS } from './_lib/sim-secrets.js';
-import {
-  authPreflight,
-  authJsonResponse,
-  authErrorResponse,
-  checkRateLimit,
-  clientIp,
-} from './_lib/auth.js';
+import { buildSurfacePrompt } from './_lib/marco-persona.js';
+import { authPreflight, authJsonResponse, authErrorResponse, checkRateLimit, hashedIpKey } from './_lib/auth.js';
 
 const MAX_ARTIFACT = 6000;
 const RATE_MAX = 12;
@@ -64,12 +59,14 @@ export async function onRequest(context) {
   if (!ctx) return authJsonResponse(404, { error: 'Unknown simulation.' }, origin);
 
   try {
-    await checkRateLimit(env, 'simfb:' + clientIp(request), { max: RATE_MAX });
+    await checkRateLimit(env, 'simfb:' + await hashedIpKey(env, request), { max: RATE_MAX });
   } catch (err) {
     return authErrorResponse(err, origin);
   }
 
   const prompt = [
+    buildSurfacePrompt('sim-feedback', { omitSchool: true }),
+    '',
     'You are a thoughtful senior ' + ctx.title + ' reviewing work from a college student with no prior exposure to this field, who just completed a realistic short job simulation.',
     'Give honest, specific, workplace-grade feedback — encouraging but never inflated, written in plain language a newcomer understands. Quote or reference their actual words where possible.',
     '',

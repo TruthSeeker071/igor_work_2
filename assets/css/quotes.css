@@ -1,0 +1,50 @@
+/* FlightWay V2 S19 — the approved-testimonial slot (D28).
+   Client half: assets/js/shared/quotes.js. Linked by index.html and
+   pricing.html, the only two pages with a quote slot.
+
+   Its own file rather than rules in flightway-theme.css, which eleven pages
+   link: one rule there is an eleven-page cache-buster restamp, and this is the
+   same reasoning that produced scorecard.css / network.css / season.css.
+
+   Tokens only, no literal hex — contrast:check reads this directory. */
+
+.fw-quote-list {
+  display: grid;
+  gap: 20px;
+  margin-top: 44px;
+}
+@media (min-width: 820px) {
+  .fw-quote-list { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+}
+
+.fw-quote {
+  margin: 0;
+  padding: 24px 26px;
+  border: 1px solid rgb(var(--border));
+  border-radius: 16px;
+  background: rgb(var(--surface));
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.fw-quote-text {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: rgb(var(--text));
+}
+/* A real quotation mark rather than a decorative glyph: the mark belongs to the
+   sentence, and a student reading this with a screen reader should hear that
+   these are somebody else's words. */
+.fw-quote-text::before { content: '\201C'; }
+.fw-quote-text::after { content: '\201D'; }
+
+.fw-quote-who {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: rgb(var(--text-muted));
+}
+.fw-quote-who::before { content: '— '; }

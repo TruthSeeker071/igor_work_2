@@ -16,7 +16,9 @@
 //   Regeneration is incremental: the saved resume is fed back as context.
 //   GET  ?soc=… → the saved resume doc for this user+career (persists across visits).
 //   PUT  { soc, bullets } → save the user's edited bullets (versioned).
-// House pattern: session-gated + requirePlan('premium') + rate-limited + schema-validated.
+// House pattern: session-gated + rate-limited + schema-validated. V2 §4: building
+// and editing are FREE (the resume they build here is the switching cost); only
+// mode='draft-doc' — the whole-resume AI draft — is metered.
 // Gemini calls carry timeoutMs + a wall-clock deadline; on failure the saved
 // doc is returned best-effort instead of a hard 5xx when one exists. The
 // critique pass is best-effort on top of the draft pass the same way.
@@ -28,8 +30,8 @@ import { originFromEnv, jsonResponse, preflightResponse, userIdFromEmail } from 
 import { loadDossierWithCoordinates } from './_lib/dossier-coordinates.js';
 import { callGeminiJson } from './_lib/gemini-json.js';
 import { groundedJson, GROUNDING_TTL } from './_lib/gemini-grounded.js';
-import { getSessionEmail, checkRateLimit, clientIp } from './_lib/auth.js';
-import { requirePlan } from './_lib/entitlements.js';
+import { getSessionEmail, checkRateLimit, hashedIpKey } from './_lib/auth.js';
+import { checkFeatureLimit, refundFeatureUse } from './_lib/plan-limits.js';
 import { getRegistry, getSocIndex, getImBuffer, sliceVector } from './_lib/onet/store.js';
 import { sanitizeTrials } from './_lib/sim-sanitize.js';
 import { resolveCareerFamily, formatProfileForFamily, resumeRubricBlock, formatGuidanceBlock } from './_lib/resume-formats.js';
@@ -237,8 +239,6 @@ async function gate(context) {
   const origin = originFromEnv(env, request);
   const email = await getSessionEmail(request, env);
   if (!email) return { origin, error: jsonResponse(401, { error: 'Not signed in.' }, origin) };
-  const ent = await requirePlan(env, email, 'premium');
-  if (!ent.ok) return { origin, error: jsonResponse(402, { error: 'The resume builder is a Flight Plan feature.', upgrade: true }, origin) };
   return { origin, email, env, request };
 }
 
@@ -380,9 +380,21 @@ async function draftDocMode(env, { origin, email, soc, careerName, body, src }) 
   const template = variantIds.includes(requested) ? requested : recommendedTemplate;
 
   let capSpent = false;
+  let planSpent = false;
   try {
+    // Abuse wall first (a 429 must never cost a monthly draft), then the §4
+    // plan meter. If the plan wall refuses, hand the abuse unit straight back —
+    // nothing was generated.
     await dailyLimit(env, email, 15);
     capSpent = true;
+    const draftCap = await checkFeatureLimit(env, email, 'resume-draft');
+    if (!draftCap.ok) {
+      try { await dailyRefund(env, email); } catch (_) { /* best-effort */ }
+      return jsonResponse(429, {
+        error: draftCap.message, upgrade: !!draftCap.upgrade, feature: 'resume-draft', remaining: 0,
+      }, origin);
+    }
+    planSpent = true;
     const deadlineAt = Date.now() + GEMINI_BUDGET_MS;
 
     const answersBlock = answers.length
@@ -525,6 +537,7 @@ async function draftDocMode(env, { origin, email, soc, careerName, body, src }) 
     }, origin);
   } catch (err) {
     if (capSpent) { try { await dailyRefund(env, email); } catch (_) { /* best-effort */ } }
+    if (planSpent) await refundFeatureUse(env, email, 'resume-draft');
     const status = err.status || 500;
     return jsonResponse(status, { error: err._userFacing ? err.message : 'The resume builder is unavailable right now.' }, origin);
   }
@@ -544,7 +557,7 @@ export async function onRequestPost(context) {
   const trials = sanitizeTrials(body?.simTrials);
 
   try {
-    await checkRateLimit(env, `rbuild:${clientIp(request)}`, { max: 20 });
+    await checkRateLimit(env, `rbuild:${await hashedIpKey(env, request)}`, { max: 20 });
   } catch (err) {
     return jsonResponse(err.status || 429, { error: err.message || 'Too many attempts.' }, origin);
   }

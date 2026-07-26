@@ -6,7 +6,6 @@
 
 import { originFromEnv, jsonResponse, preflightResponse } from './_lib.js';
 import { getSessionEmail } from './_lib/auth.js';
-import { requirePlan } from './_lib/entitlements.js';
 import { loadUser } from './_lib/user.js';
 import { isoWeek } from './_lib/weekly-plan-core.js';
 
@@ -32,11 +31,9 @@ export async function onRequestGet(context) {
   const email = await getSessionEmail(request, env);
   if (!email) return jsonResponse(401, { error: 'Not signed in.' }, origin);
 
-  // Free/paid merge §1: Receipts ship with the Weekly Flight Plan.
-  const ent = await requirePlan(env, email, 'premium');
-  if (!ent.ok) {
-    return jsonResponse(402, { error: 'Receipts are a Flight Plan feature.', upgrade: true, feature: 'receipts' }, origin);
-  }
+  // V2 §4: receipts ship WITH the Weekly Flight Plan, so they follow it free.
+  // A free Flight Plan whose own progress evidence is locked would be a wall
+  // in the middle of the one loop §4 says never to meter.
 
   if (!env.DB) return jsonResponse(200, { week: isoWeek(), hasHistory: false, movers: [], trend: [] }, origin);
 

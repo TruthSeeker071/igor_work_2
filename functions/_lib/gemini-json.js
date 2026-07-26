@@ -49,11 +49,12 @@ function buildBody({ prompt, temperature, maxTokens, jsonMode }) {
   return body;
 }
 
-async function generateOnce({ apiKey, model, prompt, temperature, maxTokens, jsonMode }) {
+async function generateOnce({ apiKey, model, prompt, temperature, maxTokens, jsonMode, timeoutMs }) {
   const data = await geminiGenerateContent({
     apiKey,
     model,
     body: buildBody({ prompt, temperature, maxTokens, jsonMode }),
+    timeoutMs,
   });
   const finishReason = data?.candidates?.[0]?.finishReason || '';
   const text = geminiTextFromResponse(data);
@@ -85,6 +86,8 @@ export async function callGeminiText(env, opts) {
     maxTokens = 512,
     label = 'gemini-text',
     softFail = false,
+    timeoutMs,
+    deadlineAt,
   } = opts || {};
 
   const { apiKey } = geminiConfigFromEnv(env);
@@ -97,9 +100,22 @@ export async function callGeminiText(env, opts) {
   const models = resolveGeminiModels(env);
   let lastErr = null;
 
+  outer:
   for (const m of models) {
     for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt += 1) {
       if (attempt > 0) await sleep(RETRY_DELAYS_MS[attempt - 1]);
+      // §3A.7: cap the whole 2-model x 3-attempt cascade at deadlineAt and clamp
+      // each request to the time remaining, matching callGeminiJson — without it
+      // the cascade can run ~125s past the caller's soft ceiling.
+      let effTimeoutMs = timeoutMs;
+      if (deadlineAt) {
+        const remaining = deadlineAt - Date.now();
+        if (remaining < 2000) {
+          if (!lastErr) lastErr = Object.assign(new Error(`${label}: deadline exhausted.`), { status: 503 });
+          break outer;
+        }
+        effTimeoutMs = timeoutMs ? Math.min(timeoutMs, remaining) : remaining;
+      }
       try {
         const { text } = await generateOnce({
           apiKey,
@@ -108,6 +124,7 @@ export async function callGeminiText(env, opts) {
           temperature,
           maxTokens,
           jsonMode: false,
+          timeoutMs: effTimeoutMs,
         });
         return String(text).trim();
       } catch (err) {
@@ -134,6 +151,8 @@ export async function callGeminiJson(env, opts) {
     jsonMode = true,
     label = 'gemini-json',
     softFail = false,
+    timeoutMs,
+    deadlineAt,
   } = opts || {};
 
   const { apiKey } = geminiConfigFromEnv(env);
@@ -152,10 +171,26 @@ export async function callGeminiJson(env, opts) {
   const tokenLimits = baseTokens === bumpedTokens ? [baseTokens] : [baseTokens, bumpedTokens];
   let lastErr = null;
 
+  // Without a deadline the cascade below can run models x tokenLimits x
+  // attempts (up to 12 calls); a deadline caps the whole cascade and clamps
+  // each request's timeout to the time remaining.
+  outer:
   for (const m of models) {
     for (const outputTokens of tokenLimits) {
+      // The bumped token tier only helps MAX_TOKENS truncation; re-running an
+      // overloaded/erroring model at higher tokens just burns the deadline.
+      let bumpTokens = false;
       for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt += 1) {
         if (attempt > 0) await sleep(RETRY_DELAYS_MS[attempt - 1]);
+        let effTimeoutMs = timeoutMs;
+        if (deadlineAt) {
+          const remaining = deadlineAt - Date.now();
+          if (remaining < 2000) {
+            if (!lastErr) lastErr = Object.assign(new Error(`${label}: deadline exhausted.`), { status: 503 });
+            break outer;
+          }
+          effTimeoutMs = timeoutMs ? Math.min(timeoutMs, remaining) : remaining;
+        }
         try {
           const { text, finishReason } = await generateOnce({
             apiKey,
@@ -164,6 +199,7 @@ export async function callGeminiJson(env, opts) {
             temperature,
             maxTokens: outputTokens,
             jsonMode,
+            timeoutMs: effTimeoutMs,
           });
 
           if (jsonMode) {
@@ -172,6 +208,7 @@ export async function callGeminiJson(env, opts) {
             } catch (parseErr) {
               if (finishReason === 'MAX_TOKENS' && outputTokens < tokenLimits[tokenLimits.length - 1]) {
                 lastErr = parseErr;
+                bumpTokens = true;
                 break;
               }
               throw parseErr;
@@ -183,10 +220,13 @@ export async function callGeminiJson(env, opts) {
           lastErr = err;
           console.warn(`${label} [${m}] attempt ${attempt + 1} failed:`, err?.message || err);
           if (RETRYABLE_STATUS.has(err.status)) continue;
-          if (err.finishReason === 'MAX_TOKENS' && outputTokens < tokenLimits[tokenLimits.length - 1]) break;
+          if (err.finishReason === 'MAX_TOKENS' && outputTokens < tokenLimits[tokenLimits.length - 1]) {
+            bumpTokens = true;
+          }
           break;
         }
       }
+      if (!bumpTokens) break; // next model — bumped tokens won't fix this failure
     }
   }
 

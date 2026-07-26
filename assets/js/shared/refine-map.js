@@ -48,6 +48,19 @@
     for (var i = range[0]; i < range[1]; i++) pending[i] += boost;
   }
 
+  // Sharpen answers bump whole 33-52 dimension domains at once, so ungated they
+  // pile far more mass onto the vector than the quiz seed carries and flatten
+  // the direction it established. Total |delta| the sharpen layer may apply,
+  // after per-dim direction gating (parity: functions/_lib/onet/refine-map.js).
+  var REFINE_L1_BUDGET = 120;
+
+  function gateRefinePending(values, pending) {
+    if (global.FWOnetMath && typeof FWOnetMath.gateLayerDeltas === 'function') {
+      return FWOnetMath.gateLayerDeltas(values, pending, REFINE_L1_BUDGET, 50);
+    }
+    return pending;
+  }
+
   // Tags carry the pre-bump value ("refine:42") so strip restores the base
   // exactly instead of zeroing it — strip/reapply must be a true inverse or
   // every hydration destroys the quiz-seeded personality in bumped domains.
@@ -170,10 +183,13 @@
       });
     }
 
+    var gated = gateRefinePending(values, pending);
     for (var i = 0; i < DIM; i++) {
-      if (!pending[i]) continue;
+      if (!gated[i]) continue;
+      var next = clamp100(values[i] + gated[i]);
+      if (next === values[i]) continue;
       sources[i] = 'refine:' + values[i];
-      values[i] = clamp100(values[i] + pending[i]);
+      values[i] = next;
     }
 
     var out = {

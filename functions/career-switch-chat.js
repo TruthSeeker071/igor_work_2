@@ -9,6 +9,8 @@ import {
   GEMINI_SAFETY_SETTINGS,
 } from './_lib.js';
 import { loadDossierWithCoordinates } from './_lib/dossier-coordinates.js';
+import { buildSurfacePrompt } from './_lib/marco-persona.js';
+import { schoolForCacheKey } from './_lib/deadlines.js';
 import { loadUserBlob } from './_lib/user.js';
 import { groundingEnabled, researchWeb, buildEvidenceBlock, looksLikeCurrentFactQuery, GROUNDING_TTL } from './_lib/gemini-grounded.js';
 import {
@@ -18,8 +20,9 @@ import {
   requireSession,
   loadRoadmap,
   checkRateLimit,
+  refundRateLimit,
 } from './_lib/auth.js';
-import { checkFeatureLimit } from './_lib/plan-limits.js';
+import { checkFeatureLimit, refundFeatureUse } from './_lib/plan-limits.js';
 import { isExplicitCareerPivotIntent } from './_lib/roadmap.js';
 import { pivotSummaryLine } from './_lib/onet/pivot-analysis.js';
 import { generateFragmentsForBase } from './_lib/derive-career.js';
@@ -63,7 +66,7 @@ function normalizePendingProposal(raw) {
   };
 }
 
-function buildSystemPrompt({ currentFocus, topMatches, switchCount }) {
+function buildSystemPrompt({ currentFocus, topMatches, switchCount, school, dossier }) {
   const targetLine = currentFocus
     ? `Current target career: ${currentFocus.name} (${currentFocus.slug}).`
     : 'Current target career: not set yet.';
@@ -74,24 +77,17 @@ function buildSystemPrompt({ currentFocus, topMatches, switchCount }) {
     ? `Note: user has switched target career ${switchCount} times in the last 30 days. If natural, gently ask what is driving the shifts.`
     : '';
 
-  return `You are the FlightWay Career Switch Advisor on the home page — a narrow assistant scoped ONLY to:
-- helping the user choose or change their target career
-- comparing fit tradeoffs between their top matches
-- clarifying which O*NET catalog career fits what they mean
-
-You are NOT the full AI Career Advisor. Refuse general coaching, homework help, interview prep, or deep life advice.
-If asked, say: "For broader advice, open AI Career Advisor from your home page."
-
-${targetLine}
-${matchesLine}
-${switchLine}
-
-Rules:
-- Keep replies under 120 words.
-- Only O*NET catalog careers can become the user's target — never invent job titles.
-- The app proposes catalog matches and asks the user to confirm before switching; you do not switch careers yourself.
-- If they are exploring without committing, help them compare options.
-- Plain text only; no markdown headers or bullet lists unless very short.`;
+  // WS-E: same Marco, narrower job. The drawer used to introduce itself as a
+  // different assistant entirely ("the FlightWay Career Switch Advisor"), which
+  // is exactly the seam WS-E exists to close — it is Marco, scoped.
+  return buildSurfacePrompt('career-switch', {
+    school,
+    dossier,
+    blocks: [
+      [targetLine, matchesLine, switchLine].filter(Boolean).join('\n'),
+      'If they are exploring without committing, help them compare — do not push them to decide.',
+    ],
+  });
 }
 
 function toGeminiContents(history, userMessage) {
@@ -205,6 +201,13 @@ export async function onRequest(context) {
   if (!userMessage) return authJsonResponse(400, { error: 'Message cannot be empty.' }, origin);
 
   let email = '';
+  // Set once both budgets are spent; a server-side failure after this point
+  // must hand back the daily Marco message the user paid for no reply.
+  let turnSpent = false;
+  const refundTurn = async () => {
+    await refundRateLimit(env, `career-switch-chat:${email}`);
+    await refundFeatureUse(env, email, 'marco-chat');
+  };
   try {
     ({ email } = await requireSession(request, env));
     await checkRateLimit(env, `career-switch-chat:${email}`);
@@ -220,6 +223,7 @@ export async function onRequest(context) {
         feature: 'marco-chat',
       }, origin);
     }
+    turnSpent = true;
 
     const [quiz, dossierRaw, roadmap] = await Promise.all([
       loadQuizSafe(env, email),
@@ -233,7 +237,10 @@ export async function onRequest(context) {
     const pendingProposal = normalizePendingProposal(payload.pendingProposal);
     const baseUrl = env?.SITE_URL || 'https://flightwayjacobprototype.pages.dev';
 
-    const systemInstruction = buildSystemPrompt({ currentFocus, topMatches, switchCount });
+    const systemInstruction = buildSystemPrompt({
+      currentFocus, topMatches, switchCount, dossier,
+      school: schoolForCacheKey({ quiz, dossier }),
+    });
     const contents = toGeminiContents(payload.history, userMessage);
 
     let focusUpdated = false;
@@ -313,6 +320,7 @@ export async function onRequest(context) {
         try {
           reply = await callGemini(env, groundedInstruction, contents);
         } catch (err) {
+          await refundTurn();
           const msg = err._userFacing ? err.message : 'The career switch advisor is busy. Try again shortly.';
           return authJsonResponse(502, { error: msg }, origin);
         }
@@ -349,6 +357,9 @@ export async function onRequest(context) {
       message: err?.message || String(err),
       stack: err?.stack ? String(err.stack).slice(0, 400) : undefined,
     }));
+    // Everything user-caused fails before the spend, so a spent turn that
+    // reaches this catch was our failure — hand the message back.
+    if (turnSpent) await refundTurn();
     return authErrorResponse(err, origin);
   }
 }

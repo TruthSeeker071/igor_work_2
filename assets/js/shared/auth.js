@@ -5,6 +5,7 @@
   const AUTH_FETCH_TIMEOUT_MS = 30000;
 
   let sessionEmail = null;
+  let sessionVerified = null; // raw `verified` from the last /auth/me; null = not yet known
   let bootPromise = null;
 
   // Every failure that can reach a display site goes through FWErr, so server
@@ -194,6 +195,15 @@
       objectiveVecAt: String((quiz.objectiveVector && quiz.objectiveVector.updatedAt) || ''),
       vectorSchemaId: String(quiz.vectorSchemaId || ''),
     };
+    // The snapshot's prose is written by the model against careerPool's fit
+    // percentages (see buildCareerPoolForApi), so a change to how fit is scored
+    // has to invalidate it even when the user's vectors have not moved — the
+    // vector timestamps above cannot see a formula change.
+    // Version 1 is omitted on purpose: including it would rewrite every
+    // existing hash and regenerate every snapshot through the AI for a scoring
+    // change that has not happened yet. It starts salting at the first bump.
+    var fitMath = (global.FWOnetMath && FWOnetMath.FIT_MATH_VERSION) || 1;
+    if (fitMath > 1) payload.fitMathVersion = fitMath;
     return hashString(JSON.stringify(payload));
   }
 
@@ -547,6 +557,18 @@
     } catch (_) { /* ignore */ }
   }
 
+  // Feature-intro marks are the one persisted field that changes without any
+  // quiz input changing; without a term here, "seen" would stay local for the
+  // whole session and the student would meet the same interstitial on their
+  // next device. Order-independent so a key-order difference is not a change.
+  function introsHash(intros) {
+    if (!intros || typeof intros !== 'object') return '';
+    return Object.keys(intros).sort().map(function (key) {
+      var row = intros[key] || {};
+      return key + ':' + (row.seen ? '1' : '0') + (row.ribbonDismissed ? '1' : '0');
+    }).join(',');
+  }
+
   function quizPayloadHash(quiz) {
     if (!quiz) return '';
     // Must cover every input the server persists — anything omitted here can
@@ -565,6 +587,7 @@
       focus: quiz.careerFocus
         ? { slug: quiz.careerFocus.slug, weight: quiz.careerFocus.weight || 0 }
         : null,
+      intros: introsHash(quiz.featureIntros),
     }));
   }
 
@@ -635,6 +658,7 @@
           force: !!(opts && opts.force),
           reason: (opts && opts.reason) || 'client',
         },
+        timeoutMs: opts && opts.timeoutMs ? opts.timeoutMs : 120000,
       });
       var data = await parseJson(resp);
       if (!resp.ok) throw respError(resp, data, 'Could not sync roadmap.');
@@ -669,6 +693,7 @@
           merged = mergeVectorInputs(local, merged);
           merged = mergePortalSnapshot(local, merged);
           merged = mergeCareerFocus(local, merged);
+          merged = mergeFeatureIntros(local, merged);
           writeLocalQuiz(merged);
           if (merged.portalSnapshot && merged.portalSnapshot.dossierFp) {
             writeDossierFingerprint(merged.portalSnapshot.dossierFp);
@@ -840,6 +865,46 @@
     return serverQuiz;
   }
 
+  // Feature intros are one-way facts: a screen you have already been shown can
+  // never become unshown. So the merge is a union, per feature, in both
+  // directions — that is also the signed-out → account migration path (an
+  // anonymous student's marks live in the same local blob and survive the
+  // first server pull). Read from FWUser rather than `localQuiz`, because
+  // readLocalQuiz() returns null until the quiz has scores and intros start
+  // before that.
+  function localFeatureIntros() {
+    try {
+      if (!global.FWUser || typeof FWUser.get !== 'function') return null;
+      var user = FWUser.get();
+      var intros = user && user.journey && user.journey.featureIntros;
+      return (intros && typeof intros === 'object') ? intros : null;
+    } catch (_) { return null; }
+  }
+
+  function mergeFeatureIntros(localQuiz, serverQuiz) {
+    if (!serverQuiz) return localQuiz || serverQuiz;
+    var localIntros = localFeatureIntros()
+      || ((localQuiz && typeof localQuiz.featureIntros === 'object') ? localQuiz.featureIntros : null);
+    if (!localIntros) return serverQuiz;
+    var serverIntros = (serverQuiz.featureIntros && typeof serverQuiz.featureIntros === 'object')
+      ? serverQuiz.featureIntros : {};
+    var out = Object.assign({}, serverIntros);
+    Object.keys(localIntros).forEach(function (key) {
+      var mine = localIntros[key];
+      if (!mine || typeof mine !== 'object') return;
+      var theirs = (out[key] && typeof out[key] === 'object') ? out[key] : {};
+      var seenAt = mine.seenAt && theirs.seenAt
+        ? (mine.seenAt < theirs.seenAt ? mine.seenAt : theirs.seenAt)
+        : (mine.seenAt || theirs.seenAt || '');
+      var merged = Object.assign({}, theirs, mine);
+      if (theirs.seen || mine.seen) merged.seen = true;
+      if (theirs.ribbonDismissed || mine.ribbonDismissed) merged.ribbonDismissed = true;
+      if (seenAt) merged.seenAt = seenAt;
+      out[key] = merged;
+    });
+    return Object.assign({}, serverQuiz, { featureIntros: out });
+  }
+
   async function loadProfile() {
     if (!sessionEmail) return null;
     const localBefore = readLocalQuiz();
@@ -860,6 +925,7 @@
       merged = mergeVectorInputs(localBefore, merged);
       merged = mergePortalSnapshot(localBefore, merged);
       merged = mergeCareerFocus(localBefore, merged);
+      merged = mergeFeatureIntros(localBefore, merged);
       if (global.FWSectorFitSheet) FWSectorFitSheet.ensureSectorFitSheet(merged);
       if (global.FWOnetVectors && typeof FWOnetVectors.hydrateQuizVectors === 'function') {
         merged = FWOnetVectors.hydrateQuizVectors(merged);
@@ -931,6 +997,12 @@
     return sessionEmail;
   }
 
+  // Unknown (pre-migration server, or /auth/me not yet resolved) must never
+  // nag — only an explicit `verified: false` from the server does.
+  function isVerified() {
+    return sessionVerified !== false;
+  }
+
   function isValidPassword(password) {
     return typeof password === 'string' && password.length >= MIN_PASSWORD_LEN;
   }
@@ -939,9 +1011,14 @@
     const resp = await authFetch('/auth/me');
     const data = await parseJson(resp);
     if (!resp.ok) {
+      sessionVerified = null;
       setSessionEmail(null);
       return null;
     }
+    // Capture before setSessionEmail — its fw-auth-change dispatch is
+    // synchronous, so isVerified() must already read the fresh value inside
+    // any listener (auth-nav.js's soft-verify banner included).
+    sessionVerified = (data && typeof data.verified === 'boolean') ? data.verified : null;
     setSessionEmail(data.email || null);
     return data.email ? { email: data.email } : null;
   }
@@ -989,7 +1066,7 @@
     return bootPromise;
   }
 
-  async function authRegister(email, password, quizProfile) {
+  async function authRegister(email, password, quizProfile, opts) {
     const body = { email, password };
     const profile = quizProfile || readLocalQuiz();
     if (profile) body.quizProfile = profile;
@@ -998,8 +1075,27 @@
     const data = await parseJson(resp);
     if (!resp.ok) throw respError(resp, data, 'Registration failed.');
 
+    // Only past the failure guard — a rejected registration is not a signup.
+    // `source` (S6) attributes where the account was created (e.g. the quiz
+    // reveal gate) so the funnel can split signups by entry point.
+    try {
+      if (global.FWEvents) {
+        var suProps = { method: 'password' };
+        if (opts && opts.source) suProps.source = opts.source;
+        FWEvents.log('signup_complete', suProps);
+        // S15 (D24). The bind happens SERVER-side, from the fw_ref cookie —
+        // a client-supplied referrer would be a client-chosen referrer — so
+        // `referred` on the response is the browser's only way to know it
+        // happened. No props: the code is the server's business, not a stat.
+        if (data && data.referred) FWEvents.log('referral_signup', {});
+      }
+    } catch (_) {}
     setSessionEmail(data.email || email);
     scheduleQuizProfileSync('post-register quiz sync failed');
+    // No props by design: the server joins anon_id → user_id off the session
+    // cookie the response above already set. Must NOT move into setSessionEmail
+    // — that also runs on every authMe boot and on logout.
+    try { if (global.FWEvents) FWEvents.log('identify', {}); } catch (_) {}
     return data;
   }
 
@@ -1008,8 +1104,13 @@
     const data = await parseJson(resp);
     if (!resp.ok) throw respError(resp, data, 'Invalid email or password.');
 
+    // The only sign-in success point; the reset flow is a separate function
+    // that never lands here, so a password reset can't be counted as a login.
+    try { if (global.FWEvents) FWEvents.log('login', { method: 'password' }); } catch (_) {}
     setSessionEmail(data.email || email);
     scheduleQuizProfileSync('post-login quiz sync failed');
+    // Mirror of the register-side identify — same cookie-is-already-set reason.
+    try { if (global.FWEvents) FWEvents.log('identify', {}); } catch (_) {}
     return data;
   }
 
@@ -1049,6 +1150,7 @@
     authForgotPassword,
     authResetPassword,
     authEmail,
+    isVerified,
     syncQuizProfile,
     uploadLocalQuizIfPresent,
     loadProfile,

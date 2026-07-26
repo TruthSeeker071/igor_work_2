@@ -36,6 +36,17 @@ export const KEY_MAP = [
   ['profile.subjects', 'identity.subjects'],
   ['profile.careerLeaning', 'identity.careerLeaning'],
   ['careerLeaningSoc', 'identity.careerLeaningSoc'],
+  // S18 Semester Loop. The student's academic calendar: which block their school
+  // runs on and when the current one starts and ends. Three scalar rows rather
+  // than one `term` object, because these go through the user-sync registry
+  // (user-sync.js FIELDS) — a registry field is one dossier LINE with one
+  // clean(), so an object would have needed a private serializer and would have
+  // been the only field in the registry that could not be stated in conversation.
+  // The `terms` D1 row (0026) is the record of the RITUAL; these three are the
+  // readable mirror. term-store.js `resolveTerm` is the single reader over both.
+  ['termSystem', 'identity.termSystem'],
+  ['termStart', 'identity.termStart'],
+  ['termEnd', 'identity.termEnd'],
   ['personalityVector', 'vectors.personality'],
   ['objectiveVector', 'vectors.objective'],
   ['vectorSchemaId', 'vectors.schemaId'],
@@ -60,6 +71,10 @@ export const KEY_MAP = [
   ['refine', 'journey.refine'],
   ['portalSnapshot', 'journey.portalSnapshot'],
   ['profileAlignment', 'journey.profileAlignment'],
+  // Which feature interstitials/ribbons this student has already been shown
+  // (feature-intro.js). Client-owned UI state — the server only stores and
+  // returns it, which is what makes it follow the account across devices.
+  ['featureIntros', 'journey.featureIntros'],
 ];
 
 export const GROUPS = ['identity', 'vectors', 'assessment', 'focus', 'resume', 'journey'];

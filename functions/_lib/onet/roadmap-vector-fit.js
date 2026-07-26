@@ -1,9 +1,9 @@
 import { getVectorsForSocs, getMagnitudeSample } from './vectors.js';
 import { getCareers } from './store.js';
 import {
-  computeFitPercent,
+  personalityFitPercent,
   objectiveFitPercent,
-  overallFitScore,
+  displayFitPercent,
   computePreparedness,
   computeGapVector,
   isObjectiveVectorActive,
@@ -37,7 +37,7 @@ export async function computeVectorFitForSoc(env, baseUrl, quiz, soc) {
   const meta = careers.find((c) => c.soc === soc);
 
   const entry = { soc };
-  entry.personalityFit = computeFitPercent(personality, careerVec);
+  entry.personalityFit = personalityFitPercent(personality, careerVec);
   if (objectiveActive) {
     entry.objectiveFit = objectiveFitPercent(objective, careerVec);
     entry.preparedness = computePreparedness(objective, careerVec, {
@@ -48,6 +48,6 @@ export async function computeVectorFitForSoc(env, baseUrl, quiz, soc) {
       .slice(0, 5)
       .map((g) => ({ index: g.index, gap: Math.round(g.gap * 10) / 10 }));
   }
-  entry.fitScore = overallFitScore(entry.personalityFit, entry.objectiveFit ?? null);
+  entry.fitScore = displayFitPercent(personality, careerVec);
   return entry;
 }

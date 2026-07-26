@@ -141,7 +141,16 @@
         if (derivedRows.length) rows = rows.concat(derivedRows);
         buildIndexes(rows, hubMap);
         applyDescriptions();
-        loadDescriptions();
+        // Descriptions (~185KB) are enrichment for drawers/panels, never for
+        // first paint — start them once the caller's boot work has settled so
+        // they stop competing with the boot-critical fetches. Anything that
+        // needs the text sooner (`load()`, the hub panel) calls
+        // loadDescriptions() itself; the promise is memoized, so it races safely.
+        if (typeof global.requestIdleCallback === 'function') {
+          global.requestIdleCallback(loadDescriptions, { timeout: 2000 });
+        } else {
+          setTimeout(loadDescriptions, 600);
+        }
         return careers;
       }).catch(function (err) {
         console.warn('[FWOnetCatalog] load failed', err);

@@ -1,27 +1,18 @@
-import { originFromEnv, isValidEmail, normalizeEmail, resendConfigFromEnv } from '../_lib.js';
-import {
-  authPreflight,
-  authJsonResponse,
-  authErrorResponse,
-  findUserByEmail,
-  createPasswordResetToken,
-  checkRateLimit,
-  clientIp,
-} from '../_lib/auth.js';
+import { originFromEnv, isValidEmail, normalizeEmail } from '../_lib.js';
+import { authPreflight, authJsonResponse, authErrorResponse, findUserByEmail, createPasswordResetToken, checkRateLimit, hashedIpKey } from '../_lib/auth.js';
+import { sendMail, renderEmail, transactionalFooter, siteBase } from '../_lib/email-template.js';
 
-const RESEND_ENDPOINT = 'https://api.resend.com/emails';
-
-function esc(s) {
-  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-function resetEmailHtml(resetUrl) {
-  return `<!doctype html><html><body style="font-family:sans-serif;color:#0f172a;padding:32px;">
-    <h1 style="font-size:22px;">Reset your Flightway password</h1>
-    <p>Click the button below to choose a new password. This link expires in one hour.</p>
-    <p><a href="${esc(resetUrl)}" style="display:inline-block;padding:12px 24px;background:#1a56db;color:#fff;text-decoration:none;border-radius:8px;">Reset password</a></p>
-    <p style="font-size:12px;color:#64748b;">If you didn't request this, you can ignore this email.</p>
-  </body></html>`;
+function resetEmail(resetUrl) {
+  const body = 'Click the button below to choose a new password. This link expires in one hour. '
+    + 'If you didn’t request this, you can safely ignore this email.';
+  return renderEmail({
+    preheader: 'Reset your FlightWay password (this link expires in one hour).',
+    heading: 'Reset your password',
+    bodyHtml: `<p style="font-size:15px;line-height:1.65;color:#c3ccea;margin:0 0 16px">${body}</p>`,
+    bodyText: body,
+    cta: { label: 'Reset password', url: resetUrl },
+    footer: transactionalFooter(),
+  });
 }
 
 export async function onRequestOptions(context) {
@@ -47,41 +38,19 @@ export async function onRequestPost(context) {
   }
 
   try {
-    await checkRateLimit(env, `forgot:${clientIp(request)}`);
+    await checkRateLimit(env, `forgot:${await hashedIpKey(env, request)}`);
     await checkRateLimit(env, `forgot:${email}`);
 
     const user = await findUserByEmail(env, email);
     if (user) {
       const token = await createPasswordResetToken(env, email);
-      const siteOrigin = origin !== '*' ? origin : 'https://flightwayjacobprototype.pages.dev';
+      const siteOrigin = origin !== '*' ? origin : siteBase(env);
       const resetUrl = `${siteOrigin}/auth.html#reset-password?token=${encodeURIComponent(token)}`;
-
-      const { apiKey, fromEmail } = resendConfigFromEnv(env);
-      if (apiKey) {
-        // Bound the upstream call (Workers fetch has no default timeout) and
-        // swallow its failure: the response must stay the generic 200 below
-        // whether or not the email actually sent, or a Resend error would leak
-        // (via a 500) that this email is registered.
-        try {
-          await fetch(RESEND_ENDPOINT, {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${apiKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              from: fromEmail,
-              to: [email],
-              subject: 'Reset your Flightway password',
-              html: resetEmailHtml(resetUrl),
-              text: `Reset your password: ${resetUrl}`,
-            }),
-            signal: AbortSignal.timeout(8000),
-          });
-        } catch (sendErr) {
-          console.error('forgot-password send failed', sendErr?.message || sendErr);
-        }
-      }
+      const { html, text } = resetEmail(resetUrl);
+      // sendMail never throws and stays silent on failure, so the response is the
+      // generic 200 below whether or not the email actually sent — a Resend error
+      // must not leak (via a 500) that this address is registered.
+      await sendMail(env, { to: email, subject: 'Reset your FlightWay password', html, text, type: 'password_reset' });
     }
 
     return authJsonResponse(200, generic, origin);

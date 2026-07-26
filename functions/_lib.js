@@ -1,6 +1,8 @@
 // Shared helpers for the AI-coach Cloudflare Pages Functions.
 // Uses Workers KV (binding: COACH_KV) instead of Netlify Blobs.
 
+import { createSseParser } from './_lib/sse.js';
+
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 export const DOSSIER_VERSION_MARKER = '# user dossier v1';
 export const DOSSIER_MAX_CHARS = 4000;
@@ -135,10 +137,45 @@ export async function loadChat(env, userId) {
       exchangeCount: Number.isInteger(parsed.exchangeCount) ? parsed.exchangeCount : 0,
       messages: Array.isArray(parsed.messages) ? parsed.messages : [],
       roadmapAck,
+      lastTopic: normalizeLastTopic(parsed.lastTopic),
     };
   } catch {
-    return { exchangeCount: 0, messages: [], roadmapAck: null };
+    return { exchangeCount: 0, messages: [], roadmapAck: null, lastTopic: null };
   }
+}
+
+// S10 Marco memory: what the PREVIOUS conversation was about, so a new one can
+// open by picking it up. Deliberately DERIVED, not generated — it is the first
+// thing the student actually said, captured verbatim at the moment the
+// transcript is reset. A Gemini call per conversation close would be recurring
+// spend for a line that cannot be more truthful than the sentence it summarizes,
+// and could hallucinate a topic that was never discussed.
+function normalizeLastTopic(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const text = String(raw.text || '').replace(/\s+/g, ' ').trim().slice(0, 160);
+  if (!text) return null;
+  return {
+    text,
+    at: String(raw.at || '').slice(0, 40),
+    exchanges: Number.isInteger(raw.exchanges) ? raw.exchanges : 0,
+  };
+}
+
+/**
+ * Build the marker from a transcript that is about to be discarded. The FIRST
+ * user turn, not the last: a conversation is named by what opened it, and the
+ * last turn is usually a follow-up fragment ("what about the other one?") that
+ * means nothing out of context.
+ */
+export function lastTopicFromMessages(messages, exchangeCount) {
+  const first = (Array.isArray(messages) ? messages : [])
+    .find((m) => m && m.role === 'user' && String(m.content || '').trim());
+  if (!first) return null;
+  return normalizeLastTopic({
+    text: first.content,
+    at: new Date().toISOString(),
+    exchanges: Number.isInteger(exchangeCount) ? exchangeCount : 0,
+  });
 }
 
 export async function saveChat(env, userId, state) {
@@ -154,6 +191,10 @@ export async function saveChat(env, userId, state) {
       roadmapUpdatedAt: String(state.roadmapAck.roadmapUpdatedAt || ''),
     };
   }
+  // Whitelisted like roadmapAck — saveChat drops anything it does not name, so
+  // a new key that is not written here silently vanishes on the next turn.
+  const lastTopic = normalizeLastTopic(state.lastTopic);
+  if (lastTopic) payload.lastTopic = lastTopic;
   await requireKv(env).put(CHAT_PREFIX + userId, JSON.stringify(payload));
 }
 
@@ -172,6 +213,14 @@ export function buildSeedDossier(quizResults) {
     `year: ${single(q.year)}`,
     `subjects_major: ${list(q.subjects)}`,
     `career_leaning: ${single(q.careerLeaning)}`,
+    // S18 Semester Loop. Seeded as placeholders because the quiz never asks for
+    // them: they arrive either from the start-of-term ritual (which writes both
+    // homes through setUserField) or from a sentence in a conversation, and a
+    // placeholder is what user-sync.js's clean() maps to '' so it never
+    // overwrites a real value with a guess.
+    `term_system: (unknown)`,
+    `term_start: (unknown)`,
+    `term_end: (unknown)`,
     `quiz_strengths: ${list(q.strengths)}`,
     `quiz_weaknesses: ${list(q.weaknesses)}`,
     `interests: (none yet)`,
@@ -221,7 +270,11 @@ export function normalizeSecretValue(raw) {
 
 export function resendConfigFromEnv(env) {
   const apiKey = normalizeSecretValue(env.RESEND_API_KEY);
-  const fromEmail = String(env.FROM_EMAIL || 'Flightway <hello@flightway.ai>').trim();
+  // Single source of truth for the sending identity. Deliberately a code
+  // default rather than a per-environment secret: it is not sensitive (it is
+  // printed on every email we send), and as a secret nobody could read back
+  // what was actually configured, so the three environments silently drifted.
+  const fromEmail = String(env.FROM_EMAIL || 'FlightWay <careers@flightway.ai>').trim();
   return { apiKey, fromEmail };
 }
 
@@ -362,7 +415,11 @@ export async function geminiGenerateContent({ apiKey, model, body, logMeta, time
     resp = await fetch(geminiGenerateUrl(model), fetchOpts);
   } catch (err) {
     if (err && (err.name === 'TimeoutError' || err.name === 'AbortError')) {
-      throw Object.assign(new Error(`Gemini request timed out after ${timeoutMs}ms.`), {
+      // effTimeoutMs, not timeoutMs: 25 of the 42 call sites omit it and take
+      // the 30s default, so this read "timed out after undefinedms" in exactly
+      // the log someone opens to find out how long it waited. Both stream
+      // variants below already had it right.
+      throw Object.assign(new Error(`Gemini request timed out after ${effTimeoutMs}ms.`), {
         status: 503,
         timedOut: true,
       });
@@ -388,4 +445,118 @@ export async function geminiGenerateContent({ apiKey, model, body, logMeta, time
 
 export function geminiTextFromResponse(data) {
   return data?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('').trim() || '';
+}
+
+/** Untrimmed text of one streamed chunk — deltas must keep their whitespace. */
+export function geminiChunkText(data) {
+  return data?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || '';
+}
+
+export function geminiStreamUrl(model) {
+  return `${GEMINI_API_BASE}/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`;
+}
+
+/**
+ * Streaming twin of geminiGenerateContent: same key handling, same error
+ * shapes, same per-request deadline — the difference is that text arrives in
+ * pieces and `onDelta` is called with each one. Returns the concatenated reply
+ * so a caller that also needs the whole text (to parse the FW_UI block, to
+ * persist the transcript) does not accumulate it a second time.
+ *
+ * The deadline covers the WHOLE stream, not just the response headers:
+ * AbortSignal.timeout aborts the body reader too. That is deliberate — a
+ * trickling upstream is exactly the failure a header-only timeout misses.
+ */
+export async function geminiStreamContent({ apiKey, model, body, logMeta, timeoutMs, onDelta }) {
+  const key = normalizeGeminiApiKey(apiKey);
+  if (!key) {
+    const err = new Error('GEMINI_API_KEY is not configured.');
+    err._userFacing = true;
+    throw err;
+  }
+
+  const effTimeoutMs = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 30000;
+  const fetchOpts = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': key,
+      Accept: 'text/event-stream',
+    },
+    body: JSON.stringify(body),
+  };
+  if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+    fetchOpts.signal = AbortSignal.timeout(effTimeoutMs);
+  }
+
+  let resp;
+  try {
+    resp = await fetch(geminiStreamUrl(model), fetchOpts);
+  } catch (err) {
+    if (err && (err.name === 'TimeoutError' || err.name === 'AbortError')) {
+      throw Object.assign(new Error(`Gemini stream timed out after ${effTimeoutMs}ms.`), {
+        status: 503,
+        timedOut: true,
+      });
+    }
+    throw err;
+  }
+
+  if (!resp.ok) {
+    const detailText = await resp.text();
+    console.error(`Gemini stream error [${model}]`, resp.status, detailText.slice(0, 500));
+    const err = Object.assign(
+      new Error(geminiErrorMessage(resp.status, detailText)),
+      { status: resp.status, detail: detailText },
+    );
+    if (resp.status === 401 || resp.status === 403) err._userFacing = true;
+    throw err;
+  }
+  if (!resp.body) {
+    throw Object.assign(new Error('Gemini returned no stream body.'), { status: 503 });
+  }
+
+  logGeminiUsage({ gemini_model: model, gemini_stream: true, ...(logMeta || {}) });
+
+  const parser = createSseParser();
+  const decoder = new TextDecoder();
+  const reader = resp.body.getReader();
+  let full = '';
+
+  const consume = (frames) => {
+    for (const frame of frames) {
+      if (frame.data === '[DONE]') continue;
+      let chunk;
+      try {
+        chunk = JSON.parse(frame.data);
+      } catch {
+        continue; // a malformed chunk loses its own text, never the stream
+      }
+      const text = geminiChunkText(chunk);
+      if (!text) continue;
+      full += text;
+      if (onDelta) onDelta(text);
+    }
+  };
+
+  try {
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      consume(parser.push(decoder.decode(value, { stream: true })));
+    }
+    consume(parser.push(decoder.decode()));
+    consume(parser.flush());
+  } catch (err) {
+    if (err && (err.name === 'TimeoutError' || err.name === 'AbortError')) {
+      throw Object.assign(new Error(`Gemini stream timed out after ${effTimeoutMs}ms.`), {
+        status: 503,
+        timedOut: true,
+        partial: full,
+      });
+    }
+    throw Object.assign(err, { partial: full });
+  }
+
+  return full.trim();
 }

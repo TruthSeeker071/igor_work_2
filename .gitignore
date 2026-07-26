@@ -1,17 +1,22 @@
-node_modules/
-.DS_Store
 .dev.vars
-*.log
-.fuse_hidden*
-*.lock
 .wrangler/
-.claude/
 .onet-cache/
 netlify.toml
 Netlify/
 scripts/playwright-smoke/
+node_modules/
+.DS_Store
 .Rhistory
 .screenshots/
 igor_work_2_repo/
 FLIGHTWAY_UI_POLISH_AND_AUDIT_BRIEF.md
 FLIGHTWAY_LAUNCH_REVIEW_BRIEF.md
+.tmp-probe/
+.screenshots*/
+
+# parallel gate runner per-gate logs
+.gates/
+
+# Scratch harnesses. Agents write these at the repo root; pages_build_output_dir="."
+# means anything left behind is publicly served (see the _redirects header comment).
+.tmp-*

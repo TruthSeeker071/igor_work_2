@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Signed-in only: page-boot bounces a visitor to /auth before anything renders, so a crawler sees a blank shell under a FlightWay title. -->
+<meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg?v=20260720f">
+  <link rel="icon" href="/favicon.ico?v=20260720a" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/icons/favicon-128.png?v=20260720a">
+  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-180.png?v=20260720a">
+<title>Applications · FlightWay</title>
+<meta name="description" content="Track every application from saved to offer, with tailoring and interview prep one click away.">
+<link rel="preload" href="/assets/fonts/inter-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/space-grotesk-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260721p">
+<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260724i">
+<link rel="stylesheet" href="assets/css/flightway-2.css?v=20260725g">
+<link rel="stylesheet" href="assets/css/feature-intro.css?v=20260721a">
+<script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
+<script src="assets/js/shared/global-shim.js?v=20260703p"></script>
+<script src="assets/js/shared/flags.js?v=20260716h"></script>
+<script src="assets/js/shared/entitlements.js?v=20260724e" defer></script>
+<script src="assets/js/shared/plan-surface.js?v=20260725e" defer></script>
+<script src="assets/js/shared/events.js?v=20260724a" defer></script>
+<script src="assets/vendor/lucide-lite.js?v=20260724d" defer></script>
+<style>
+  /* Application Tracker board (S12 UI) — scoped to #applications-board.
+     Client half of functions/tracker.js; see assets/js/shared/applications.js
+     (FWApplications) and assets/js/app/applications-board.js. Section cards
+     reuse the shared .fp-head/.fp-title/.fp-sub classes flightway-2.css already
+     ships for flightplan.html, so this page reads as the same product rather
+     than a new visual system. Same house rule as flightplan.html's own block:
+     --ok/--warn/--err only on border-color/background, never as a text color
+     value. */
+  #applications-board { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+
+  .app-add-form {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px;
+    padding: 14px; border-radius: 12px; border: 1px solid rgb(var(--border));
+    background: rgb(var(--surface-2) / 0.5); min-width: 0;
+  }
+  .app-add-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: rgb(var(--text-muted)); min-width: 0; }
+  .app-add-label { font-weight: 600; }
+  .app-add-input {
+    padding: 8px 10px; border-radius: 8px; border: 1px solid rgb(var(--border)); background: rgb(var(--surface));
+    color: rgb(var(--text)); font: inherit; font-size: 13px; min-width: 0; box-sizing: border-box;
+  }
+  .app-add-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; }
+  .app-add-save {
+    padding: 8px 18px; border-radius: 999px; border: 1px solid rgb(var(--primary)); background: rgb(var(--primary));
+    color: rgb(var(--primary-fg)); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+  }
+  .app-add-save:hover { background: rgb(var(--primary-hover)); border-color: rgb(var(--primary-hover)); }
+  /* Same house rule as flightplan.html's .fp-radar-form-error/.fp-commit-error:
+     hue on the border, text stays on --text. */
+  .app-add-error {
+    grid-column: 1 / -1; margin: 0; font-size: 12.5px; color: rgb(var(--text));
+    padding-left: 9px; border-left: 3px solid rgb(var(--err));
+  }
+
+  /* Five columns on desktop, one per server-supplied status. Below ~900px
+     this collapses to a single stacked list, each column's heading acting as
+     the group heading — same markup, CSS-only breakpoint. */
+  .app-board-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; align-items: start; min-width: 0; }
+  @media (max-width: 900px) {
+    .app-board-grid { grid-template-columns: 1fr; }
+  }
+
+  .app-col { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+  .app-col-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .app-col-label { margin: 0; font-size: 12.5px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; color: rgb(var(--text-muted)); }
+  .app-col-count {
+    font-size: 11px; font-weight: 700; color: rgb(var(--text-muted)); background: rgb(var(--surface-2));
+    border: 1px solid rgb(var(--border)); border-radius: 999px; padding: 1px 8px; min-width: 18px; text-align: center;
+  }
+  .app-col-list { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .app-col-hint { margin: 0; font-size: 12.5px; color: rgb(var(--text-muted)); }
+
+  .app-card {
+    padding: 12px 14px; border-radius: 12px; border: 1px solid rgb(var(--border)); background: rgb(var(--surface));
+    display: flex; flex-direction: column; gap: 6px; min-width: 0;
+  }
+  .app-card-role { margin: 0; font-size: 14px; font-weight: 700; color: rgb(var(--text)); overflow-wrap: anywhere; }
+  .app-card-company { margin: 0; font-size: 12.5px; color: rgb(var(--text-muted)); overflow-wrap: anywhere; }
+  .app-card-status {
+    padding: 6px 8px; border-radius: 8px; border: 1px solid rgb(var(--border)); background: rgb(var(--surface-2));
+    color: rgb(var(--text)); font: inherit; font-size: 12.5px; max-width: 100%; box-sizing: border-box;
+  }
+  .app-card-notes { margin: 0; font-size: 12.5px; color: rgb(var(--text-muted)); overflow-wrap: anywhere; }
+  .app-card-link { font-size: 12.5px; font-weight: 600; color: rgb(var(--primary)); text-decoration: none; }
+  .app-card-link:hover { text-decoration: underline; }
+  .app-card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+  .app-card-action {
+    padding: 5px 10px; border-radius: 999px; border: 1px solid rgb(var(--border)); background: rgb(var(--surface-2));
+    color: rgb(var(--text)); font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer;
+    text-decoration: none; transition: var(--transition); display: inline-block;
+  }
+  .app-card-action:hover { background: rgb(var(--surface-hover)); }
+  .app-card-action--remove { color: rgb(var(--text-muted)); }
+  .app-card-error {
+    margin: 0; font-size: 12px; color: rgb(var(--text));
+    padding-left: 9px; border-left: 3px solid rgb(var(--err));
+  }
+
+  .app-empty {
+    display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: 12px;
+    border: 1px dashed rgb(var(--border-strong)); background: rgb(var(--surface-2) / 0.5); min-width: 0;
+  }
+  .app-empty-text { margin: 0; font-size: 13.5px; line-height: 1.5; color: rgb(var(--text)); max-width: 62ch; overflow-wrap: anywhere; }
+  .app-empty-cta { display: inline-block; font-size: 13px; font-weight: 600; color: rgb(var(--primary)); text-decoration: none; }
+  .app-empty-cta:hover { text-decoration: underline; }
+
+  /* Migration 0022 pending — a notice, not an error card. Deliberately styled
+     like the empty state rather than like a failure: nothing is broken. */
+  .app-notice {
+    display: flex; flex-direction: column; gap: 10px; align-items: flex-start;
+    padding: 22px; border-radius: 14px; border: 1px dashed rgb(var(--border-strong));
+    background: rgb(var(--surface-2) / 0.5);
+  }
+  .app-notice-title { margin: 0; font-size: 16px; font-weight: 700; color: rgb(var(--text)); }
+  .app-notice-body { margin: 0; font-size: 13.5px; line-height: 1.5; color: rgb(var(--text-muted)); max-width: 62ch; }
+  .app-notice-link { font-size: 13px; font-weight: 600; color: rgb(var(--primary)); text-decoration: none; }
+  .app-notice-link:hover { text-decoration: underline; }
+
+  .app-state-card {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 16px;
+    border-radius: 12px; border: 1px solid rgb(var(--border)); background: rgb(var(--surface));
+  }
+  .app-state-text { margin: 0; font-size: 13.5px; color: rgb(var(--text)); }
+  .app-state-cta { display: inline-block; font-size: 13px; font-weight: 600; color: rgb(var(--primary)); text-decoration: none; }
+  .app-state-cta:hover { text-decoration: underline; }
+  .app-state-retry {
+    padding: 7px 14px; border-radius: 999px; border: 1px solid rgb(var(--border));
+    background: rgb(var(--surface-2)); color: rgb(var(--text)); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .app-state-retry:hover { background: rgb(var(--surface-hover)); }
+
+  .app-loading { margin: 0; font-size: 13px; color: rgb(var(--text-muted)); }
+</style>
+</head>
+<body class="portal-page applications-page" data-fw-intro="applications">
+<div id="fw-page-veil" class="fw-page-veil" aria-live="polite" aria-busy="true">
+</div>
+
+<canvas id="fw-data-field" aria-hidden="true"></canvas>
+
+<nav>
+  <div class="nav-inner">
+    <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay home"></a>
+    <div class="nav-links app-nav" aria-label="App">
+      <a href="portal.html" class="app-nav-tab" data-app-nav="home"><span class="app-nav-label">Home</span></a>
+      <a href="flightplan.html" class="app-nav-tab is-active" data-app-nav="plan" aria-current="page"><span class="app-nav-label">Flight Plan</span></a>
+      <a href="roadmap.html" class="app-nav-tab" data-app-nav="roadmap"><span class="app-nav-label">Roadmap</span></a>
+      <a href="coach.html" class="app-nav-tab" data-app-nav="advisor"><span class="app-nav-label">Marco</span></a>
+      <a href="dashboard.html" class="app-nav-tab" data-app-nav="explore"><span class="app-nav-label">Explore</span></a>
+      <a href="auth.html#signin" class="app-nav-tab nav-signin-link" id="nav-signin-link">Sign in</a>
+      <button type="button" class="fw-theme-toggle" aria-label="Switch to dark mode" aria-pressed="false">
+        <span class="fw-theme-icon" aria-hidden="true"></span>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<div id="page-applications" class="page active">
+  <section class="portal-wrap">
+    <header class="fp-head">
+      <h1 class="fp-title">Applications</h1>
+      <p class="fp-sub">Every application you are tracking, from saved to offer — with tailoring and interview prep one click away.</p>
+    </header>
+
+    <!-- FWApplicationsBoard.mount() renders the add-form, the five status
+         columns and every state (loading/empty/signed-out/error) into this
+         section — see assets/js/app/applications-board.js. -->
+    <section id="applications-board" aria-live="polite" aria-busy="true"></section>
+  </section>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-left">
+      <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay"></a>
+      <p>&copy; 2026 FlightWay. All rights reserved.</p>
+    </div>
+    <div class="footer-links">
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+      <a href="/security">Security</a>
+      <a href="/contact">Contact</a>
+      <a href="/invite">Invite a friend</a>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/js/shared/page-veil.js?v=20260721a" defer></script>
+<script src="assets/js/shared/page-boot.js?v=20260703p" defer></script>
+<script src="assets/js/shared/fw-errors.js?v=20260720a" defer></script>
+<script src="assets/js/shared/auth.js?v=20260725b" defer></script>
+<script src="assets/js/shared/fw-busy.js?v=20260720a" defer></script>
+<script src="assets/js/shared/user.js?v=20260725e" defer></script>
+<script src="assets/js/shared/google-auth.js?v=20260725b" defer></script>
+<script src="assets/js/shared/auth-nav.js?v=20260724d" defer></script>
+<script src="assets/js/shared/user-chip.js?v=20260721a" defer></script>
+<script src="assets/js/shared/fw-toast.js?v=20260718i" defer></script>
+<!-- `defer` preserves document order, so the shared API loads ahead of the board. -->
+<script src="assets/js/shared/applications.js?v=20260724i" defer></script>
+<script src="assets/js/app/applications-board.js?v=20260724i" defer></script>
+<script src="assets/js/shared/feature-intro.js?v=20260725e" defer></script>
+<script src="assets/js/shared/data-field.js?v=20260703p" defer></script>
+<script src="assets/js/shared/brand.js?v=20260720i" defer></script>
+<script src="assets/js/shared/app-nav.js?v=20260724d" defer></script>
+<script src="assets/js/shared/theme.js?v=20260703p" defer></script>
+<script>
+  // Deferred scripts finish before DOMContentLoaded, so globals exist here.
+  document.addEventListener('DOMContentLoaded', function () {
+    FWPageBoot.authBootThen(function () {
+      if (!FWPageBoot.requireAuth('applications.html')) return;
+      if (window.FWApplicationsBoard) FWApplicationsBoard.mount();
+      if (window.FWAppNav) FWAppNav.sync('plan');
+      if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+      if (window.FWPageVeil) FWPageVeil.notifyRender();
+    });
+  });
+</script>
+</body>
+</html>

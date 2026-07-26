@@ -12,7 +12,9 @@
 // text reaching a Gemini prompt → always fenced as DATA here.
 
 import { playbookForFamily, metricsPromptBlock, INTERVIEW_METRICS, PERSONAS } from './interview-playbooks.js';
-import { schoolPromptBlock } from './school.js';
+// School reaches these prompts through buildSurfacePrompt, which calls
+// schoolPromptBlock itself — invariant 0.2 holds without a second import.
+import { buildSurfacePrompt } from './marco-persona.js';
 
 export const TOTAL_QUESTIONS = 8;
 export const MAX_TRANSCRIPT_ENTRIES = 2 * TOTAL_QUESTIONS + 4;
@@ -133,8 +135,12 @@ export function buildTurnPrompt({
     close: 'Wrap up warmly in persona: thank them, tell them their debrief is ready. Do NOT ask another question.',
   };
   return [
-    `You are ${p.name}, a mock interviewer for a student targeting ${careerName || 'their chosen career'}.`,
-    schoolPromptBlock(school),
+    // WS-E: the house voice, then the character. The interviewer is not Marco —
+    // a mock interview that sounds like your advisor is not a mock interview.
+    buildSurfacePrompt('interview-turn', {
+      school,
+      blocks: [`You are ${p.name}, a mock interviewer for a student targeting ${careerName || 'their chosen career'}.`],
+    }),
     `Persona: ${p.style}${playbook.personaNotes ? ` Field norms for this interview: ${playbook.personaNotes}` : ''}`,
     company ? `Company mode: the student is preparing for a real interview at "${company}". Use the firm's style/values where known.` : '',
     companyEvidence || '',
@@ -168,8 +174,12 @@ export function buildDebriefPrompt({
   playbook, careerName, company, resumeText, transcript, technicalAsked, school,
 }) {
   return [
-    `You are an interview coach writing the end-of-session debrief for a student targeting ${careerName || 'their chosen career'}${company ? ` (company mode: ${company})` : ''}.`,
-    schoolPromptBlock(school),
+    // WS-E: the debrief is Marco — same voice as the chat, same refusal to
+    // soften. The interview itself was someone else.
+    buildSurfacePrompt('interview-debrief', {
+      school,
+      blocks: [`You are writing the end-of-session debrief for a student targeting ${careerName || 'their chosen career'}${company ? ` (company mode: ${company})` : ''}.`],
+    }),
     // The family's real priorities steer the verdict and per-axis notes —
     // consulting's MECE structure, finance's quantitative speed, healthcare's
     // ethical reasoning — not just the generic rubric.

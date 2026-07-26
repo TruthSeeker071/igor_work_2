@@ -40,7 +40,7 @@
       var objective = FWOnetVectors.readQuizVectors().objective;
       if (!personality || !careerVec) return null;
       var M = FWOnetMath;
-      var entry = { personalityFit: M.cosinePercent(M.cosine(personality.values, careerVec)) };
+      var entry = { personalityFit: M.personalityFitPercent(personality.values, careerVec) };
       if (objective && objective.values && FWOnetVectors.magnitude(objective.values) > 0.01) {
         entry.objectiveFit = M.objectiveFitPercent
           ? M.objectiveFitPercent(objective.values, careerVec)
@@ -123,7 +123,7 @@
       + '<span class="portal-target-orb" aria-hidden="true"></span>'
       + '<span class="portal-target-name"></span>'
       + '<span class="portal-target-fit"></span>'
-      + '<span class="portal-target-chevron" aria-hidden="true">▾</span>'
+      + '<span class="portal-target-chevron" aria-hidden="true">' + lucide.svg('chevron-down') + '</span>'
       + '</button>'
       + '</div>'
       + '<div class="portal-target-menu" id="portal-target-menu" hidden role="listbox" aria-label="Career matches"></div>'
@@ -131,7 +131,6 @@
       + '<div id="portal-target-advisor-slot"></div>'
       + '</div>'
       + '<div class="portal-target-metrics portal-target-dual-fit" id="portal-target-dual-fit" hidden aria-live="polite"></div>'
-      + '<div class="portal-target-cta-row"><a class="portal-target-deepdive" id="portal-target-deepdive" href="career.html">Open deep dive &rarr;</a></div>'
       + '</div>';
 
     this.row = this.root.querySelector('#portal-target-row');
@@ -229,8 +228,8 @@
     var hits = FWOnetCatalog.searchByTitle(query, limit || 10);
     return hits.map(function (hit) {
       var rarity = { tier: 'common', base: '#9AA0AD' };
-      if (global.FWCareerTarget && typeof FWCareerTarget.fitRarity === 'function') {
-        rarity = FWCareerTarget.fitRarity(50);
+      if (global.FWCareerTarget && typeof FWCareerTarget.neutralRarity === 'function') {
+        rarity = FWCareerTarget.neutralRarity();
       }
       return {
         id: hit.soc ? ('soc:' + hit.soc) : hit.slug,
@@ -293,8 +292,6 @@
 
   TargetSwitch.prototype.updateHero = function (target) {
     if (!this.toggle || !target) return;
-    var dd = this.root && this.root.querySelector('#portal-target-deepdive');
-    if (dd && target.slug) dd.href = 'career.html?slug=' + encodeURIComponent(target.slug);
     var orb = this.toggle.querySelector('.portal-target-orb');
     var nameEl = this.toggle.querySelector('.portal-target-name');
     var fitEl = this.toggle.querySelector('.portal-target-fit');

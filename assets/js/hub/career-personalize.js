@@ -358,7 +358,7 @@
       + '<div class="career-chat-header"><div><div class="career-chat-eye">Deep dive assistant</div>'
       + '<h3 class="career-chat-title">Ask or refine</h3>'
       + '<p class="career-chat-sub" id="career-chat-count"></p></div>'
-      + '<button type="button" class="career-chat-close" id="career-chat-close" aria-label="Close">×</button></div>'
+      + '<button type="button" class="career-chat-close" id="career-chat-close" aria-label="Close">' + lucide.svg('x') + '</button></div>'
       + '<div class="career-chat-messages" id="career-chat-messages"></div>'
       + '<div class="career-chat-input-row">'
       + '<textarea id="career-chat-input" class="career-chat-input" rows="2" placeholder="Ask a question or share context…" aria-label="Message"></textarea>'
@@ -900,20 +900,6 @@
 
     var section = el.closest('.career-fit-section');
     if (section) section.style.display = '';
-
-    // UI overhaul Phase 3c (wireframe 1e-5): mirror the primary CTA into the
-    // fixed bottom bar on mobile — one fixed container, CTA above the tabs.
-    try {
-      if (window.FWTabbar && window.matchMedia && matchMedia('(max-width: 768px)').matches) {
-        var srcCta = el.querySelector('.fit-track-roadmap-btn') || el.querySelector('.fit-roadmap-cta a');
-        if (srcCta) {
-          var mirror = srcCta.cloneNode(true);
-          mirror.className = 'fw-sticky-cta';
-          mirror.textContent = 'Set as my target career';
-          FWTabbar.setAction(mirror);
-        }
-      }
-    } catch (_) { /* chrome only — never block fit panel render */ }
   }
 
   var careerTitleBySocCache = null;
@@ -969,7 +955,7 @@
       if (!personality || !careerVec) return null;
       var M = FWOnetMath;
       var entry = {
-        personalityFit: M.cosinePercent(M.cosine(personality.values, careerVec)),
+        personalityFit: M.personalityFitPercent(personality.values, careerVec),
       };
       if (objective && objective.values && FWOnetVectors.magnitude(objective.values) > 0.01) {
         entry.objectiveFit = M.objectiveFitPercent
@@ -979,8 +965,8 @@
           entry.preparedness = FWOnetVectors.computePreparedness(objective.values, careerVec, {});
         }
       }
-      if (typeof FWOnetVectors.overallFitScore === 'function') {
-        entry.fitScore = FWOnetVectors.overallFitScore(entry.personalityFit, entry.objectiveFit ?? null);
+      if (typeof FWOnetVectors.displayFitPercent === 'function') {
+        entry.fitScore = FWOnetVectors.displayFitPercent(personality.values, careerVec);
       }
       return entry.personalityFit != null ? entry : null;
     }).catch(function () { return null; });
@@ -1417,11 +1403,33 @@
         updateChatCount();
       }
 
+      // §5: a pivot hands the rebuild to the primary build wizard for the new
+      // target (roadmap.html auto-launches clarifying questions → metered generate)
+      // rather than a silent free server rebuild.
+      if (data.roadmapBuild && data.roadmapBuild.slug) {
+        appendChatMsg('assistant', 'Opening your roadmap builder for ' + (data.roadmapBuild.name || 'your new target') + '…');
+        try {
+          sessionStorage.setItem('fw_roadmap_pending_career', JSON.stringify({
+            slug: data.roadmapBuild.slug, name: data.roadmapBuild.name || '',
+          }));
+        } catch (_) { /* ignore */ }
+        setTimeout(function () {
+          location.href = 'roadmap.html?career=' + encodeURIComponent(data.roadmapBuild.slug);
+        }, 900);
+        return;
+      }
+      // §4 option C: the focus switched but the user is out of roadmap rebuilds —
+      // say so in Marco's voice; their roadmap stays on the initial career.
+      if (data.roadmapCapped && data.roadmapCapMessage) {
+        appendChatMsg('assistant', data.roadmapCapMessage);
+        state.chatHistory.push({ role: 'assistant', content: data.roadmapCapMessage });
+      }
+
       if (data.roadmapRetargeted || data.focusUpdated) {
         if (global.FWAuth && typeof FWAuth.getRoadmap === 'function') {
           FWAuth.getRoadmap().catch(function () { /* ignore */ });
         }
-        if (global.FWRoadmap && typeof FWRoadmap.showToast === 'function') {
+        if (!data.roadmapCapped && global.FWRoadmap && typeof FWRoadmap.showToast === 'function') {
           FWRoadmap.showToast('Your career plan was updated based on what you shared.');
         }
         if (global.FWRoadmap && typeof FWRoadmap.render === 'function') {

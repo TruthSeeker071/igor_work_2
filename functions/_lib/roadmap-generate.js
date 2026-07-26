@@ -4,10 +4,12 @@ import { groundedJson, GROUNDING_TTL } from './gemini-grounded.js';
 import { loadCareerAnalysis, saveRoadmap } from './auth.js';
 import { loadUserBlob } from './user.js';
 import { normalizeRoadmap, attachRoadmapMeta, ROADMAP_TREE_VERSION } from './roadmap.js';
-import { migrateRoadmapV1ToV2, hasValidSpineShape, PLAIN_STYLE_RULES } from './roadmap-tree.js';
+import { migrateRoadmapV1ToV2, hasValidSpineShape, PLAIN_STYLE_RULES, sanitizeUntrustedText } from './roadmap-tree.js';
 import { buildFitContext, loadDimensionRegistry } from './onet/gap-format.js';
 import { computeVectorFitForSoc } from './onet/roadmap-vector-fit.js';
-import { sanitizeSchoolName, schoolPromptBlock, resolveSchool } from './school.js';
+// schoolPromptBlock reaches these prompts through buildSurfacePrompt (0.2).
+import { sanitizeSchoolName, resolveSchool } from './school.js';
+import { buildSurfacePrompt } from './marco-persona.js';
 
 const MAX_DOSSIER_LEN = 2800;
 const MAX_MSG_LEN = 600;
@@ -57,16 +59,16 @@ export function buildGeneratePrompt({
       gaps: (quizFitBreakdown.gaps || []).slice(0, 2),
     })}`
     : '';
-  const schoolLine = schoolPromptBlock(school);
   const customBlock = Array.isArray(customAnswers) && customAnswers.length
     ? customAnswers.slice(0, 6).map((a) => `- ${trimForPrompt(a.prompt, 160)}: ${trimForPrompt(a.answer, 200)}`).join('\n')
     : '';
   const profileBlock = formatProfileBuildingBlock(profileBuildingAnswers, trimForPrompt);
 
-  return `You are a career planning coach for FlightWay. Create a personalized step-by-step roadmap for a student targeting "${careerName}" (slug: ${careerSlug}).
+  return `${buildSurfacePrompt('roadmap-advice', { school })}
+
+Create a personalized step-by-step roadmap for a student targeting "${sanitizeUntrustedText(careerName, 120)}" (slug: ${careerSlug}).
 
 User: ${userName || 'Student'}
-${schoolLine}
 Top quiz scores: ${formatQuizScoresForPrompt(quizScores)}
 ${fitBlock}
 ${resumeSummary ? `Resume: ${trimForPrompt(resumeSummary, 240)}` : ''}
@@ -88,7 +90,7 @@ Rules:
 - summary: 2-3 sentences overview.
 
 Return ONLY JSON:
-{"targetCareerSlug":"${careerSlug}","targetCareerName":"${careerName.replace(/"/g, '\\"')}","summary":"...","fitContext":{"quizFitPercent":0,"topGaps":["..."]},"phases":[{"key":"this_month","label":"This month","actions":[{"id":"m1","text":"...","type":"class","done":false}]},{"key":"next_semester","label":"Next semester","actions":[...]},{"key":"longer_term","label":"Longer term","actions":[...]}]}`;
+{"targetCareerSlug":"${careerSlug}","targetCareerName":"${sanitizeUntrustedText(careerName, 120).replace(/"/g, '\\"')}","summary":"...","fitContext":{"quizFitPercent":0,"topGaps":["..."]},"phases":[{"key":"this_month","label":"This month","actions":[{"id":"m1","text":"...","type":"class","done":false}]},{"key":"next_semester","label":"Next semester","actions":[...]},{"key":"longer_term","label":"Longer term","actions":[...]}]}`;
 }
 
 export function buildGenerateTreePrompt({
@@ -115,7 +117,6 @@ export function buildGenerateTreePrompt({
       gaps: (quizFitBreakdown.gaps || []).slice(0, 2),
     })}`
     : '';
-  const schoolLine = schoolPromptBlock(school);
   let vectorBlock = '';
   if (vectorFit && typeof vectorFit === 'object') {
     const gapNames = (vectorFit.topGaps && vectorFit.topGaps.length)
@@ -131,10 +132,11 @@ Order gap-closing waypoints to attack these gaps in the order listed — biggest
     : '';
   const profileBlock = formatProfileBuildingBlock(profileBuildingAnswers, trimForPrompt);
 
-  return `You are a career planning coach for FlightWay. Create a personalized ROADMAP TREE for a student targeting "${careerName}" (slug: ${careerSlug}).
+  return `${buildSurfacePrompt('roadmap-advice', { school })}
+
+Create a personalized ROADMAP TREE for a student targeting "${sanitizeUntrustedText(careerName, 120)}" (slug: ${careerSlug}).
 
 User: ${userName || 'Student'}
-${schoolLine}
 Top quiz scores: ${formatQuizScoresForPrompt(quizScores)}
 ${fitBlock}
 ${vectorBlock}
@@ -192,7 +194,7 @@ trunk → s1 → s2(major) → s3 → s4(major) → s5 → s6
               └─ "Alternative: data visualization" → "Build visualization portfolio"
 
 Return ONLY JSON:
-{"version":2,"targetCareerSlug":"${careerSlug}","targetCareerName":"${careerName.replace(/"/g, '\\"')}","summary":"...","fitContext":{"quizFitPercent":0,"vectorFitScore":0,"personalityFit":0,"objectiveFit":0,"preparedness":0,"targetSoc":"","topGaps":["..."],"vectorGaps":[{"index":0,"name":"...","domain":"skills","gap":0}]},"trunk":{"id":"trunk","title":"...","subtitle":"Where you are now","confidence":5},"nodes":[{"id":"s1","parentId":"trunk","depth":1,"type":"waypoint","pathRole":"spine","shortTitle":"Take linear algebra","title":"Build a rock-solid foundation in linear algebra and statistics","whyItMatters":"Data science roles expect fluency in matrix math and probability; this closes your quantitative gap.","addressedGaps":["quantitative skills"],"careerValue":"knowledge","steps":[{"id":"s1a","text":"Enroll in MATH 20250 Abstract Linear Algebra this semester","done":false,"kind":"course"},{"id":"s1b","text":"Read chapters 1-6 of Axler's Linear Algebra Done Right","done":false,"kind":"reading"},{"id":"s1c","text":"Join the Data Science Society and attend 4 workshops","done":false,"kind":"club"},{"id":"s1d","text":"Build a matrix-methods cheat-sheet repo with worked examples","done":false,"kind":"deliverable"},{"id":"s1e","text":"Coffee-chat 2 upperclassmen who took the honors sequence","done":false,"kind":"network"},{"id":"s1f","text":"Score 85%+ on the final exam","done":false,"kind":"milestone"}],"confidence":5,"horizon":"next_month","actionType":"class"},...],"decisions":[{"id":"d1","nodeId":"s2","prompt":"...","options":[{"id":"opt1","label":"...","childNodeId":"branch2a"},{"id":"opt2","label":"...","childNodeId":"branch2c"}]},...],"activePath":["trunk","s1","s2","s3","s4","s5","s6"]}`
+{"version":2,"targetCareerSlug":"${careerSlug}","targetCareerName":"${sanitizeUntrustedText(careerName, 120).replace(/"/g, '\\"')}","summary":"...","fitContext":{"quizFitPercent":0,"vectorFitScore":0,"personalityFit":0,"objectiveFit":0,"preparedness":0,"targetSoc":"","topGaps":["..."],"vectorGaps":[{"index":0,"name":"...","domain":"skills","gap":0}]},"trunk":{"id":"trunk","title":"...","subtitle":"Where you are now","confidence":5},"nodes":[{"id":"s1","parentId":"trunk","depth":1,"type":"waypoint","pathRole":"spine","shortTitle":"Take linear algebra","title":"Build a rock-solid foundation in linear algebra and statistics","whyItMatters":"Data science roles expect fluency in matrix math and probability; this closes your quantitative gap.","addressedGaps":["quantitative skills"],"careerValue":"knowledge","steps":[{"id":"s1a","text":"Enroll in MATH 20250 Abstract Linear Algebra this semester","done":false,"kind":"course"},{"id":"s1b","text":"Read chapters 1-6 of Axler's Linear Algebra Done Right","done":false,"kind":"reading"},{"id":"s1c","text":"Join the Data Science Society and attend 4 workshops","done":false,"kind":"club"},{"id":"s1d","text":"Build a matrix-methods cheat-sheet repo with worked examples","done":false,"kind":"deliverable"},{"id":"s1e","text":"Coffee-chat 2 upperclassmen who took the honors sequence","done":false,"kind":"network"},{"id":"s1f","text":"Score 85%+ on the final exam","done":false,"kind":"milestone"}],"confidence":5,"horizon":"next_month","actionType":"class"},...],"decisions":[{"id":"d1","nodeId":"s2","prompt":"...","options":[{"id":"opt1","label":"...","childNodeId":"branch2a"},{"id":"opt2","label":"...","childNodeId":"branch2c"}]},...],"activePath":["trunk","s1","s2","s3","s4","s5","s6"]}`
     + `\n\n${PLAIN_STYLE_RULES}`;
 }
 

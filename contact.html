@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg?v=20260720f">
+  <link rel="icon" href="/favicon.ico?v=20260720a" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/icons/favicon-128.png?v=20260720a">
+  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-180.png?v=20260720a">
+  <title>Contact FlightWay</title>
+  <meta name="description" content="Questions about your account, billing, privacy or a career-center partnership? Reach the FlightWay team — a real person reads every message.">
+  <!-- Absolute canonical: this exact file is served by BOTH Pages projects, and
+       without it the prototype host competes with flightway.ai as duplicate
+       content. Hardcoded on purpose — the preview host must point away from itself. -->
+  <link rel="canonical" href="https://flightway.ai/contact">
+  <meta property="og:site_name" content="FlightWay">
+  <meta property="og:url" content="https://flightway.ai/contact">
+  <meta property="og:title" content="Contact FlightWay">
+  <meta property="og:description" content="Questions about your account, billing, privacy or a career-center partnership? A real person reads every message.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://flightway.ai/assets/og/og-default.png?v=20260724a">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="FlightWay — career development for students">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Contact FlightWay">
+  <meta name="twitter:description" content="Questions about your account, billing, privacy or a career-center partnership? A real person reads every message.">
+  <meta name="twitter:image" content="https://flightway.ai/assets/og/og-default.png?v=20260724a">
+  <link rel="preload" href="/assets/fonts/inter-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/space-grotesk-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260721p">
+  <link rel="stylesheet" href="assets/css/flightway-legal.css?v=20260724a">
+  <script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
+  <script src="assets/js/shared/flags.js?v=20260716h"></script>
+  <script src="assets/js/shared/events.js?v=20260724a" defer></script>
+</head>
+<body>
+  <a class="fw-skip-link" href="#main">Skip to content</a>
+
+  <header class="fw-doc-nav">
+    <div class="fw-doc-nav-inner">
+      <a href="/" class="fw-brand" data-fw-brand data-fw-brand-href="/" aria-label="FlightWay home"></a>
+      <div class="fw-doc-nav-links">
+        <a class="fw-doc-nav-hide-sm" href="/pricing">Pricing</a>
+        <a class="fw-doc-nav-hide-sm" href="/privacy">Privacy</a>
+        <button type="button" class="fw-theme-toggle" aria-label="Switch to light mode" aria-pressed="true">
+          <span class="fw-theme-icon" aria-hidden="true"></span>
+        </button>
+        <a href="/quiz" class="fw-btn fw-btn-primary fw-btn-sm">Get started</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="fw-doc" id="main">
+    <div class="fw-doc-head">
+      <p class="fw-eyebrow">CONTACT</p>
+      <h1>Talk to us</h1>
+      <p class="fw-doc-meta">A real person reads every message — there is no support bot here. We aim to reply within two business days.
+        You can also email <a href="mailto:hello@flightway.ai">hello@flightway.ai</a> directly.</p>
+    </div>
+
+    <div class="fw-contact-grid">
+      <div class="fw-contact-card">
+        <form id="fw-contact-form" novalidate>
+          <div class="fw-field">
+            <label for="fw-contact-topic">What is this about?</label>
+            <select id="fw-contact-topic" name="topic" required>
+              <option value="support">Help with my account or a feature</option>
+              <option value="billing">Billing, refunds or cancelling</option>
+              <option value="privacy">Privacy, my data, or deleting my account</option>
+              <option value="career-center">Career centers &amp; schools</option>
+              <option value="partnership">Partnership or press</option>
+              <option value="feedback">Feedback or a bug</option>
+              <option value="other">Something else</option>
+            </select>
+          </div>
+
+          <div class="fw-field">
+            <label for="fw-contact-name">Your name <span style="font-weight:400;opacity:.65">(optional)</span></label>
+            <input id="fw-contact-name" name="name" type="text" autocomplete="name" maxlength="80">
+          </div>
+
+          <div class="fw-field">
+            <label for="fw-contact-email">Email we can reply to</label>
+            <input id="fw-contact-email" name="email" type="email" autocomplete="email" required maxlength="200">
+          </div>
+
+          <div class="fw-field">
+            <label for="fw-contact-body">Your message</label>
+            <textarea id="fw-contact-body" name="body" required maxlength="4000"
+              placeholder="What happened, what you expected, and anything we would need to reproduce it."></textarea>
+            <p class="fw-field-hint">Please don't include passwords, card numbers, or anything you wouldn't want stored.</p>
+          </div>
+
+          <!-- Rendered only when the deployment has a Turnstile site key. Empty
+               and display:none everywhere else — see #fw-turnstile:empty. -->
+          <div id="fw-turnstile"></div>
+
+          <button type="submit" class="fw-contact-submit" id="fw-contact-submit">Send message</button>
+          <p class="fw-contact-status" id="fw-contact-status" role="status" aria-live="polite"></p>
+          <p class="fw-field-hint" style="margin-top:14px">By sending this you agree to our <a href="/terms">Terms</a>
+            and <a href="/privacy">Privacy Policy</a>. We use your message and email only to answer you.</p>
+        </form>
+      </div>
+
+      <div>
+        <div class="fw-contact-aside">
+          <h2>Delete my account</h2>
+          <p>You can delete your account and everything attached to it from
+            <a href="/portal">your home page</a> — no email required. It removes your profile, quiz answers,
+            roadmap, coach history, resumes and mock-interview results. Two things are deliberately kept and
+            we say which on the policy page. See <a href="/privacy#your-choices">Your choices</a>.</p>
+        </div>
+        <div class="fw-contact-aside">
+          <h2>Career centers &amp; schools</h2>
+          <p>We're running pilots with a small number of college career centers. Pick
+            <strong>Career centers &amp; schools</strong> above and tell us your institution
+            and rough student count.</p>
+        </div>
+        <div class="fw-contact-aside">
+          <h2>Security reports</h2>
+          <p>Found something? Please report it privately rather than publicly — details and our commitments
+            are on the <a href="/security">Security</a> page.</p>
+        </div>
+        <div class="fw-contact-aside">
+          <h2>Under 13</h2>
+          <p>FlightWay is for students 13 and over. If you believe a child under 13 has created an account,
+            contact us and we will delete it.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="fw-footer">
+    <div class="fw-container">
+      <div class="fw-footer-grid">
+        <div>
+          <a href="/" class="fw-brand" data-fw-brand data-fw-brand-href="/" aria-label="FlightWay"></a>
+          <p class="fw-footer-tagline">The talent development platform for students.</p>
+        </div>
+        <div class="fw-footer-col">
+          <h3>Product</h3>
+          <ul>
+            <li><a href="/#features">Features</a></li>
+            <li><a href="/pricing">Pricing</a></li>
+            <li><a href="/quiz">Career Quiz</a></li>
+            <li><a href="/auth#signin">Sign in</a></li>
+          </ul>
+        </div>
+        <div class="fw-footer-col">
+          <h3>Company</h3>
+          <ul>
+            <li><a href="/#how-it-works">How it works</a></li>
+            <li><a href="/contact?topic=career-center">Career centers</a></li>
+            <li><a href="/contact">Contact</a></li>
+          </ul>
+        </div>
+        <div class="fw-footer-col">
+          <h3>Legal</h3>
+          <ul>
+            <li><a href="/privacy">Privacy</a></li>
+            <li><a href="/terms">Terms</a></li>
+            <li><a href="/security">Security</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="fw-footer-bar">
+        <p>© 2026 FlightWay, Inc. All rights reserved.</p>
+        <p><a href="mailto:hello@flightway.ai">hello@flightway.ai</a></p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/js/shared/brand.js?v=20260720i" defer></script>
+  <script src="assets/js/shared/theme.js?v=20260703p" defer></script>
+  <script>
+    (function () {
+      var form = document.getElementById('fw-contact-form');
+      var statusEl = document.getElementById('fw-contact-status');
+      var submitEl = document.getElementById('fw-contact-submit');
+      var topicEl = document.getElementById('fw-contact-topic');
+      var slot = document.getElementById('fw-turnstile');
+      var turnstileWidget = null;
+      var turnstileExpected = false;
+
+      // Deep-linkable topic, so every "career-center pricing" / "delete my data"
+      // link anywhere in the product can land on the right pre-filled form
+      // instead of a generic one. Ignores anything not in the <select>.
+      try {
+        var want = new URLSearchParams(location.search).get('topic');
+        if (want) {
+          var opts = Array.prototype.map.call(topicEl.options, function (o) { return o.value; });
+          if (opts.indexOf(want) >= 0) topicEl.value = want;
+        }
+      } catch (_) { /* no query string is fine */ }
+
+      // Turnstile is opt-in per deployment: /config carries the site key only
+      // where Jacob set one. No key -> no external script request at all, which
+      // keeps the "zero third-party requests" property everywhere else.
+      fetch('/config', { headers: { Accept: 'application/json' } })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (cfg) {
+          var key = cfg && cfg.turnstileSiteKey;
+          if (!key) return;
+          // Remember that a challenge is EXPECTED. Without this, any break in
+          // the chain below (script blocked, render throws) leaves the widget
+          // null, the client posts an empty token, and the server — which knows
+          // the challenge is configured — rejects it with a message about
+          // verification the student has no way to act on.
+          turnstileExpected = true;
+          window.fwTurnstileReady = function () {
+            try {
+              turnstileWidget = window.turnstile.render(slot, { sitekey: key, theme: 'auto' });
+            } catch (err) { console.warn('turnstile render failed', err); }
+          };
+          var s = document.createElement('script');
+          s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=fwTurnstileReady';
+          s.async = true;
+          s.defer = true;
+          document.head.appendChild(s);
+        })
+        .catch(function () { /* the form works without it */ });
+
+      function say(msg, ok) {
+        statusEl.textContent = msg;
+        statusEl.classList.toggle('is-ok', !!ok);
+      }
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var email = document.getElementById('fw-contact-email').value.trim();
+        var body = document.getElementById('fw-contact-body').value.trim();
+        if (!email || email.indexOf('@') < 0) { say('Please enter an email address we can reply to.'); return; }
+        if (body.length < 10) { say('Please tell us a little more — at least a sentence.'); return; }
+
+        var token = '';
+        try {
+          if (turnstileWidget !== null && window.turnstile) token = window.turnstile.getResponse(turnstileWidget) || '';
+        } catch (_) { token = ''; }
+        if (turnstileExpected && !token) {
+          say(turnstileWidget === null
+            ? 'The verification widget could not load — please email hello@flightway.ai instead.'
+            : 'Please complete the verification above.');
+          return;
+        }
+
+        submitEl.disabled = true;
+        say('Sending…');
+        fetch('/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: email,
+            topic: topicEl.value,
+            name: document.getElementById('fw-contact-name').value.trim(),
+            body: body,
+            turnstileToken: token,
+          }),
+        })
+          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+          .then(function (res) {
+            if (!res.ok) throw new Error((res.data && res.data.error) || 'Something went wrong.');
+            form.querySelector('.fw-contact-submit').remove();
+            say('Thanks — that reached us. We reply to ' + email + ' within two business days.', true);
+          })
+          .catch(function (err) {
+            submitEl.disabled = false;
+            say(err.message || 'Something went wrong. Please email hello@flightway.ai instead.');
+            // A failed challenge is single-use; leaving the stale token in place
+            // guarantees the retry fails too.
+            try { if (turnstileWidget !== null && window.turnstile) window.turnstile.reset(turnstileWidget); } catch (_) {}
+          });
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -46,14 +46,42 @@ export function stripeConfigured(env) {
   return !!String((env && env.STRIPE_SECRET_KEY) || '').trim();
 }
 
-/** True while the configured key is a test-mode key (sk_test_…). */
+/**
+ * True while the configured key is a test-mode key.
+ *
+ * Matches restricted keys (`rk_test_…`) as well as standard ones (`sk_test_…`):
+ * a scoped restricted key is the normal way to be handed API access to someone
+ * else's Stripe account, and missing it here is worse than cosmetic — /config
+ * surfaces this flag so the UI can say "test mode" out loud, and an unrecognised
+ * test key makes a fake charge look exactly like a real one during the
+ * pre-launch validation run.
+ */
 export function stripeTestMode(env) {
-  return /^sk_test_/.test(String((env && env.STRIPE_SECRET_KEY) || '').trim());
+  return /^(sk|rk)_test_/.test(String((env && env.STRIPE_SECRET_KEY) || '').trim());
 }
 
+/**
+ * The price id for a tier, in the mode the configured key actually operates in.
+ *
+ * Both Pages projects build from ONE wrangler.toml, but they hold different
+ * Stripe keys: `flightway` (-> flightway.ai) has the live key, and
+ * `flightwayprototype` (-> pages.dev) has the test key. A single set of price
+ * ids therefore cannot be right for both — Stripe keeps test and live objects
+ * in separate namespaces, so a live price id under a test key fails with
+ * "No such price", and the prototype could not exercise checkout at all.
+ *
+ * So the mode of the key selects the price: a test key looks for
+ * `STRIPE_PRICE_<TIER>_TEST` first. The live vars stay the unsuffixed ones, so
+ * production is unaffected and a missing `_TEST` var degrades to the old
+ * behaviour instead of breaking.
+ */
 export function priceIdFor(env, tier) {
   const sku = SKUS[tier];
   if (!sku || !env) return '';
+  if (stripeTestMode(env)) {
+    const testId = String(env[`${sku.priceEnv}_TEST`] || '').trim();
+    if (testId) return testId;
+  }
   return String(env[sku.priceEnv] || '').trim();
 }
 
@@ -231,12 +259,43 @@ export function sprintGrant(currentPlan, currentExpiresAt, now = Date.now()) {
  * a grace window, so a dropped renewal webhook degrades (user keeps access a
  * few extra days) instead of failing hard (paying user locked out).
  */
+/**
+ * The paid-period end, in Stripe's unix seconds, across BOTH payload shapes.
+ *
+ * API version 2025-03-31 (Basil) removed `current_period_end` from the
+ * Subscription object and moved it onto each subscription item. We read both
+ * because the two code paths that call subscriptionGrant() do not share an API
+ * version: retrieveSubscription() goes out under the version stripeFetch pins,
+ * while a webhook payload arrives under whatever version its event destination
+ * is configured with. Reading only the old shape meant a modern destination
+ * silently produced `expiresAt: null` — premium that never expires — on every
+ * subscription.updated, while the initial purchase looked perfect.
+ *
+ * Items are maxed rather than taking the first: a multi-item subscription can
+ * carry different periods, and §9's never-shorten rule says access ends at the
+ * last one.
+ */
+export function subscriptionPeriodEnd(sub) {
+  const top = Number(sub && sub.current_period_end);
+  if (Number.isFinite(top) && top > 0) return top;
+  const items = (sub && sub.items && sub.items.data) || [];
+  let latest = 0;
+  for (const item of items) {
+    const v = Number(item && item.current_period_end);
+    if (Number.isFinite(v) && v > latest) latest = v;
+  }
+  return latest;
+}
+
 export function subscriptionGrant(sub, currentPlan) {
   if (normalizePlan(currentPlan) === 'lifetime') return { skip: true, reason: 'lifetime' };
   const status = String((sub && sub.status) || '');
   if (!ACTIVE_SUB_STATUSES.has(status)) return { plan: 'free', expiresAt: null };
-  const end = Number(sub && sub.current_period_end);
-  const expiresAt = Number.isFinite(end) && end > 0
+  const end = subscriptionPeriodEnd(sub);
+  // Neither shape present is genuinely anomalous; grant open-ended premium
+  // rather than an instant expiry, so a Stripe payload change can't lock out
+  // someone who just paid. The status events still downgrade them correctly.
+  const expiresAt = end > 0
     ? new Date(end * 1000 + RENEWAL_GRACE_DAYS * 86400000).toISOString()
     : null;
   return { plan: 'premium', expiresAt };

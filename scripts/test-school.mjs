@@ -17,6 +17,8 @@ import {
 import { normalizeUser, denormalizeUser } from '../functions/_lib/user-model.js';
 import { buildGenerateTreePrompt, buildGeneratePrompt } from '../functions/_lib/roadmap-generate.js';
 import { buildOpportunityPrompt } from '../functions/_lib/opportunity-core.js';
+import { buildScorecardPrompt } from '../functions/_lib/scorecard-core.js';
+import { buildOutreachPrompt } from '../functions/_lib/contact-core.js';
 import { buildWeeklyPlanPrompt } from '../functions/_lib/weekly-plan-gen.js';
 import { buildTurnPrompt, buildDebriefPrompt } from '../functions/_lib/interview-core.js';
 import { buildCoordinateLines } from '../functions/_lib/dossier-coordinates.js';
@@ -64,6 +66,18 @@ const SURFACES = [
   ['roadmap tree', (school) => buildGenerateTreePrompt({ careerName: 'Quant Trader', careerSlug: 'q', school })],
   ['roadmap v1', (school) => buildGeneratePrompt({ careerName: 'Quant Trader', careerSlug: 'q', school })],
   ['opportunity finder', (school) => buildOpportunityPrompt({ evidence: 'E', dossier: 'D', careerName: 'Quant Trader', gaps: [], school })],
+  // S16: the readiness scorecard scores a student against live postings, so
+  // "could they actually apply to this?" is a school question before it is a
+  // scoring one — a posting they are ineligible for would drag the number down
+  // for a gap that does not exist.
+  ['readiness scorecard', (school) => buildScorecardPrompt({ evidence: 'E', careerName: 'Quant Trader', school, today: '2026-09-01' })],
+  // S17: the network mapper drafts a message to "a {school} alum" — five of its
+  // seven archetypes name the student's own school in the label, so a draft that
+  // points them at another university's trading team is advice they cannot act on.
+  ['outreach draft', (school) => buildOutreachPrompt({
+    contact: { label: 'A UChicago alum', channel: 'email' },
+    careerName: 'Quant Trader', school, corpus: { entries: [], ids: new Set() }, today: '2026-09-01',
+  })],
   ['weekly plan', (school) => buildWeeklyPlanPrompt({
     careerName: 'Quant Trader', node: { title: 'n' }, stepLines: [], planPhases: [], prevTasks: [], notes: [], week: '2026-W30', school,
   })],

@@ -1,4 +1,30 @@
+# Files Cloudflare Pages should not upload as public assets.
+#
+# READ THIS BEFORE TRUSTING IT (S2, 2026-07-24): this file is NOT the control
+# that keeps anything private on this project. `.cursor/` has been listed below
+# since June and https://flightway.ai/.cursor/rules/jacob-work-prototype.mdc
+# still answered 200 — `.assetsignore` is honoured by direct
+# `wrangler pages deploy` uploads, and this project is built by the GitHub
+# integration instead. Every entry here therefore ALSO needs a rule in
+# `_redirects`, which is evaluated at request time and demonstrably works.
+# Kept as a second line (and as the fix if the deploy path ever changes back),
+# never as the only one.
 .onet-cache/
 node_modules/
 .DS_Store
 .cursor/
+
+# S2 (V2): served 200 on live flightway.ai. Values are placeholders, but the
+# variable NAMES are a map of every secret this deployment reads — a free
+# enumeration of what to go phishing for. Also 302'd in _redirects.
+.dev.vars.example
+
+# Local gate/QA output. Gitignored today, so normally absent from the build —
+# listed so a stray committed run can never become a public directory.
+.gates/
+.screenshots/
+.smoke-playwright/
+.tmp-probe/
+.wrangler/
+.github/
+.claude/

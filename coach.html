@@ -3,23 +3,29 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" href="/favicon.ico?v=20260717h" sizes="any">
-  <link rel="icon" type="image/png" href="/assets/favicon.png?v=20260717h">
-  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=20260717h">
+<!-- Marco's thread is drawn by JS from the signed-in user's own history, so a
+     crawler only ever sees an empty shell — and the content it would eventually
+     hold is one student's private conversation. Keep it out of search. -->
+<meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg?v=20260720f">
+  <link rel="icon" href="/favicon.ico?v=20260720a" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/icons/favicon-128.png?v=20260720a">
+  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-180.png?v=20260720a">
 <title>FlightWay — Marco, your AI advisor</title>
-<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260720c">
-<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260720c">
+<link rel="preload" href="/assets/fonts/inter-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/space-grotesk-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260721p">
+<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260724i">
 <script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
 <script src="assets/js/shared/global-shim.js?v=20260703p"></script>
 <script src="assets/js/shared/flags.js?v=20260716h"></script>
-<link rel="stylesheet" href="assets/css/flightway-2.css?v=20260720c">
-<script src="assets/js/shared/events.js?v=20260716h" defer></script>
-<script src="assets/js/shared/entitlements.js?v=20260719a" defer></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/flightway-2.css?v=20260725g">
+<link rel="stylesheet" href="assets/css/feature-intro.css?v=20260721a">
+<script src="assets/js/shared/events.js?v=20260724a" defer></script>
+<script src="assets/js/shared/entitlements.js?v=20260724e" defer></script>
+<script src="assets/js/shared/plan-surface.js?v=20260725e" defer></script>
 </head>
-<body class="coach-page">
+<body class="coach-page" data-fw-intro="marco">
 <div id="fw-page-veil" class="fw-page-veil" aria-live="polite" aria-busy="true">
 </div>
 
@@ -28,10 +34,10 @@
     <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay home"></a>
     <div class="nav-links app-nav" aria-label="App">
       <a href="portal.html" class="app-nav-tab" data-app-nav="home"><span class="app-nav-label">Home</span></a>
-      <a href="dashboard.html" class="app-nav-tab" data-app-nav="hub"><span class="app-nav-label">Career Hub</span></a>
+      <a href="flightplan.html" class="app-nav-tab" data-app-nav="plan"><span class="app-nav-label">Flight Plan</span></a>
+      <a href="roadmap.html" class="app-nav-tab" data-app-nav="roadmap"><span class="app-nav-label">Roadmap</span></a>
       <a href="coach.html" class="app-nav-tab" data-app-nav="advisor"><span class="app-nav-label">Marco</span></a>
-      <a href="roadmap.html" class="app-nav-tab" data-app-nav="roadmap"><span class="app-nav-label">Career Roadmap</span></a>
-      <a href="quiz.html" class="app-nav-tab app-nav-tab--muted" data-app-nav="quiz"><span class="app-nav-label">Career Quiz</span></a>
+      <a href="dashboard.html" class="app-nav-tab" data-app-nav="explore"><span class="app-nav-label">Explore</span></a>
       <a href="auth.html#signin" class="app-nav-tab nav-signin-link" id="nav-signin-link">Sign in</a>
       <button type="button" class="fw-theme-toggle" aria-label="Switch to dark mode" aria-pressed="false">
         <span class="fw-theme-icon" aria-hidden="true"></span>
@@ -41,47 +47,56 @@
 </nav>
 
 <div id="page-coach" class="page active">
-  <div class="coach-shell">
-    <div class="coach-header">
-      <div>
-        <div class="coach-eye">Your AI Career Advisor</div>
-        <h2 class="coach-title" id="coach-title">Marco</h2>
-        <div class="coach-sub" id="coach-sub">Personalized for <span id="coach-user-email">your account</span>.</div>
+  <div class="coach-frame">
+    <main class="coach-shell">
+      <div class="coach-header">
+        <div class="coach-ident">
+          <span class="coach-mark" id="coach-mark" aria-hidden="true"></span>
+          <div class="coach-ident-text">
+            <div class="coach-eye">Your AI career advisor</div>
+            <h1 class="coach-title" id="coach-title">Marco</h1>
+            <div class="coach-sub" id="coach-sub">Caught up on <span id="coach-user-email">your account</span>.</div>
+          </div>
+        </div>
+        <div class="coach-header-actions">
+          <div class="coach-memory" id="coach-memory" role="img"></div>
+          <button class="coach-gear" onclick="coachOpenSettings()" title="Settings" aria-label="Settings"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-settings" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /> <circle cx="12" cy="12" r="3" /></svg></button>
+        </div>
       </div>
-      <div class="coach-header-actions">
-        <button class="coach-gear" onclick="coachOpenSettings()" title="Settings">⚙</button>
+      <div class="coach-chat" id="coach-chat">
+        <div class="coach-empty" id="coach-empty"></div>
       </div>
-    </div>
-    <div class="coach-progress">
-      <div class="coach-progress-bar"><div class="coach-progress-fill" id="coach-progress-fill" style="width:0%"></div></div>
-      <div class="coach-progress-label" id="coach-progress-label">Exchange 0 / 5 — Marco updates what he remembers about you every 5 exchanges</div>
-    </div>
-    <div class="coach-chat" id="coach-chat">
-      <div class="coach-empty" id="coach-empty">
-        Say hi to Marco — he already knows your quiz results. Ask anything about your top industries, majors, or next steps.
+      <div class="coach-updating" id="coach-updating">
+        <div class="fw-spinner coach-spinner"></div>
+        <div>Updating dossier — Marco is committing what he learned to memory…</div>
       </div>
-    </div>
-    <div class="coach-updating" id="coach-updating">
-      <div class="fw-spinner coach-spinner"></div>
-      <div>Updating dossier — your coach is committing what it learned to memory…</div>
-    </div>
-    <form class="coach-input-row" id="coach-input-row" onsubmit="event.preventDefault(); coachSend();">
-      <textarea id="coach-input" class="coach-input" rows="1" placeholder="Ask your coach anything…" maxlength="2000"></textarea>
-      <button type="submit" id="coach-send-btn" class="coach-send-btn">Send</button>
-    </form>
-    <div class="coach-error" id="coach-error"></div>
+      <div data-fw-ribbon="marco"></div>
+      <div class="coach-composer">
+        <form class="coach-input-row" id="coach-input-row" onsubmit="event.preventDefault(); coachSend();">
+          <textarea id="coach-input" class="coach-input" rows="1" placeholder="Ask Marco anything…" maxlength="2000"></textarea>
+          <button type="submit" id="coach-send-btn" class="coach-send-btn">Send</button>
+        </form>
+        <div class="coach-composer-meta">
+          <span class="coach-usage" id="coach-usage" hidden></span>
+          <span class="coach-composer-hint">Enter to send · Shift+Enter for a new line</span>
+          <span class="coach-count" id="coach-count" hidden aria-live="polite"></span>
+        </div>
+        <div class="coach-error" id="coach-error"></div>
+      </div>
+    </main>
+    <aside class="coach-rail" id="coach-rail" aria-label="What Marco is working from"></aside>
   </div>
   <div class="coach-overlay" id="coach-settings-overlay" onclick="coachSettingsOverlayClick(event)">
     <div class="coach-settings-modal">
       <div class="coach-settings-head">
-        <div class="coach-settings-title">Coach Settings</div>
-        <button class="coach-x" onclick="coachCloseSettings()" aria-label="Close settings">×</button>
+        <div class="coach-settings-title">What Marco remembers</div>
+        <button class="coach-x" onclick="coachCloseSettings()" aria-label="Close settings"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x" aria-hidden="true"><path d="M18 6 6 18" /> <path d="m6 6 12 12" /></svg></button>
       </div>
       <div class="coach-settings-body">
         <div class="coach-settings-row">
           <div>
             <div class="coach-settings-label">Your dossier</div>
-            <div class="coach-settings-help">This is the one-page profile your coach reads before every reply.</div>
+            <div class="coach-settings-help">The one-page profile Marco reads before every reply. Edit it directly — he uses whatever is here.</div>
           </div>
           <button class="coach-secondary-btn" onclick="coachLoadDossier()">↻ Reload</button>
         </div>
@@ -98,14 +113,14 @@
 <div class="coach-overlay" id="coach-signup-overlay" onclick="coachSignupOverlayClick(event)">
   <div class="coach-signup-modal">
     <div class="coach-settings-head">
-      <div class="coach-settings-title">Create your free coach account</div>
-      <button class="coach-x" onclick="coachCloseSignup()" aria-label="Close sign-up">×</button>
+      <div class="coach-settings-title">Meet Marco</div>
+      <button class="coach-x" onclick="coachCloseSignup()" aria-label="Close sign-up"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x" aria-hidden="true"><path d="M18 6 6 18" /> <path d="m6 6 12 12" /></svg></button>
     </div>
     <div class="coach-settings-body">
-      <div class="coach-settings-help">Create an account with email and password to save your results and unlock unlimited chats with your AI career coach.</div>
+      <div class="coach-settings-help">Marco has already read your quiz. Create a free account and he keeps what he learns about you — across every session.</div>
       <input type="email" id="coach-signup-email" class="coach-email-input" placeholder="you@example.com" autocomplete="email">
-      <input type="password" id="coach-signup-password" class="coach-email-input" placeholder="Password (8+ characters)" autocomplete="new-password" style="margin-top:10px">
-      <input type="password" id="coach-signup-password-confirm" class="coach-email-input" placeholder="Confirm password" autocomplete="new-password" style="margin-top:10px">
+      <input type="password" id="coach-signup-password" class="coach-email-input" placeholder="Password (8+ characters)" autocomplete="new-password">
+      <input type="password" id="coach-signup-password-confirm" class="coach-email-input" placeholder="Confirm password" autocomplete="new-password">
       <div class="coach-error" id="coach-signup-error"></div>
       <div class="coach-dossier-actions">
         <div></div>
@@ -115,20 +130,41 @@
   </div>
 </div>
 
-<script src="assets/js/shared/page-veil.js?v=20260720c" defer></script>
+<footer>
+  <div class="footer-inner">
+    <div class="footer-left">
+      <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay"></a>
+      <p>&copy; 2026 FlightWay, Inc. All rights reserved.</p>
+    </div>
+    <div class="footer-links">
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+      <a href="/security">Security</a>
+      <a href="/contact">Contact</a>
+      <a href="/invite">Invite a friend</a>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/js/shared/page-veil.js?v=20260721a" defer></script>
 <script src="assets/js/shared/page-boot.js?v=20260703p" defer></script>
 <script src="assets/js/shared/fw-errors.js?v=20260720a" defer></script>
-<script src="assets/js/shared/auth.js?v=20260720c" defer></script>
+<script src="assets/js/shared/auth.js?v=20260725b" defer></script>
 <script src="assets/js/shared/fw-busy.js?v=20260720a" defer></script>
-<script src="assets/js/shared/user.js?v=20260719g" defer></script>
+<script src="assets/js/shared/user.js?v=20260725e" defer></script>
+<script src="assets/vendor/lucide-lite.js?v=20260724d" defer></script>
+<script src="assets/js/shared/feature-intro.js?v=20260725e" defer></script>
 <script src="assets/js/shared/profile-alignment.js?v=20260703p" defer></script>
 <script src="assets/js/quiz/quiz-data.js?v=20260703p" defer></script>
-<script src="assets/js/shared/auth-nav.js?v=20260703p" defer></script>
-<script src="assets/js/coach/coach.js?v=20260720c" defer></script>
+<script src="assets/js/shared/auth-nav.js?v=20260724d" defer></script>
+<script src="assets/js/shared/user-chip.js?v=20260721a" defer></script>
+<!-- brand.js before coach.js: Marco's avatar is FWBrand.icon(), and coach.js
+     can reach coachBootPage synchronously when FWAuth is absent. -->
+<script src="assets/js/shared/brand.js?v=20260720i" defer></script>
+<script src="assets/js/coach/coach.js?v=20260722a" defer></script>
 <script src="assets/js/shared/resume-render.js?v=20260718b" defer></script>
-<script src="assets/js/coach/interview-mode.js?v=20260718b" defer></script>
-<script src="assets/js/shared/brand.js?v=20260717g" defer></script>
-<script src="assets/js/shared/app-nav.js?v=20260703p" defer></script>
+<script src="assets/js/coach/interview-mode.js?v=20260725e" defer></script>
+<script src="assets/js/shared/app-nav.js?v=20260724d" defer></script>
 <script src="assets/js/shared/theme.js?v=20260703p" defer></script>
 <script src="assets/js/shared/fw-toast.js?v=20260718i" defer></script>
 </body>

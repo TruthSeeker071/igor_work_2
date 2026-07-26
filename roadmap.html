@@ -3,25 +3,34 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" href="/favicon.ico?v=20260717h" sizes="any">
-  <link rel="icon" type="image/png" href="/assets/favicon.png?v=20260717h">
-  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=20260717h">
+<!-- Signed-in app shell: a crawler sees this markup empty, since the roadmap is drawn by JS after sign-in, so indexing it would surface a blank FlightWay page in search results. -->
+<meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg?v=20260720f">
+  <link rel="icon" href="/favicon.ico?v=20260720a" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/icons/favicon-128.png?v=20260720a">
+  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-180.png?v=20260720a">
 <title>FlightWay — Career Roadmap</title>
-<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260720c">
-<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260720c">
-<link rel="stylesheet" href="assets/css/skill-gap-tracker.css?v=20260720c">
-<link rel="stylesheet" href="assets/css/opportunity-finder.css?v=20260720c">
+<link rel="preload" href="/assets/fonts/inter-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/space-grotesk-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260721p">
+<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260724i">
+<link rel="stylesheet" href="assets/css/skill-gap-tracker.css?v=20260720d">
+<link rel="stylesheet" href="assets/css/opportunity-finder.css?v=20260724i">
 <script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
 <script src="assets/js/shared/global-shim.js?v=20260703p"></script>
 <script src="assets/js/shared/flags.js?v=20260716h"></script>
-<link rel="stylesheet" href="assets/css/flightway-2.css?v=20260720c">
-<script src="assets/js/shared/events.js?v=20260716h" defer></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-<script src="assets/vendor/lucide-lite.js?v=20260703p" defer></script>
+<!-- WS-G: roadmap.html had never loaded entitlements.js, so opportunity-finder.js's
+     FWEnt.gate() call could never fire and the generations chip had no counters. -->
+<script src="assets/js/shared/entitlements.js?v=20260724e" defer></script>
+<script src="assets/js/shared/plan-surface.js?v=20260725e" defer></script>
+<link rel="stylesheet" href="assets/css/flightway-2.css?v=20260725g">
+<link rel="stylesheet" href="assets/css/feature-intro.css?v=20260721a">
+<link rel="stylesheet" href="assets/css/share.css?v=20260725b">
+<link rel="stylesheet" href="assets/css/nps.css?v=20260725f">
+<script src="assets/js/shared/events.js?v=20260724a" defer></script>
+<script src="assets/vendor/lucide-lite.js?v=20260724d" defer></script>
 </head>
-<body class="roadmap-page">
+<body class="roadmap-page" data-fw-intro="roadmap">
 <div id="fw-page-veil" class="fw-page-veil" aria-live="polite" aria-busy="true">
 </div>
 
@@ -32,10 +41,10 @@
     <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay home"></a>
     <div class="nav-links app-nav" aria-label="App">
       <a href="portal.html" class="app-nav-tab" data-app-nav="home"><span class="app-nav-label">Home</span></a>
-      <a href="dashboard.html" class="app-nav-tab" data-app-nav="hub"><span class="app-nav-label">Career Hub</span></a>
+      <a href="flightplan.html" class="app-nav-tab" data-app-nav="plan"><span class="app-nav-label">Flight Plan</span></a>
+      <a href="roadmap.html" class="app-nav-tab" data-app-nav="roadmap"><span class="app-nav-label">Roadmap</span></a>
       <a href="coach.html" class="app-nav-tab" data-app-nav="advisor"><span class="app-nav-label">Marco</span></a>
-      <a href="roadmap.html" class="app-nav-tab" data-app-nav="roadmap"><span class="app-nav-label">Career Roadmap</span></a>
-      <a href="quiz.html" class="app-nav-tab app-nav-tab--muted" data-app-nav="quiz"><span class="app-nav-label">Career Quiz</span></a>
+      <a href="dashboard.html" class="app-nav-tab" data-app-nav="explore"><span class="app-nav-label">Explore</span></a>
       <a href="auth.html#signin" class="app-nav-tab nav-signin-link" id="nav-signin-link">Sign in</a>
       <button type="button" class="fw-theme-toggle" aria-label="Switch to dark mode" aria-pressed="false">
         <span class="fw-theme-icon" aria-hidden="true"></span>
@@ -47,6 +56,10 @@
 <div id="page-roadmap" class="page active">
   <section class="portal-wrap">
     <header class="portal-head" id="roadmap-head"></header>
+    <div data-fw-ribbon="roadmap"></div>
+    <!-- S15. A static host rather than an injection into .roadmap-hud-actions,
+         which roadmap.js rebuilds from a template string on every render. -->
+    <div class="roadmap-share" data-fw-share-host="roadmap"></div>
     <div id="roadmap-body"></div>
   </section>
 </div>
@@ -59,35 +72,48 @@
       <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay"></a>
       <p>&copy; 2026 FlightWay. All rights reserved.</p>
     </div>
-    <div class="footer-links"><a href="#">Privacy</a><a href="#">Terms</a><a href="#">Contact</a></div>
+    <div class="footer-links"><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/security">Security</a><a href="/contact">Contact</a><a href="/invite">Invite a friend</a></div>
   </div>
 </footer>
 
-<script src="assets/js/shared/page-veil.js?v=20260720c" defer></script>
+<script src="assets/js/shared/page-veil.js?v=20260721a" defer></script>
 <script src="assets/js/shared/page-boot.js?v=20260703p" defer></script>
 <script src="assets/js/shared/fw-errors.js?v=20260720a" defer></script>
-<script src="assets/js/shared/auth.js?v=20260720c" defer></script>
+<script src="assets/js/shared/auth.js?v=20260725b" defer></script>
+<script src="assets/js/shared/nps.js?v=20260725f" defer></script>
 <script src="assets/js/shared/fw-busy.js?v=20260720a" defer></script>
-<script src="assets/js/shared/user.js?v=20260719g" defer></script>
+<script src="assets/js/shared/user.js?v=20260725e" defer></script>
+<script src="assets/js/shared/feature-intro.js?v=20260725e" defer></script>
 <script src="assets/js/shared/profile-alignment.js?v=20260703p" defer></script>
-<script src="assets/js/shared/roadmap-sync.js?v=20260703p" defer></script>
-<script src="assets/js/shared/career-target.js?v=20260717b" defer></script>
-<script src="assets/js/shared/onet-math.js?v=20260713a" defer></script>
+<script src="assets/js/shared/roadmap-sync.js?v=20260721i" defer></script>
+<script src="assets/js/shared/career-target.js?v=20260721v" defer></script>
+<script src="assets/js/shared/onet-math.js?v=20260721v" defer></script>
 <script src="assets/js/hub/hub-careers.js?v=20260719b" defer></script>
-<script src="assets/js/shared/onet-catalog.js?v=20260718f" defer></script>
-<script src="assets/js/shared/onet-vectors.js?v=20260719a" defer></script>
+<script src="assets/js/shared/onet-catalog.js?v=20260720c" defer></script>
+<!-- onet-vectors.js hydrates on DOMContentLoaded and its personality seed ranks
+     the quiz scores through FWSectorFitSheet.SECTOR_KEYS. roadmap.html was the
+     one hydrating page that never loaded this, so the seed ranked nothing. -->
+<script src="assets/js/shared/sector-fit-sheet.js?v=20260721u" defer></script>
+<script src="assets/js/shared/onet-vectors.js?v=20260726a" defer></script>
 <script src="assets/js/shared/career-focus-migrate.js?v=20260703p" defer></script>
-<script src="assets/js/shared/auth-nav.js?v=20260703p" defer></script>
+<script src="assets/js/shared/auth-nav.js?v=20260724d" defer></script>
+<script src="assets/js/shared/user-chip.js?v=20260721a" defer></script>
 <script src="assets/js/shared/fw-toast.js?v=20260718i" defer></script>
 <script src="assets/js/shared/fw-confirm.js?v=20260703p" defer></script>
-<script src="assets/js/app/roadmap-tree.js?v=20260709e" defer></script>
-<script src="assets/js/app/skill-gap-tracker.js?v=20260720d" defer></script>
-<script src="assets/js/app/opportunity-finder.js?v=20260720e" defer></script>
-<script src="assets/js/app/roadmap.js?v=20260720d" defer></script>
+<script src="assets/js/shared/commitments.js?v=20260724g" defer></script>
+<script src="assets/js/app/roadmap-tree.js?v=20260724g" defer></script>
+<script src="assets/js/app/skill-gap-tracker.js?v=20260724a" defer></script>
+<!-- S12: the Finder's "Save to applications" button reads global.FWApplications.
+     `defer` preserves document order, so this tag must stay ABOVE the finder —
+     the same ordering rule commitments.js follows for roadmap-tree.js. -->
+<script src="assets/js/shared/applications.js?v=20260724i" defer></script>
+<script src="assets/js/app/opportunity-finder.js?v=20260724i" defer></script>
+<script src="assets/js/app/roadmap.js?v=20260725f" defer></script>
+<script src="assets/js/shared/share-card.js?v=20260725b" defer></script>
 <script src="assets/js/shared/hub-canvas-bg.js?v=20260718p" defer></script>
 <script src="assets/js/shared/data-field.js?v=20260703p" defer></script>
-<script src="assets/js/shared/brand.js?v=20260717g" defer></script>
-<script src="assets/js/shared/app-nav.js?v=20260703p" defer></script>
+<script src="assets/js/shared/brand.js?v=20260720i" defer></script>
+<script src="assets/js/shared/app-nav.js?v=20260724d" defer></script>
 <script src="assets/js/shared/theme.js?v=20260703p" defer></script>
 <script>
   // Deferred scripts finish before DOMContentLoaded, so globals exist here.

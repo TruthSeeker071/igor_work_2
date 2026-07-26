@@ -148,6 +148,21 @@
     }
   })();
 
+  // ── "About you": year + school ─────────────────────────────────────────────
+  // V2 S6 (D8) moved year/school OUT of the pre-signup quiz; this step is their
+  // post-signup home. Persisted (in applyAndPersist) through the SAME v1
+  // profile.{year,school} paths qzBuildHubPayload writes, so KEY_MAP normalizes
+  // them to identity.{year,school} — the school single source — with no new
+  // write path. Seeded from any value already on the profile (e.g. a pre-V2
+  // account, or a re-visit).
+  var YEAR_OPTS = [
+    { k: 'freshman', l: 'Freshman' }, { k: 'sophomore', l: 'Sophomore' },
+    { k: 'junior', l: 'Junior' }, { k: 'senior', l: 'Senior' }
+  ];
+  var aboutYear = profile().year || '';
+  var aboutSchool = profile().school || '';
+  function hasAboutYou() { return !!(aboutYear || (aboutSchool && aboutSchool.trim())); }
+
   // ── GPA helpers (ported verbatim from quiz-app.js) ──────────────────────────
   function gpaLetter(v) {
     if (v >= 4.0) return 'A+'; if (v >= 3.7) return 'A'; if (v >= 3.3) return 'A-';
@@ -282,6 +297,14 @@
       if (patches.length) FWSectorFitSheet.recordLocalPatches(quiz, patches, 'academics');
     }
     quiz.academics = compactAnswers();
+    // About-you (V2 S6): write year + school through the v1 profile paths so the
+    // KEY_MAP normalizer routes them to identity.{year,school} — no bespoke
+    // identity write, no second school home. Only set what the student provided.
+    if (hasAboutYou()) {
+      quiz.profile = quiz.profile || {};
+      if (aboutYear) quiz.profile.year = aboutYear;
+      if (aboutSchool && aboutSchool.trim()) quiz.profile.school = aboutSchool.trim();
+    }
     if (answers.transcriptText && String(answers.transcriptText).trim()) {
       quiz.academicsTranscript = String(answers.transcriptText).trim();
     }
@@ -386,6 +409,19 @@
     return '<div class="hr-q' + (isAnswered(q) ? ' answered' : '') + '">' + head + body + '</div>';
   }
 
+  function aboutYouHtml() {
+    var yearBtns = YEAR_OPTS.map(function (o) {
+      return '<button type="button" class="hr-opt hr-year-opt' + (aboutYear === o.k ? ' sel' : '') + '" data-act="year" data-k="' + o.k + '">' + o.l + '</button>';
+    }).join('');
+    return ''
+      + '<div class="hr-q hr-aboutyou' + (hasAboutYou() ? ' answered' : '') + '">'
+      +   '<div class="hr-q-title">About you</div>'
+      +   '<div class="hr-q-sub">Your year and school tune your major, class, and roadmap recommendations.</div>'
+      +   '<div class="hr-opts hr-year-opts">' + yearBtns + '</div>'
+      +   '<input type="text" class="hr-text hr-school" data-act="school" placeholder="Your college or university" value="' + escAttr(aboutSchool || '') + '">'
+      + '</div>';
+  }
+
   // ── Embeddable mount (quiz flow) ────────────────────────────────────────────
   // The Academics panel used to be a Career Hub slide-in; it now lives in the
   // post-signup quiz flow right after Sharpen Matches (and standalone via
@@ -444,6 +480,13 @@
     var el = e.target.closest('[data-act]');
     if (!el) return;
     var act = el.getAttribute('data-act');
+    if (act === 'year') {
+      aboutYear = el.getAttribute('data-k');
+      var ybtns = el.parentNode.querySelectorAll('.hr-year-opt');
+      for (var y = 0; y < ybtns.length; y++) ybtns[y].classList.toggle('sel', ybtns[y] === el);
+      var ay = el.closest('.hr-aboutyou'); if (ay) ay.classList.toggle('answered', hasAboutYou());
+      return;
+    }
     if (act === 'mc') {
       var qi = +el.getAttribute('data-qi'), i = +el.getAttribute('data-i'), q = Qs[qi];
       answers[q.id] = i;
@@ -478,6 +521,11 @@
       el.classList.add('hr-slider-on');
       markAnswered(el, true);
       writeJson(ANS_KEY, answers); refreshProgress();
+      return;
+    }
+    if (act === 'school') {
+      aboutSchool = el.value;                     // state only — persisted at commit
+      var as = el.closest('.hr-aboutyou'); if (as) as.classList.toggle('answered', hasAboutYou());
       return;
     }
     if (act === 'text') {
@@ -515,7 +563,7 @@
       + '<div class="hr-sub">' + headerSub() + '</div>'
       + '<div class="hr-prog"><div class="hr-prog-fill" style="width:' + Math.round(done / REQUIRED.length * 100) + '%"></div></div>'
       + '<div class="hr-prog-lbl">' + done + ' of ' + REQUIRED.length + ' answered</div>'
-      + '<div class="hr-body">' + Qs.map(questionHtml).join('') + '</div>';
+      + '<div class="hr-body">' + aboutYouHtml() + Qs.map(questionHtml).join('') + '</div>';
     if (!container._fwAcadBound) {
       container._fwAcadBound = true;
       container.addEventListener('click', onPanelClick);
@@ -531,6 +579,7 @@
     // (sector-fit-sheet patches + persistQuizVectors sync).
     commit: function () { applyAndPersist(); },
     answeredCount: answeredCount,
+    hasAboutYou: hasAboutYou,
     total: REQUIRED.length,
     isComplete: function () { return answeredCount() >= REQUIRED.length; },
     // Legacy hub panel API — the slide-in is gone; harmless no-ops so old

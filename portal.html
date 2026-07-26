@@ -3,24 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" href="/favicon.ico?v=20260717h" sizes="any">
-  <link rel="icon" type="image/png" href="/assets/favicon.png?v=20260717h">
-  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=20260717h">
+<!-- This page is a blank shell until auth.js hydrates it after sign-in, so a crawler sees nothing worth indexing under the FlightWay title. -->
+<meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg?v=20260720f">
+  <link rel="icon" href="/favicon.ico?v=20260720a" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/icons/favicon-128.png?v=20260720a">
+  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-180.png?v=20260720a">
 <title>FlightWay — Your home</title>
-<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260720c">
-<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260720c">
+<link rel="preload" href="/assets/fonts/inter-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/space-grotesk-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260721p">
+<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260724i">
 <script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
 <script src="assets/js/shared/global-shim.js?v=20260703p"></script>
 <script src="assets/js/shared/flags.js?v=20260716h"></script>
-<script src="assets/js/shared/entitlements.js?v=20260719a" defer></script>
-<link rel="stylesheet" href="assets/css/flightway-2.css?v=20260720c">
-<script src="assets/js/shared/events.js?v=20260716h" defer></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-<script src="assets/vendor/lucide-lite.js?v=20260703p" defer></script>
-<link rel="stylesheet" href="assets/css/good-fit-jobs.css?v=20260720c">
-<script src="assets/js/job-matches.js?v=20260720c" defer></script>
+<script src="assets/js/shared/entitlements.js?v=20260724e" defer></script>
+<script src="assets/js/shared/plan-surface.js?v=20260725e" defer></script>
+<link rel="stylesheet" href="assets/css/flightway-2.css?v=20260725g">
+<link rel="stylesheet" href="assets/css/share.css?v=20260725b">
+<link rel="stylesheet" href="assets/css/nps.css?v=20260725f">
+<script src="assets/js/shared/events.js?v=20260724a" defer></script>
+<script src="assets/vendor/lucide-lite.js?v=20260724d" defer></script>
 </head>
 <body class="portal-page">
 <div id="fw-page-veil" class="fw-page-veil" aria-live="polite" aria-busy="true">
@@ -33,10 +36,10 @@
     <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay home"></a>
     <div class="nav-links app-nav" aria-label="App">
       <a href="portal.html" class="app-nav-tab is-active" data-app-nav="home" aria-current="page"><span class="app-nav-label">Home</span></a>
-      <a href="dashboard.html" class="app-nav-tab" data-app-nav="hub"><span class="app-nav-label">Career Hub</span></a>
+      <a href="flightplan.html" class="app-nav-tab" data-app-nav="plan"><span class="app-nav-label">Flight Plan</span></a>
+      <a href="roadmap.html" class="app-nav-tab" data-app-nav="roadmap"><span class="app-nav-label">Roadmap</span></a>
       <a href="coach.html" class="app-nav-tab" data-app-nav="advisor"><span class="app-nav-label">Marco</span></a>
-      <a href="roadmap.html" class="app-nav-tab" data-app-nav="roadmap"><span class="app-nav-label">Career Roadmap</span></a>
-      <a href="quiz.html" class="app-nav-tab app-nav-tab--muted" data-app-nav="quiz"><span class="app-nav-label">Career Quiz</span></a>
+      <a href="dashboard.html" class="app-nav-tab" data-app-nav="explore"><span class="app-nav-label">Explore</span></a>
       <a href="auth.html#signin" class="app-nav-tab nav-signin-link" id="nav-signin-link">Sign in</a>
       <button type="button" class="fw-theme-toggle" aria-label="Switch to dark mode" aria-pressed="false">
         <span class="fw-theme-icon" aria-hidden="true"></span>
@@ -48,21 +51,36 @@
 <div id="page-portal" class="page active">
   <section class="portal-wrap">
     <header class="portal-head" id="portal-head"></header>
+    <!-- WS-G: plan badge + what's left. Filled by plan-surface.js; it lives
+         outside #portal-head because portal.js rewrites that node's innerHTML. -->
+    <div class="portal-plan" id="portal-plan" data-fw-plan-panel hidden></div>
     <div id="portal-prompt-banner"></div>
+    <!-- S7: the This-Week mirror. Its own host, ABOVE the action grid and outside
+         #portal-actions, which renderActions() wipes on every re-render. -->
+    <div class="portal-thisweek" id="portal-thisweek"></div>
     <div class="portal-empty-quiz" id="portal-empty-quiz"></div>
     <div class="portal-actions" id="portal-actions"></div>
+    <div class="portal-rail">
+      <div class="portal-profile-entry" id="portal-profile-entry"></div>
+      <div class="portal-snapshot" id="portal-snapshot"></div>
+      <!-- S15. Its own node, NOT inside #portal-snapshot — portal.js rewrites
+           that one's innerHTML on every re-render. -->
+      <div class="portal-share" data-fw-share-host="portal"></div>
+    </div>
     <div class="portal-fw2-stack" id="portal-fw2-stack" aria-label="Progress and tools"></div>
-    <div class="portal-profile-entry" id="portal-profile-entry"></div>
-    <div class="portal-snapshot" id="portal-snapshot"></div>
     <footer class="portal-footer" id="portal-footer" hidden>
       <!-- plan + Stripe Customer Portal link; filled by assets/js/shared/billing.js -->
       <div class="portal-billing" id="portal-billing" hidden></div>
+      <!-- S15 (D24). The account surface owns both halves: the invite link and
+           the off switch for every public share page this account published. -->
+      <div class="portal-invite fw-invite" data-fw-invite></div>
+      <div class="portal-shares fw-shares" data-fw-shares></div>
       <button type="button" class="portal-signout-btn" id="portal-signout-btn">Sign out</button>
-      <button type="button" class="portal-doom-btn" id="portal-doom-btn"
-        style="margin-top:14px;width:100%;padding:12px 14px;border:2px solid #c0392b;border-radius:12px;background:#fdecea;color:#a5281b;font-weight:800;font-size:14px;letter-spacing:.01em;cursor:pointer;transition:background .18s ease,transform .06s ease;">
-        ⚠️ Do Not Press — Delete My Account
+      <button type="button" class="portal-doom-btn" id="portal-doom-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-triangle-alert" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /> <path d="M12 9v4" /> <path d="M12 17h.01" /></svg>
+        <span>Delete my account</span>
       </button>
-      <p class="portal-doom-note" style="margin:8px 2px 0;font-size:12px;line-height:1.4;color:var(--text-tertiary,#8a8f98);text-align:center;">
+      <p class="portal-doom-note">
         Permanently erases your account and every trace of your data. You can sign up again with the same email as a brand-new user.
       </p>
     </footer>
@@ -75,43 +93,59 @@
       <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay"></a>
       <p>&copy; 2026 FlightWay. All rights reserved.</p>
     </div>
-    <div class="footer-links"><a href="mailto:hello@flightway.app">Contact</a></div>
+    <div class="footer-links">
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+      <a href="/security">Security</a>
+      <a href="/contact">Contact</a>
+      <a href="/invite">Invite a friend</a>
+    </div>
   </div>
 </footer>
 
-<script src="assets/js/shared/page-veil.js?v=20260720c" defer></script>
+<script src="assets/js/shared/page-veil.js?v=20260721a" defer></script>
 <script src="assets/js/shared/page-boot.js?v=20260703p" defer></script>
 <script src="assets/js/shared/fw-errors.js?v=20260720a" defer></script>
-<script src="assets/js/shared/auth.js?v=20260720c" defer></script>
+<script src="assets/js/shared/auth.js?v=20260725b" defer></script>
+<script src="assets/js/shared/nps.js?v=20260725f" defer></script>
 <script src="assets/js/shared/fw-busy.js?v=20260720a" defer></script>
-<script src="assets/js/shared/user.js?v=20260719g" defer></script>
+<script src="assets/js/shared/user.js?v=20260725e" defer></script>
+<!-- S5 (D6): fires signup_complete|login(method:google)+identify when the OAuth
+     callback lands here with ?fw_oauth=google (portal is the default return). -->
+<script src="assets/js/shared/google-auth.js?v=20260725b" defer></script>
 <script src="assets/js/shared/profile-alignment.js?v=20260703p" defer></script>
-<script src="assets/js/shared/roadmap-sync.js?v=20260703p" defer></script>
-<script src="assets/js/shared/sector-fit-sheet.js?v=20260703p" defer></script>
+<script src="assets/js/shared/roadmap-sync.js?v=20260721i" defer></script>
+<script src="assets/js/shared/sector-fit-sheet.js?v=20260721u" defer></script>
 <script src="assets/js/shared/academics-map.js?v=20260703p" defer></script>
 <script src="assets/js/shared/refine-map.js?v=20260703p" defer></script>
 <script src="assets/js/hub/hub-careers.js?v=20260719b" defer></script>
-<script src="assets/js/shared/onet-math.js?v=20260713a" defer></script>
-<script src="assets/js/shared/onet-catalog.js?v=20260718f" defer></script>
-<script src="assets/js/shared/onet-vectors.js?v=20260719a" defer></script>
+<script src="assets/js/shared/onet-math.js?v=20260721v" defer></script>
+<script src="assets/js/shared/onet-catalog.js?v=20260720c" defer></script>
+<script src="assets/js/shared/onet-vectors.js?v=20260726a" defer></script>
 <script src="assets/js/shared/career-focus-migrate.js?v=20260703p" defer></script>
-<script src="assets/js/shared/career-target.js?v=20260717b" defer></script>
-<script src="assets/js/shared/hub-zone-fit.js?v=20260718f" defer></script>
-<script src="assets/js/shared/onet-dimension-viewer.js?v=20260712d" defer></script>
-<script src="assets/js/shared/auth-nav.js?v=20260703p" defer></script>
+<script src="assets/js/shared/career-target.js?v=20260721v" defer></script>
+<script src="assets/js/shared/hub-zone-fit.js?v=20260721v" defer></script>
+<script src="assets/js/shared/onet-dimension-viewer.js?v=20260721u" defer></script>
+<script src="assets/js/shared/auth-nav.js?v=20260724d" defer></script>
+<script src="assets/js/shared/user-chip.js?v=20260721a" defer></script>
 <script src="assets/js/shared/fw-toast.js?v=20260718i" defer></script>
-<script src="assets/js/app/roadmap-tree.js?v=20260709e" defer></script>
+<script src="assets/js/app/roadmap-tree.js?v=20260724g" defer></script>
 <script src="assets/js/profile/profile-building-fallback.js?v=20260718q" defer></script>
-<script src="assets/js/app/portal-target-switch.js?v=20260718o" defer></script>
-<script src="assets/js/app/portal.js?v=20260720b" defer></script>
+<script src="assets/js/app/portal-target-switch.js?v=20260721q" defer></script>
+<script src="assets/js/app/portal.js?v=20260724d" defer></script>
 <script src="assets/js/sim/sim-portal-card.js?v=20260710m" defer></script>
-<script src="assets/js/app/portal-flightplan.js?v=20260719a" defer></script>
-<script src="assets/js/app/notify-optin.js?v=20260719a" defer></script>
-<script src="assets/js/app/portal-career-advisor.js?v=20260720c" defer></script>
+<script src="assets/js/app/portal-flightplan.js?v=20260725f" defer></script>
+<script src="assets/js/app/artifacts.js?v=20260724i" defer></script>
+<script src="assets/js/shared/share-card.js?v=20260725b" defer></script>
+<script src="assets/js/app/invite-panel.js?v=20260725b" defer></script>
+<!-- S7 moved the notification prefs centre (and with it the D10 weekly-digest
+     prompt) to flightplan.html, where the weekly email is actually about — so
+     notify-optin.js and feature-intro.js load there now, not here. -->
+<script src="assets/js/app/portal-career-advisor.js?v=20260720g" defer></script>
 <script src="assets/js/shared/data-field.js?v=20260703p" defer></script>
-<script src="assets/js/shared/billing.js?v=20260720c" defer></script>
-<script src="assets/js/shared/brand.js?v=20260717g" defer></script>
-<script src="assets/js/shared/app-nav.js?v=20260703p" defer></script>
+<script src="assets/js/shared/billing.js?v=20260724a" defer></script>
+<script src="assets/js/shared/brand.js?v=20260720i" defer></script>
+<script src="assets/js/shared/app-nav.js?v=20260724d" defer></script>
 <script src="assets/js/shared/theme.js?v=20260703p" defer></script>
 <script>
   // Deferred scripts finish before DOMContentLoaded, so globals exist here.
@@ -121,7 +155,7 @@
       if (window.FWPortal && typeof FWPortal.render === 'function') FWPortal.render();
       if (window.FWSimPortalCard) FWSimPortalCard.inject();
       if (window.FWFlightPlanCard) FWFlightPlanCard.inject();
-      if (window.FWNotifyOptin) FWNotifyOptin.inject();
+      if (window.FWArtifacts) FWArtifacts.injectCard();
       if (window.FWAppNav) FWAppNav.sync('home');
     });
   });

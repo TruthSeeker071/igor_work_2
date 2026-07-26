@@ -1,0 +1,130 @@
+/* FlightWay V2 S15 — share card modal + invite surfaces (plan §5 S15).
+ *
+ * A dedicated stylesheet rather than more rules in flightway-2.css, for the
+ * reason S14 learned the hard way: flightway-2.css is linked by 13 pages, so a
+ * single new rule there forces a cache-buster sweep across all of them. This
+ * file is linked by the four pages that actually render these surfaces.
+ *
+ * Every plate uses THEME TOKENS, never a literal dark hex — a hardcoded dark
+ * panel with token-coloured text is the exact defect `contrast:check` exists to
+ * catch, and it has shipped four times. The one deliberate literal is the
+ * canvas card itself, which is an image, not a plate: it is dark in both themes
+ * because a shared PNG has no theme to follow.
+ */
+
+/* ───────────────────────────────  the CTA  ─────────────────────────────── */
+.fw-share-cta {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(var(--primary), .12);
+  border: 1px solid rgba(var(--primary), .30);
+  color: rgb(var(--text)); font: inherit; font-weight: 600; font-size: 13.5px;
+  padding: 9px 15px; border-radius: 10px; cursor: pointer;
+  transition: background var(--transition, .18s ease);
+}
+.fw-share-cta::before { content: "↗"; font-size: 14px; }
+.fw-share-cta:hover { background: rgba(var(--primary), .20); }
+
+/* ──────────────────────────────  the modal  ───────────────────────────── */
+.fw-share-modal {
+  position: fixed; inset: 0; z-index: 2147483000;
+  display: grid; place-items: center; padding: 20px;
+  background: rgba(8, 10, 20, .68);
+  overflow-y: auto;
+}
+.fw-share-box {
+  position: relative; width: min(640px, 100%);
+  background: rgb(var(--surface)); color: rgb(var(--text));
+  border: 1px solid rgb(var(--border)); border-radius: 18px;
+  padding: 26px 24px 22px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .35);
+}
+.fw-share-close {
+  position: absolute; top: 10px; right: 12px;
+  background: transparent; border: 0; cursor: pointer;
+  color: rgb(var(--text)); opacity: .55;
+  font-size: 26px; line-height: 1; padding: 6px 10px; border-radius: 8px;
+}
+.fw-share-close:hover { opacity: 1; }
+.fw-share-title { margin: 0 0 6px; font-size: 1.25rem; font-weight: 700; }
+.fw-share-lede {
+  margin: 0 0 16px; font-size: .92rem; line-height: 1.6;
+  color: var(--text-tertiary, rgb(var(--text)));
+}
+.fw-share-preview {
+  display: block; width: 100%; height: auto; aspect-ratio: 1200 / 630;
+  border-radius: 12px; border: 1px solid rgb(var(--border));
+  background: rgba(127, 140, 175, .10);
+}
+.fw-share-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0 0; }
+.fw-sc-btn {
+  background: rgba(127, 140, 175, .12);
+  border: 1px solid rgb(var(--border));
+  color: rgb(var(--text)); font: inherit; font-weight: 600; font-size: 13.5px;
+  padding: 10px 16px; border-radius: 10px; cursor: pointer;
+}
+.fw-sc-btn:hover:not(:disabled) { background: rgba(127, 140, 175, .20); }
+.fw-sc-btn:disabled { opacity: .55; cursor: default; }
+.fw-sc-btn--primary {
+  background: rgba(var(--primary), .16); border-color: rgba(var(--primary), .34);
+}
+.fw-sc-btn--primary:hover:not(:disabled) { background: rgba(var(--primary), .26); }
+.fw-share-status {
+  margin: 12px 0 0; font-size: .87rem; line-height: 1.55;
+  color: var(--text-tertiary, rgb(var(--text)));
+  min-height: 1.2em;
+}
+.fw-share-linkbox {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+  margin: 14px 0 0; padding: 12px 14px;
+  border: 1px solid rgb(var(--border)); border-radius: 12px;
+}
+.fw-share-url {
+  flex: 1 1 220px; min-width: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .86rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ─────────────────────────  invite + link manager  ─────────────────────── */
+.fw-invite { display: grid; gap: 12px; }
+.fw-invite-lede {
+  margin: 0; font-size: .92rem; line-height: 1.6;
+  color: var(--text-tertiary, rgb(var(--text)));
+}
+.fw-invite-row {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+  padding: 12px 14px; border: 1px solid rgb(var(--border)); border-radius: 12px;
+}
+.fw-invite-link {
+  flex: 1 1 200px; min-width: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .86rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.fw-invite-stats {
+  display: flex; flex-wrap: wrap; gap: 6px 20px; margin: 0; padding: 0; list-style: none;
+  font-size: .87rem; color: var(--text-tertiary, rgb(var(--text)));
+}
+.fw-invite-stats b { color: rgb(var(--text)); font-size: 1.15rem; margin-right: 5px; }
+.fw-invite-note { margin: 0; font-size: .84rem; line-height: 1.55; color: var(--text-tertiary, rgb(var(--text))); }
+.fw-invite-more { font-weight: 600; }
+
+.fw-shares { display: grid; gap: 8px; margin: 14px 0 0; }
+.fw-shares-title { margin: 0; font-size: .84rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--text-tertiary, rgb(var(--text))); }
+.fw-shares-row {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  padding: 10px 12px; border: 1px solid rgb(var(--border)); border-radius: 10px;
+  font-size: .87rem;
+}
+.fw-shares-name { flex: 1 1 160px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fw-shares-views { color: var(--text-tertiary, rgb(var(--text))); font-variant-numeric: tabular-nums; }
+.fw-shares-off {
+  background: transparent; border: 1px solid rgb(var(--border)); border-radius: 8px;
+  color: rgb(var(--text)); font: inherit; font-size: .82rem; font-weight: 600;
+  padding: 6px 11px; cursor: pointer;
+}
+.fw-shares-off:hover:not(:disabled) { background: rgba(127, 140, 175, .16); }
+.fw-shares-off:disabled { opacity: .5; cursor: default; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fw-share-cta { transition: none; }
+}

@@ -21,10 +21,15 @@ import {
   sliceVector,
 } from './onet/store.js';
 import { DIM_COUNT } from './onet/constants.js';
+import {
+  FRAGMENT_COUNT,
+  offsetLayout,
+  baseIndexFromCareers,
+  rekeyDerivedRows,
+} from './onet/derive-rekey.js';
 import { callGeminiJson } from './gemini-json.js';
 import { resolveGeminiModels } from '../_lib.js';
 
-const FRAGMENT_COUNT = 3;
 // Synthetic SOC range for runtime fragments. The static sidecar owns 99-0XXX;
 // runtime rows start at 99-1000.00 and count up.
 const SYNTHETIC_SOC_START = '99-1000.00';
@@ -70,39 +75,6 @@ function applyAdjustments(baseVector, adjustments, nameToIndex) {
     applied[name] = clamped;
   }
   return { vector, applied };
-}
-
-// Deterministic small offset so the derived orb sits near its base but distinct.
-// Places each fragment on a fixed orbit around its base career: FRAGMENT_COUNT
-// (3) siblings 120 degrees apart at a fixed radius, so they never overlap each
-// other or crowd the parent. 46 world units keeps them visually attached to
-// the base while approaching real-career nearest-neighbor spacing within a
-// zone (empirically ~70-90 units), rather than the old +/-14 grid-jitter offset
-// (max ~20 units apart) that let siblings render almost on top of one another.
-function offsetLayout(baseRow, seed) {
-  const FRAGMENT_ORBIT_R = 92; // 2x — keeps satellites from crowding the parent orb
-  // Deterministic per-base jitter (hash of base SOC + seed) so sibling spacing
-  // reads organic rather than a perfect 120° tripod, while keeping siblings at
-  // least ~70° apart and the radius within ±30% of the nominal orbit.
-  let h = 0;
-  const key = String(baseRow.soc || '') + ':' + seed;
-  for (let i = 0; i < key.length; i++) h = ((h << 5) - h + key.charCodeAt(i)) | 0;
-  const j1 = ((h >>> 8) & 0xff) / 255;  // 0..1
-  const j2 = ((h >>> 16) & 0xff) / 255; // 0..1
-  const angle = ((seed - 1) * (2 * Math.PI / FRAGMENT_COUNT)) + (Math.PI / 6)
-    + (j1 - 0.5) * (Math.PI / 3.6); // ±25° wobble
-  const orbitR = FRAGMENT_ORBIT_R * (0.7 + 0.6 * j2);
-  const dx = Math.cos(angle) * orbitR;
-  const dy = Math.sin(angle) * orbitR;
-  const out = {};
-  for (const [xk, yk] of [['layoutX', 'layoutY'], ['sectorX', 'sectorY']]) {
-    if (baseRow[xk] != null) out[xk] = round2(baseRow[xk] + dx);
-    if (baseRow[yk] != null) out[yk] = round2(baseRow[yk] + dy);
-  }
-  for (const k of ['layoutNX', 'layoutNY', 'sectorNX', 'sectorNY']) {
-    if (baseRow[k] != null) out[k] = baseRow[k];
-  }
-  return out;
 }
 
 function buildDerivedRow({ soc, title, slug, description, baseRow, vector, baseImportance, applied, model, seed }) {
@@ -191,6 +163,25 @@ export async function getRuntimeDerivedRows(env) {
 }
 
 /**
+ * Every derived row served to a client, re-keyed against the LIVE catalog:
+ * a fragment's hubZone/orbColor/coords are a snapshot of its base taken at
+ * generation time, so a rezone since then would otherwise strand it in a dead
+ * zone bucket (see onet/derive-rekey.js). Orphans — base SOC gone or excluded —
+ * are dropped here. One catalog lookup per call, not per row.
+ */
+export async function getAllDerivedRows(env, baseUrl) {
+  try {
+    const [derived, careers] = await Promise.all([
+      getDerivedCareers(env, baseUrl),
+      getCareers(env, baseUrl),
+    ]);
+    return rekeyDerivedRows(derived, baseIndexFromCareers(careers));
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Single derived row by SOC, or null. Sources from the unified static-sidecar +
  * D1 set so both hand-authored 99-0XXX and runtime 99-1XXX SOCs resolve (the
  * static ones are also in the client catalog, but this keeps the ?soc= endpoint
@@ -198,12 +189,8 @@ export async function getRuntimeDerivedRows(env) {
  */
 export async function getRuntimeDerivedBySoc(env, baseUrl, soc) {
   if (!soc) return null;
-  try {
-    const all = await getDerivedCareers(env, baseUrl);
-    return all.find((r) => r && r.soc === soc) || null;
-  } catch {
-    return null;
-  }
+  const all = await getAllDerivedRows(env, baseUrl);
+  return all.find((r) => r && r.soc === soc) || null;
 }
 
 function stripVectors(row) {
@@ -222,14 +209,10 @@ function stripVectors(row) {
  */
 export async function getFragmentsForSoc(env, baseUrl, baseSoc) {
   if (!baseSoc) return [];
-  try {
-    const all = await getDerivedCareers(env, baseUrl);
-    return all
-      .filter((r) => r && r.derivedFrom && r.derivedFrom.soc === baseSoc)
-      .map(stripVectors);
-  } catch {
-    return [];
-  }
+  const all = await getAllDerivedRows(env, baseUrl);
+  return all
+    .filter((r) => r && r.derivedFrom && r.derivedFrom.soc === baseSoc)
+    .map(stripVectors);
 }
 
 // Next synthetic SOC in the 99-1XXX.00 range: MAX(soc) LIKE '99-1%' + 1.
@@ -413,7 +396,10 @@ export async function generateFragmentsForBase(env, ctx, { baseSoc, email, baseU
     if (!r || !r.row_json) continue;
     try { out.push(JSON.parse(r.row_json)); } catch { /* skip */ }
   }
-  return out.length ? out : built;
+  // Rows persisted by an earlier generation carry a snapshot of the base as it
+  // looked then; re-key them against the base row we just loaded.
+  if (out.length) return rekeyDerivedRows(out, new Map([[baseRow.soc, baseRow]]));
+  return built;
 }
 
 export { stripVectors };

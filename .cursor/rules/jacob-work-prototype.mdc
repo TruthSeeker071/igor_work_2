@@ -1,0 +1,17 @@
+---
+description: After FlightWay plan implementation, commit and push to Jacob_Work prototype branch
+globs: flightway/**
+alwaysApply: false
+---
+
+# FlightWay prototype workflow
+
+`Jacob_Work` is the prototype branch. It deploys to `flightway-prototype` via CI.
+
+When you finish implementing an approved plan or complete FlightWay feature/fix work:
+
+1. Run verification (`node --check` on touched JS, `bash scripts/smoke.sh` when applicable).
+2. Commit with a clear message.
+3. Push to `origin/Jacob_Work` — do not leave implemented work only local.
+
+Only skip push if the user explicitly says not to.

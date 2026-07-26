@@ -3,21 +3,38 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" href="/favicon.ico?v=20260717h" sizes="any">
-  <link rel="icon" type="image/png" href="/assets/favicon.png?v=20260717h">
-  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=20260717h">
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg?v=20260720f">
+  <link rel="icon" href="/favicon.ico?v=20260720a" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/icons/favicon-128.png?v=20260720a">
+  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-180.png?v=20260720a">
 <title>FlightWay — Career Quiz</title>
-<meta name="description" content="A short quiz that matches you against 5,000+ real careers and shows you exactly why each one fits.">
-<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260720c">
-<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260720c">
-<link rel="stylesheet" href="assets/css/flightway-2.css?v=20260720c">
+<meta name="description" content="A short quiz that matches you against 750+ real careers and shows you exactly why each one fits.">
+<!-- See index.html: served by both Pages projects, so the canonical is absolute. -->
+<link rel="canonical" href="https://flightway.ai/quiz">
+<meta property="og:site_name" content="FlightWay">
+<meta property="og:url" content="https://flightway.ai/quiz">
+<meta property="og:title" content="FlightWay — the 90-second career quiz">
+<meta property="og:description" content="Ten questions, matched against 750+ real occupations — with the reasoning shown, not hidden.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://flightway.ai/assets/og/og-quiz.png?v=20260724a">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="FlightWay career quiz — which careers actually fit you?">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="FlightWay — the 90-second career quiz">
+<meta name="twitter:description" content="Ten questions, matched against 750+ real occupations — with the reasoning shown, not hidden.">
+<meta name="twitter:image" content="https://flightway.ai/assets/og/og-quiz.png?v=20260724a">
+<link rel="preload" href="/assets/fonts/inter-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/space-grotesk-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260721p">
+<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260724i">
+<link rel="stylesheet" href="assets/css/flightway-2.css?v=20260725g">
+<link rel="stylesheet" href="assets/css/feature-intro.css?v=20260721a">
+<link rel="stylesheet" href="assets/css/share.css?v=20260725b">
 <script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
 <script src="assets/js/shared/global-shim.js?v=20260703p"></script>
 <script src="assets/js/shared/flags.js?v=20260716h"></script>
-<script src="assets/js/shared/events.js?v=20260716h" defer></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="assets/js/shared/events.js?v=20260724a" defer></script>
 </head>
 <body class="quiz-page">
 <div id="fw-page-veil" class="fw-page-veil" aria-live="polite" aria-busy="true">
@@ -28,10 +45,10 @@
     <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay home"></a>
     <div class="nav-links app-nav" aria-label="App">
       <a href="portal.html" class="app-nav-tab" data-app-nav="home"><span class="app-nav-label">Home</span></a>
-      <a href="dashboard.html" class="app-nav-tab" data-app-nav="hub"><span class="app-nav-label">Career Hub</span></a>
+      <a href="flightplan.html" class="app-nav-tab" data-app-nav="plan"><span class="app-nav-label">Flight Plan</span></a>
+      <a href="roadmap.html" class="app-nav-tab" data-app-nav="roadmap"><span class="app-nav-label">Roadmap</span></a>
       <a href="coach.html" class="app-nav-tab" data-app-nav="advisor"><span class="app-nav-label">Marco</span></a>
-      <a href="roadmap.html" class="app-nav-tab" data-app-nav="roadmap"><span class="app-nav-label">Career Roadmap</span></a>
-      <a href="quiz.html" class="app-nav-tab app-nav-tab--muted" data-app-nav="quiz"><span class="app-nav-label">Career Quiz</span></a>
+      <a href="dashboard.html" class="app-nav-tab" data-app-nav="explore"><span class="app-nav-label">Explore</span></a>
       <a href="auth.html#signin" class="app-nav-tab nav-signin-link" id="nav-signin-link">Sign in</a>
       <button type="button" class="fw-theme-toggle" aria-label="Switch to dark mode" aria-pressed="false">
         <span class="fw-theme-icon" aria-hidden="true"></span>
@@ -46,7 +63,7 @@
       <div class="qz-intro-card">
         <div class="qz-badge">Quick match</div>
         <h1 class="qz-intro-title">Find the Career<br>You Were Built For</h1>
-        <p class="qz-intro-desc">A few quick questions — tap, pick, done. We'll instantly match you to careers, then we'll sharpen the results together.</p>
+        <p class="qz-intro-desc">A few quick questions — tap, pick, done. We’ll instantly match you to careers, then we’ll sharpen the results together.</p>
         <div class="qz-intro-trust">
           <span class="qz-intro-time">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
@@ -55,7 +72,7 @@
         </div>
         <p class="qz-intro-note">Want more precision? A few deeper questions follow after you sign up.</p>
         <button class="qz-start-btn" onclick="qzStart()">Start</button>
-        <div style="margin-top:14px;" id="qz-dev-skip-wrap" hidden>
+        <div class="qz-dev-skip-wrap" id="qz-dev-skip-wrap" hidden>
           <button class="qz-skip-quiz-btn" onclick="qzRandomizeAndShowResults()" title="Dev shortcut: generate a random answer set and jump to results">
             🎲 Skip with random answers (dev)
           </button>
@@ -82,8 +99,9 @@
     <div id="qz-sharpen" class="qz-hidden">
       <div class="qz-resume-card qz-card">
         <div class="qz-resume-badge">Step 1 of 3</div>
-        <h2 class="qz-resume-title">Let's sharpen your matches</h2>
-        <p class="qz-resume-sub">A few deeper questions about how you like to work — every answer tunes your career map. Skip any that don't speak to you.</p>
+        <h2 class="qz-resume-title">Let’s sharpen your matches</h2>
+        <p class="qz-resume-sub">A few deeper questions about how you like to work — every answer tunes your career map. Skip any that don’t speak to you.</p>
+        <div data-fw-ribbon="sharpen"></div>
         <div id="qz-sharpen-root"></div>
         <div class="qz-resume-actions">
           <button type="button" class="qz-btn qz-btn-primary" id="qz-sharpen-continue">Save &amp; continue →</button>
@@ -96,7 +114,7 @@
       <div class="qz-resume-card qz-card">
         <div class="qz-resume-badge">Step 2 of 3</div>
         <h2 class="qz-resume-title">Your academic profile</h2>
-        <p class="qz-resume-sub">GPA, classes, major, and plans — this tunes your matches and sharpens your roadmap. Skip anything you're not sure about.</p>
+        <p class="qz-resume-sub">GPA, classes, major, and plans — this tunes your matches and sharpens your roadmap. Skip anything you’re not sure about.</p>
         <div id="qz-academics-root"></div>
         <div class="qz-resume-actions">
           <button type="button" class="qz-btn qz-btn-primary" id="qz-academics-continue">Save &amp; continue →</button>
@@ -113,28 +131,115 @@
         <div id="qz-resume-ingest-root"></div>
         <div class="qz-resume-actions">
           <button type="button" class="qz-btn qz-btn-primary" id="qz-resume-continue" disabled>Continue →</button>
-          <button type="button" class="qz-btn qz-btn-ghost" id="qz-resume-skip">I don't have any relevant experience</button>
+          <button type="button" class="qz-btn qz-btn-ghost" id="qz-resume-skip">I don’t have any relevant experience</button>
         </div>
         <p class="qz-resume-status" id="qz-resume-status" aria-live="polite"></p>
       </div>
+    </div>
+    <!-- V2 S6 (D5): the reveal. Value before the wall — top-3 real matches +
+         full "why" on #1, matches 4–10 blurred (no real data in the DOM), the
+         signup gate below. Reveal cards render into #qz-reveal-cards from JS. -->
+    <style id="qz-reveal-css">
+      /* OAuth button (mirrors auth.html's #fw-oauth-css; page-local, no shared CSS bump) */
+      .auth-oauth[hidden] { display: none; }
+      .auth-oauth { margin: 0 0 2px; }
+      .auth-google-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 44px; padding: 10px 16px; border: 1px solid #dadce0; border-radius: 10px; background: #fff; color: #1f1f1f; font-family: inherit; font-size: .95rem; font-weight: 600; cursor: pointer; transition: background .15s ease, box-shadow .15s ease; }
+      .auth-google-btn:hover { background: #f6f7f8; box-shadow: 0 1px 3px rgba(60,64,67,.24); }
+      .auth-google-btn:active { background: #eceef0; }
+      .auth-google-btn:focus-visible { outline: 2px solid #4285f4; outline-offset: 2px; }
+      .auth-google-g { flex: 0 0 auto; display: block; }
+      .auth-oauth-or { display: flex; align-items: center; gap: 12px; margin: 16px 0 6px; color: rgb(var(--text-muted)); font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+      .auth-oauth-or::before, .auth-oauth-or::after { content: ""; flex: 1; height: 1px; background: rgb(var(--text-muted) / .22); }
+      #page-quiz .qz-signup-optional { color: var(--text-tertiary); font-weight: 500; }
+
+      /* Reveal head + card grid */
+      #page-quiz .qz-reveal-head { text-align: center; margin: 0 auto 22px; max-width: 660px; }
+      #page-quiz .qz-reveal-eye { font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--primary-solid); margin-bottom: 8px; }
+      #page-quiz .qz-reveal-title { font-family: var(--font-display); font-size: var(--fs-h1); font-weight: 700; color: rgb(var(--text)); line-height: 1.15; letter-spacing: -.02em; margin: 0 0 10px; }
+      #page-quiz .qz-reveal-sub { color: var(--text-tertiary); font-size: .98rem; line-height: 1.55; margin: 0; }
+      #page-quiz .qz-leaning-ack { margin: 14px auto 0; padding: 12px 16px; border-radius: 12px; background: var(--surface-solid); border: 1px solid var(--border); color: var(--text-tertiary); font-size: .9rem; line-height: 1.5; text-align: left; }
+      #page-quiz .qz-leaning-ack[hidden] { display: none; }
+      #page-quiz .qz-reveal-cards { display: flex; flex-direction: column; gap: 14px; max-width: 660px; margin: 0 auto 26px; }
+      #page-quiz .qz-reveal-loading { text-align: center; color: var(--text-tertiary); padding: 40px 0; font-size: .95rem; }
+
+      #page-quiz .qz-match-card { position: relative; border: 2px solid var(--border); border-radius: 16px; background: var(--surface-solid); padding: 18px; transition: border-color .2s, box-shadow .2s; }
+      #page-quiz .qz-match-card.is-top { border-color: var(--accent, var(--primary-solid)); box-shadow: 0 8px 30px rgb(0 0 0 / .07); }
+      #page-quiz .qz-mc-top { display: flex; align-items: center; gap: 14px; }
+      #page-quiz .qz-mc-rank { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; background: var(--q-s2); color: var(--text-tertiary); }
+      #page-quiz .qz-match-card.is-top .qz-mc-rank { background: var(--accent, var(--primary-solid)); color: #fff; }
+      #page-quiz .qz-mc-portrait { flex: 0 0 auto; width: 56px; height: 56px; border-radius: 50%; overflow: hidden; }
+      #page-quiz .qz-mc-portrait svg { width: 100%; height: 100%; display: block; }
+      #page-quiz .qz-mc-info { flex: 1 1 auto; min-width: 0; }
+      #page-quiz .qz-mc-name { font-family: var(--font-display); font-size: 1.12rem; font-weight: 700; color: rgb(var(--text)); line-height: 1.2; }
+      #page-quiz .qz-mc-sector { font-size: .82rem; color: var(--text-tertiary); margin-top: 2px; }
+      #page-quiz .qz-mc-fit { display: flex; align-items: center; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+      #page-quiz .qz-mc-pct { font-size: 1.05rem; font-weight: 800; color: rgb(var(--text)); }
+      #page-quiz .qz-mc-tier { font-size: .68rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--tier, var(--primary-solid)); }
+      #page-quiz .qz-mc-why { margin-top: 12px; color: var(--text-tertiary); font-size: .92rem; line-height: 1.5; }
+      #page-quiz .qz-mc-whytoggle { margin-top: 10px; background: none; border: none; color: var(--primary-solid); font-weight: 600; font-size: .88rem; cursor: pointer; padding: 4px 0; font-family: inherit; }
+      #page-quiz .qz-mc-caret { display: inline-block; transition: transform .2s; }
+      #page-quiz .qz-match-card.is-why-open .qz-mc-caret { transform: rotate(180deg); }
+      #page-quiz .qz-mc-breakdown { display: none; margin-top: 12px; }
+      #page-quiz .qz-mc-breakdown.is-open { display: block; }
+
+      /* Blurred 4–10: no real career data reaches the DOM — a locked placeholder only. */
+      #page-quiz .qz-match-card--locked { pointer-events: none; }
+      #page-quiz .qz-match-card--locked .qz-mc-rank { opacity: .5; }
+      #page-quiz .qz-mc-lockrows { flex: 1 1 auto; display: flex; flex-direction: column; gap: 8px; filter: blur(5px); opacity: .6; }
+      #page-quiz .qz-mc-lockbar { height: 13px; border-radius: 7px; background: var(--text-tertiary); opacity: .45; width: 62%; }
+      #page-quiz .qz-mc-lockbar--sm { width: 40%; height: 10px; }
+      #page-quiz .qz-mc-lockchip { flex: 0 0 auto; font-size: 1.1rem; opacity: .5; }
+
+      @media (max-width: 560px) {
+        #page-quiz .qz-match-card { padding: 14px; }
+        #page-quiz .qz-mc-portrait { width: 46px; height: 46px; }
+      }
+    </style>
+    <div id="qz-reveal" class="qz-hidden">
+      <div class="qz-reveal-head">
+        <div class="qz-reveal-eye">Your results are in</div>
+        <h2 class="qz-reveal-title">Here's where your answers point</h2>
+        <p class="qz-reveal-sub">A starting read from how you think, work, and lead — a data point you can judge, not a verdict. Your top match is broken down below; sign up to save all ten and sharpen them.</p>
+        <div id="qz-leaning-ack" class="qz-leaning-ack" hidden></div>
+      </div>
+      <div id="qz-reveal-cards" class="qz-reveal-cards"></div>
+      <!-- S15: the peak-pride moment. The button renders on page load and the
+           modal reports "no matches yet" if the reveal has not run — cheaper and
+           more robust than teaching quiz-app.js to inject it. -->
+      <div class="qz-reveal-share" data-fw-share-host="reveal"></div>
     </div>
     <div id="qz-gate" class="qz-hidden">
       <div class="qz-gate qz-signup">
         <div class="qz-signup-check" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
         </div>
-        <div class="qz-signup-title">Assessment complete</div>
-        <div class="qz-signup-sub">Create a free account to save your answers and unlock your full career report.</div>
+        <div class="qz-signup-title">Save your matches</div>
+        <div class="qz-signup-sub">Create a free account to save your matches and unlock all 10 — plus your roadmap and Marco, your AI advisor. Free, always.</div>
+        <!-- S5/S6: "Continue with Google". Ships hidden; google-auth.js reveals it
+             only when /config.googleAuthEnabled. data-return=/portal.html — a new
+             Google account's quiz results are pushed server-side by the portal-boot
+             syncQuizProfile (the reveal already wrote them to the local blob). -->
+        <div class="auth-oauth" hidden>
+          <button type="button" class="auth-google-btn" data-google-auth data-return="/portal.html" onclick="qzGateGoogleClick()">
+            <svg class="auth-google-g" viewBox="0 0 18 18" width="18" height="18" aria-hidden="true"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.71-1.57 2.68-3.89 2.68-6.62Z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.02-3.7H.96v2.34A9 9 0 0 0 9 18Z"/><path fill="#FBBC05" d="M3.98 10.72a5.42 5.42 0 0 1 0-3.44V4.94H.96a9 9 0 0 0 0 8.12l3.02-2.34Z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.46 3.44 1.35l2.58-2.58C13.47.89 11.43 0 9 0A9 9 0 0 0 .96 4.94l3.02 2.34C4.68 5.16 6.66 3.58 9 3.58Z"/></svg>
+            <span>Continue with Google</span>
+          </button>
+          <div class="auth-oauth-or"><span>or</span></div>
+        </div>
         <form class="qz-signup-form" onsubmit="qzCreateAccount(event)">
-          <label class="qz-signup-label" for="qz-su-email">Email</label>
+          <label class="qz-signup-label" for="qz-su-name">First name <span class="qz-signup-optional">(optional)</span></label>
+          <input id="qz-su-name" class="qz-signup-input" type="text" autocomplete="given-name" placeholder="Alex" maxlength="40">
+          <label class="qz-signup-label qz-signup-label--spaced" for="qz-su-email">Email</label>
           <input id="qz-su-email" class="qz-signup-input" type="email" autocomplete="email" placeholder="you@example.com">
-          <label class="qz-signup-label" for="qz-su-password" style="margin-top:16px">Password</label>
+          <label class="qz-signup-label qz-signup-label--spaced" for="qz-su-password">Password</label>
           <input id="qz-su-password" class="qz-signup-input" type="password" autocomplete="new-password" placeholder="••••••••">
           <div class="qz-signup-hint">At least 8 characters.</div>
           <div class="qz-signup-error" id="qz-su-error"></div>
-          <button type="submit" class="qz-signup-btn" id="qz-su-btn">Create account &amp; see results <span aria-hidden="true">→</span></button>
+          <button type="submit" class="qz-signup-btn" id="qz-su-btn">Create free account <span aria-hidden="true">→</span></button>
         </form>
-        <div class="qz-signup-foot">Already have an account? <a href="#" onclick="qzSignupLogin(event)">Log in</a></div>
+        <!-- qzSignupLogin already calls ev.preventDefault(), but href="#" still scrolls the
+             page to the top on any browser where the handler throws before reaching it. -->
+        <div class="qz-signup-foot">Already have an account? <a href="auth.html#signin" onclick="qzSignupLogin(event)">Log in</a></div>
       </div>
     </div>
     <div id="qz-results" class="qz-hidden">
@@ -155,13 +260,13 @@
   <div class="coach-signup-modal">
     <div class="coach-settings-head">
       <div class="coach-settings-title">Create your free coach account</div>
-      <button class="coach-x" onclick="coachCloseSignup()" aria-label="Close sign-up">×</button>
+      <button class="coach-x" onclick="coachCloseSignup()" aria-label="Close sign-up"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x" aria-hidden="true"><path d="M18 6 6 18" /> <path d="m6 6 12 12" /></svg></button>
     </div>
     <div class="coach-settings-body">
       <div class="coach-settings-help">Create an account with email and password to save your results and unlock unlimited chats with your AI career coach.</div>
       <input type="email" id="coach-signup-email" class="coach-email-input" placeholder="you@example.com" autocomplete="email">
-      <input type="password" id="coach-signup-password" class="coach-email-input" placeholder="Password (8+ characters)" autocomplete="new-password" style="margin-top:10px">
-      <input type="password" id="coach-signup-password-confirm" class="coach-email-input" placeholder="Confirm password" autocomplete="new-password" style="margin-top:10px">
+      <input type="password" id="coach-signup-password" class="coach-email-input" placeholder="Password (8+ characters)" autocomplete="new-password">
+      <input type="password" id="coach-signup-password-confirm" class="coach-email-input" placeholder="Confirm password" autocomplete="new-password">
       <div class="coach-error" id="coach-signup-error"></div>
       <div class="coach-dossier-actions">
         <div></div>
@@ -171,33 +276,57 @@
   </div>
 </div>
 
+<footer>
+  <div class="footer-inner">
+    <div class="footer-left">
+      <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay"></a>
+      <p>&copy; 2026 FlightWay, Inc. All rights reserved.</p>
+    </div>
+    <div class="footer-links">
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+      <a href="/security">Security</a>
+      <a href="/contact">Contact</a>
+    </div>
+  </div>
+</footer>
+
 <script src="assets/js/shared/page-boot.js?v=20260703p" defer></script>
 <script src="assets/js/app/salary-tiers.js?v=20260703p" defer></script>
 <script src="assets/js/hub/hub-careers.js?v=20260719b" defer></script>
 <script src="assets/js/quiz/quiz-data.js?v=20260703p" defer></script>
-<script src="assets/js/shared/career-target.js?v=20260717b" defer></script>
-<script src="assets/js/shared/sector-fit-sheet.js?v=20260703p" defer></script>
-<script src="assets/js/shared/onet-catalog.js?v=20260718f" defer></script>
-<script src="assets/js/shared/user.js?v=20260719g" defer></script>
-<script src="assets/js/hub/hub-refine.js?v=20260720d" defer></script>
-<script src="assets/js/hub/hub-academics.js?v=20260719b" defer></script>
+<script src="assets/js/shared/career-target.js?v=20260721v" defer></script>
+<script src="assets/js/shared/sector-fit-sheet.js?v=20260721u" defer></script>
+<script src="assets/js/shared/onet-catalog.js?v=20260720c" defer></script>
+<script src="assets/js/shared/user.js?v=20260725e" defer></script>
+<script src="assets/vendor/lucide-lite.js?v=20260724d" defer></script>
+<script src="assets/js/shared/feature-intro.js?v=20260725e" defer></script>
+<script src="assets/js/hub/hub-refine.js?v=20260719a" defer></script>
+<script src="assets/js/hub/hub-academics.js?v=20260724c" defer></script>
 <script src="assets/js/shared/academics-map.js?v=20260703p" defer></script>
-<script src="assets/js/shared/onet-vectors.js?v=20260719a" defer></script>
-<script src="assets/js/shared/entitlements.js?v=20260719a" defer></script>
-<script src="assets/js/shared/why-this-match.js?v=20260719a" defer></script>
+<!-- onet-vectors reads FWOnetMath at load time; without it the quiz seed and the
+     resume bleed silently fall back to a different code path than every other page. -->
+<script src="assets/js/shared/onet-math.js?v=20260721v" defer></script>
+<script src="assets/js/shared/onet-vectors.js?v=20260726a" defer></script>
+<script src="assets/js/shared/entitlements.js?v=20260724e" defer></script>
+<script src="assets/js/shared/plan-surface.js?v=20260725e" defer></script>
+<script src="assets/js/shared/why-this-match.js?v=20260721t" defer></script>
 <script src="assets/js/shared/resume-ingest.js?v=20260720c" defer></script>
 <script src="assets/js/quiz/onet-quiz-seed.js?v=20260710m" defer></script>
-<script src="assets/js/quiz/quiz-app.js?v=20260720c" defer></script>
+<script src="assets/js/quiz/quiz-app.js?v=20260724c" defer></script>
+<script src="assets/js/shared/share-card.js?v=20260725b" defer></script>
 <script src="assets/js/shared/fw-errors.js?v=20260720a" defer></script>
-<script src="assets/js/shared/auth.js?v=20260720c" defer></script>
+<script src="assets/js/shared/auth.js?v=20260725b" defer></script>
+<script src="assets/js/shared/google-auth.js?v=20260725b" defer></script>
 <script src="assets/js/shared/fw-busy.js?v=20260720a" defer></script>
-<script src="assets/js/coach/coach.js?v=20260720c" defer></script>
-<script src="assets/js/shared/auth-nav.js?v=20260703p" defer></script>
-<script src="assets/js/shared/brand.js?v=20260717g" defer></script>
-<script src="assets/js/shared/app-nav.js?v=20260703p" defer></script>
+<script src="assets/js/coach/coach.js?v=20260722a" defer></script>
+<script src="assets/js/shared/auth-nav.js?v=20260724d" defer></script>
+<script src="assets/js/shared/user-chip.js?v=20260721a" defer></script>
+<script src="assets/js/shared/brand.js?v=20260720i" defer></script>
+<script src="assets/js/shared/app-nav.js?v=20260724d" defer></script>
 <script src="assets/js/shared/theme.js?v=20260703p" defer></script>
 <script src="assets/js/shared/fw-toast.js?v=20260718i" defer></script>
-<script src="assets/js/shared/page-veil.js?v=20260720c" defer></script>
+<script src="assets/js/shared/page-veil.js?v=20260721a" defer></script>
 <script>
   // Reveal the boot veil once the quiz DOM is ready (static intro, or the
   // #sharpen/#academics step swapped in on DOMContentLoaded). Quiz keeps its

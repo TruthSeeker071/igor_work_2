@@ -7,7 +7,7 @@
 //   POST {} → { url }
 
 import { originFromEnv, jsonResponse, preflightResponse } from '../_lib.js';
-import { getSessionEmail, checkRateLimit, clientIp } from '../_lib/auth.js';
+import { getSessionEmail, checkRateLimit, hashedIpKey } from '../_lib/auth.js';
 import { stripeConfigured, createPortalSession } from '../_lib/stripe.js';
 
 export async function onRequestOptions(context) {
@@ -22,7 +22,7 @@ export async function onRequestPost(context) {
   if (!email) return jsonResponse(401, { error: 'Not signed in.' }, origin);
 
   try {
-    await checkRateLimit(env, `billportal:${clientIp(request)}`, { max: 20 });
+    await checkRateLimit(env, `billportal:${await hashedIpKey(env, request)}`, { max: 20 });
   } catch (err) {
     return jsonResponse(err.status || 429, { error: err.message || 'Too many attempts.' }, origin);
   }

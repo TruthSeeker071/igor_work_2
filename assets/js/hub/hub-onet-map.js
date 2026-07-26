@@ -750,11 +750,9 @@
   function applyFitToCareer(career, vec) {
     if (!vec || !state.personality) return false;
     var V = window.FWOnetVectors;
-    var cp = V.cosinePercent || function (cos) { return V.clamp100(Math.round((cos || 0) * 100)); };
     var prevP = career.personalityFit;
     var prevO = career.objectiveFit;
-    var cosP = V.cosine(state.personality.values, vec);
-    career.personalityFit = cp(cosP);
+    career.personalityFit = V.personalityFitPercent(state.personality.values, vec);
     career.rawPersonalityFit = career.personalityFit;
     if (state.objective && state.objective.values && objectiveVectorActive()) {
       if (window.FWOnetMath && typeof FWOnetMath.objectiveFitPercent === 'function') {
@@ -866,7 +864,7 @@
     Object.keys(displayAggs).forEach(function (zone) {
       var agg = displayAggs[zone];
       if (!agg || !agg.lvMean || !agg.count) return;
-      var pFit = cp(V.cosine(state.personality.values, agg.lvMean));
+      var pFit = V.personalityFitPercent(state.personality.values, agg.lvMean);
       byZone[zone] = {
         personalityFit: pFit,
         rawPersonality: pFit,

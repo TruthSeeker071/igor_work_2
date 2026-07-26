@@ -8,13 +8,8 @@
 import { originFromEnv } from './_lib.js';
 import { callGeminiText } from './_lib/gemini-json.js';
 import { SIM_SECRETS } from './_lib/sim-secrets.js';
-import {
-  authPreflight,
-  authJsonResponse,
-  authErrorResponse,
-  checkRateLimit,
-  clientIp,
-} from './_lib/auth.js';
+import { buildSurfacePrompt } from './_lib/marco-persona.js';
+import { authPreflight, authJsonResponse, authErrorResponse, checkRateLimit, hashedIpKey } from './_lib/auth.js';
 
 const MAX_MESSAGES = 30;
 const MAX_MSG_CHARS = 600;
@@ -39,6 +34,10 @@ function buildPrompt(ctx, messages) {
     .map((m) => (m.role === 'user' ? 'Student: ' : ctx.colleagueName + ': ') + m.content)
     .join('\n');
   return [
+    // WS-E: the house voice rules, then the character. No school block — this
+    // surface names no programs, it is one colleague at one desk.
+    buildSurfacePrompt('sim-colleague', { omitSchool: true }),
+    '',
     'You are roleplaying ' + ctx.persona,
     '',
     'SCENARIO: ' + ctx.brief,
@@ -96,7 +95,7 @@ export async function onRequest(context) {
   if (!ctx) return authJsonResponse(404, { error: 'Unknown simulation.' }, origin);
 
   try {
-    await checkRateLimit(env, 'simchat:' + clientIp(request), { max: RATE_MAX });
+    await checkRateLimit(env, 'simchat:' + await hashedIpKey(env, request), { max: RATE_MAX });
   } catch (err) {
     return authErrorResponse(err, origin);
   }

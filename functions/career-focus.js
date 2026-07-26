@@ -69,7 +69,14 @@ export async function onRequest(context) {
     let syncResult = null;
     if (retarget) {
       try {
-        syncResult = await maybeSyncRoadmap(env, email, { reason: source, quiz: focusQuiz });
+        // meter:true — this endpoint IS the user-initiated build flow (the
+        // roadmap page calls it before it would ever hit the metered
+        // action:'generate' path), so the one free AI roadmap generation is
+        // spent here. A capped free user gets roadmap:null back, and the
+        // client falls through to action:'generate', which answers the 402
+        // upgrade. Background sync callers never pass meter, so a profile-drift
+        // refresh stays free.
+        syncResult = await maybeSyncRoadmap(env, email, { reason: source, quiz: focusQuiz, meter: true });
       } catch (syncErr) {
         console.warn('career-focus sync failed', syncErr);
       }
@@ -82,9 +89,12 @@ export async function onRequest(context) {
       retarget,
       careerFocusHistory: careerFocusHistory || [],
       switchCount: switchCount || 0,
-      roadmap: syncResult?.roadmap || null,
+      roadmap: syncResult?.capped ? null : (syncResult?.roadmap || null),
       roadmapRetargeted: syncResult?.retargeted || false,
       roadmapCached: syncResult?.cached || false,
+      roadmapCapped: syncResult?.capped || false,
+      roadmapCapMessage: syncResult?.capMessage || null,
+      roadmapCapUpgrade: syncResult?.capUpgrade || false,
       alignment: alignment ? {
         severity: alignment.severity,
         reasons: alignment.reasons || [],

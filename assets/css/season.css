@@ -1,0 +1,212 @@
+/* FlightWay V2 S18 — Interview Season Mode + the Semester Loop.
+   Client halves: assets/js/app/season-panel.js (`.sz-`) and
+   assets/js/app/term-panel.js (`.tm-`), mounted into #flightplan-season and
+   #flightplan-term inside .fp-module--wide plates on flightplan.html.
+
+   ONE file for two surfaces because they ship together, sit next to each other
+   on the same page and share every token — and because the alternative is two
+   more entries in the buster rotation for no benefit. Its own file rather than
+   rules in flightway-2.css for the reason that file's 13 links make obvious: one
+   rule there is a 13-page restamp. Same reasoning that produced
+   opportunity-finder.css, share.css, scorecard.css and network.css.
+
+   Same var convention as those: the rgb(var(--x)) triplets the sibling
+   .fp-radar/.fp-commit blocks use on this dark .fp-module plate.
+
+   House rule, same as the scorecard and the network mapper: state hue lives on
+   borders and backgrounds only, never as the sole carrier of meaning — every
+   week's state is also a word ("This week", "Scored 3.8/5", "Missed"), so the
+   tint is decoration on top of text. */
+
+/* ===== Interview Season (.sz-) ========================================== */
+
+.sz-headline { margin: 0 0 12px; font-size: 14px; line-height: 1.55; color: rgb(var(--text)); }
+.sz-note { margin: 0 0 12px; font-size: 12.5px; line-height: 1.55; color: rgb(var(--text-muted)); }
+.sz-note--warn {
+  padding: 10px 12px; border-radius: 10px;
+  border: 1px solid rgb(var(--warn) / 0.4); background: rgb(var(--warn) / 0.07);
+  color: rgb(var(--text));
+}
+.sz-error { margin: 10px 0 0; font-size: 12.5px; color: rgb(var(--text)); }
+.sz-source { margin: 14px 0 0; font-size: 11.5px; color: rgb(var(--text-muted)); }
+
+/* Progress across the six weeks. A bar rather than "3/6" alone because the arc
+   is the product: a student two weeks from the end reads a bar differently. */
+.sz-bar {
+  height: 6px; border-radius: 999px; overflow: hidden; margin: 0 0 14px;
+  background: rgb(var(--surface-2));
+}
+.sz-bar-fill { display: block; height: 100%; background: rgb(var(--primary)); border-radius: 999px; }
+
+.sz-trend { display: flex; align-items: center; gap: 10px; margin: 0 0 16px; color: rgb(var(--primary)); }
+.sz-spark { width: 120px; height: 28px; flex: none; }
+.sz-trend-text { font-size: 12px; color: rgb(var(--text-muted)); }
+
+/* ---- the six weeks ------------------------------------------------------ */
+
+.sz-weeks { list-style: none; margin: 0 0 4px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+
+.sz-week {
+  border-radius: 12px; border: 1px solid rgb(var(--border));
+  background: rgb(var(--surface-2) / 0.35); overflow: hidden;
+}
+.sz-week--now { border-color: rgb(var(--primary) / 0.55); background: rgb(var(--primary) / 0.06); }
+.sz-week--done { border-color: rgb(var(--ok) / 0.45); }
+.sz-week--missed { opacity: .72; }
+.sz-week--locked { opacity: .5; }
+
+/* The head is a <button> for the unlocked weeks and a plain div for the locked
+   ones, so the two share every rule below except the affordances. */
+.sz-week-head {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 14px;
+  border: 0; background: transparent; color: inherit; font: inherit; text-align: left;
+}
+button.sz-week-head { cursor: pointer; transition: background var(--transition); }
+button.sz-week-head:hover { background: rgb(var(--surface-2) / 0.55); }
+
+.sz-week-n {
+  flex: none; width: 22px; height: 22px; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11.5px; font-weight: 700;
+  border: 1px solid rgb(var(--border)); background: rgb(var(--surface));
+  color: rgb(var(--text-muted));
+}
+.sz-week--now .sz-week-n { border-color: rgb(var(--primary)); color: rgb(var(--text)); }
+.sz-week--done .sz-week-n { border-color: rgb(var(--ok) / 0.6); color: rgb(var(--text)); }
+
+.sz-week-title { flex: 1 1 auto; min-width: 0; font-size: 13.5px; font-weight: 700; color: rgb(var(--text)); }
+.sz-week-status { flex: none; font-size: 11.5px; color: rgb(var(--text-muted)); }
+.sz-week-chev, .sz-week-lock { flex: none; display: inline-flex; color: rgb(var(--text-muted)); }
+.sz-week-chev svg, .sz-week-lock svg { width: 15px; height: 15px; }
+.sz-week-chev { transition: transform var(--transition); }
+.sz-week--open .sz-week-chev { transform: rotate(180deg); }
+
+.sz-week-body { padding: 0 14px 14px 46px; }
+.sz-week-why { margin: 0 0 8px; font-size: 12.5px; line-height: 1.6; color: rgb(var(--text)); }
+.sz-week-ask { margin: 0 0 10px; font-size: 12.5px; line-height: 1.55; font-style: italic; color: rgb(var(--text-muted)); }
+.sz-week-label {
+  margin: 12px 0 6px; font-size: 10.5px; font-weight: 700; letter-spacing: .04em;
+  text-transform: uppercase; color: rgb(var(--text-muted));
+}
+.sz-focus { margin: 0; padding-left: 18px; font-size: 12.5px; line-height: 1.6; color: rgb(var(--text)); }
+.sz-focus li { margin: 0 0 4px; }
+
+.sz-axes { display: flex; flex-wrap: wrap; gap: 6px; }
+.sz-axis {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 999px;
+  border: 1px solid rgb(var(--border)); background: rgb(var(--surface-2));
+  color: rgb(var(--text-muted));
+}
+
+.sz-week-cta {
+  display: inline-block; margin-top: 14px; padding: 8px 16px; border-radius: 999px;
+  border: 1px solid rgb(var(--primary)); background: rgb(var(--primary));
+  color: rgb(var(--primary-fg)); font-size: 13px; font-weight: 700; text-decoration: none;
+  transition: background var(--transition), border-color var(--transition);
+}
+.sz-week-cta:hover { background: rgb(var(--primary-hover)); border-color: rgb(var(--primary-hover)); }
+
+/* ---- the grounded round list -------------------------------------------- */
+
+.sz-rounds { margin-top: 18px; }
+.sz-round-list { margin: 0; padding-left: 18px; font-size: 12.5px; line-height: 1.6; color: rgb(var(--text)); }
+.sz-round-list li { margin: 0 0 6px; }
+.sz-round-name { font-weight: 700; }
+.sz-round-what { display: block; color: rgb(var(--text-muted)); }
+
+/* ---- buttons ------------------------------------------------------------ */
+
+.sz-start, .tm-go {
+  padding: 9px 18px; border-radius: 999px; border: 1px solid rgb(var(--primary));
+  background: rgb(var(--primary)); color: rgb(var(--primary-fg)); font: inherit; font-size: 13px;
+  font-weight: 700; cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+}
+.sz-start:hover:not(:disabled), .tm-go:hover:not(:disabled) {
+  background: rgb(var(--primary-hover)); border-color: rgb(var(--primary-hover));
+}
+.sz-end, .tm-cancel {
+  padding: 7px 14px; border-radius: 999px; border: 1px solid rgb(var(--border));
+  background: transparent; color: rgb(var(--text-muted)); font: inherit; font-size: 12px;
+  font-weight: 600; cursor: pointer;
+  transition: border-color var(--transition), color var(--transition);
+}
+.sz-end:hover:not(:disabled), .tm-cancel:hover:not(:disabled) {
+  border-color: rgb(var(--primary) / 0.55); color: rgb(var(--text));
+}
+.sz-start:disabled, .sz-end:disabled, .tm-go:disabled, .tm-cancel:disabled { opacity: .55; cursor: not-allowed; }
+.sz-start { margin-top: 14px; }
+.sz-end { margin-top: 4px; }
+
+/* ===== Semester Loop (.tm-) ============================================== */
+
+.tm-headline { margin: 0 0 10px; font-size: 14px; line-height: 1.55; color: rgb(var(--text)); }
+.tm-dates { margin: 0 0 12px; font-size: 12px; color: rgb(var(--text-muted)); }
+.tm-term-name { font-weight: 700; color: rgb(var(--text)); }
+.tm-note { margin: 0 0 12px; font-size: 12.5px; line-height: 1.55; color: rgb(var(--text-muted)); }
+.tm-note--warn {
+  padding: 10px 12px; border-radius: 10px;
+  border: 1px solid rgb(var(--warn) / 0.4); background: rgb(var(--warn) / 0.07);
+  color: rgb(var(--text));
+}
+.tm-error { margin: 10px 0 0; font-size: 12.5px; color: rgb(var(--text)); }
+.tm-fine { margin: 12px 0 0; font-size: 11.5px; line-height: 1.55; color: rgb(var(--text-muted)); }
+.tm-muted { color: rgb(var(--text-muted)); }
+.tm-label {
+  margin: 16px 0 6px; font-size: 10.5px; font-weight: 700; letter-spacing: .04em;
+  text-transform: uppercase; color: rgb(var(--text-muted));
+}
+
+.tm-bar { height: 6px; border-radius: 999px; overflow: hidden; margin: 0 0 14px; background: rgb(var(--surface-2)); }
+.tm-bar-fill { display: block; height: 100%; background: rgb(var(--primary)); border-radius: 999px; }
+
+.tm-outcomes { margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.6; color: rgb(var(--text)); }
+.tm-outcomes li { margin: 0 0 5px; }
+.tm-anchors { margin: 12px 0 0; font-size: 12px; line-height: 1.7; color: rgb(var(--text-muted)); }
+.tm-anchor-k { font-weight: 700; color: rgb(var(--text)); }
+
+.tm-seeded { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.tm-seeded li {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  padding: 9px 12px; border-radius: 10px;
+  border: 1px solid rgb(var(--border)); background: rgb(var(--surface-2) / 0.35);
+}
+.tm-seeded-text { font-size: 12.5px; line-height: 1.5; color: rgb(var(--text)); min-width: 0; }
+.tm-seeded-due { flex: none; font-size: 11.5px; color: rgb(var(--text-muted)); font-variant-numeric: tabular-nums; }
+
+/* ---- the ritual form ---------------------------------------------------- */
+
+.tm-wizard { display: flex; flex-direction: column; gap: 10px; }
+.tm-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tm-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.tm-field-k {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  color: rgb(var(--text-muted));
+}
+.tm-input {
+  width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid rgb(var(--border));
+  background: rgb(var(--surface)); color: rgb(var(--text)); font: inherit; font-size: 13px;
+}
+.tm-input::placeholder { color: rgb(var(--text-muted)); }
+.tm-input:focus-visible { outline: 2px solid rgb(var(--primary) / 0.6); outline-offset: 1px; }
+.tm-outcome-inputs { display: flex; flex-direction: column; gap: 8px; }
+
+.tm-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+
+/* ---- the review --------------------------------------------------------- */
+
+.tm-review { margin-top: 18px; padding-top: 4px; border-top: 1px solid rgb(var(--border)); }
+.tm-review-headline { margin: 14px 0 0; font-size: 14px; line-height: 1.55; color: rgb(var(--text)); }
+.tm-grant {
+  margin: 12px 0 0; padding: 10px 12px; border-radius: 10px; font-size: 12.5px; line-height: 1.55;
+  border: 1px solid rgb(var(--ok) / 0.45); background: rgb(var(--ok) / 0.07); color: rgb(var(--text));
+}
+.tm-review-list { margin: 0; padding-left: 20px; font-size: 12.5px; line-height: 1.6; color: rgb(var(--text)); }
+.tm-review-list li { margin: 0 0 4px; }
+
+@media (max-width: 640px) {
+  .tm-row { grid-template-columns: 1fr; }
+  .sz-week-body { padding-left: 14px; }
+  .tm-seeded li { flex-direction: column; gap: 4px; }
+}

@@ -2,6 +2,7 @@
 /dashboard.html  /dashboard.html  200
 /Flightway.html  /Flightway.html  200
 /portal.html     /portal.html     200
+/flightplan.html /flightplan.html 200
 /roadmap.html    /roadmap.html    200
 /coach.html      /coach.html      200
 /profile-build.html  /profile-build.html  200
@@ -19,6 +20,14 @@
 # rules make them unreachable. /data and /assets stay public (the app fetches
 # them); /functions, /migrations and /node_modules are already excluded from
 # upload by Pages — listed anyway as defense in depth.
+#
+# S2, VERIFIED THE HARD WAY: `.assetsignore` does NOT keep a file out of this
+# build. `.cursor/` has been listed there since June and
+# https://flightway.ai/.cursor/rules/jacob-work-prototype.mdc still answered 200
+# on 2026-07-24. That file is honoured by direct `wrangler pages deploy`
+# uploads, not by the Git integration that actually builds this project. So THIS
+# FILE is the only mechanism that works — anything that must not be public needs
+# a rule here, and an .assetsignore entry alone is not a fix.
 /docs/*           /  302
 /scripts/*        /  302
 /migrations/*     /  302
@@ -26,7 +35,23 @@
 /node_modules/*   /  302
 /.github/*        /  302
 /.gitignore       /  302
+# Placeholder values only, but the variable NAMES map every secret this
+# deployment reads (ROOT_ADMIN_EMAIL, both Stripe keys, DEV_TEST_EMAILS) — a
+# free list of what to go phishing for. Was serving 200 on flightway.ai.
+/.dev.vars.example  /  302
+/.assetsignore    /  302
+/.cursor/*        /  302
+/.claude/*        /  302
+# Scratch harnesses written at the repo root during a session. Gitignored, so
+# normally absent — but a3c0390 shipped two of them by accident in the very
+# commit that added this block, which is the argument for the rule.
+/.tmp-*           /  302
+/.gates/*         /  302
+/.screenshots/*   /  302
+/.wrangler/*      /  302
+/.dev.vars        /  302
 /wrangler.toml    /  302
+/.redeploy-trigger  /  302
 /package.json     /  302
 /package-lock.json  /  302
 /CLAUDE.md        /  302
@@ -34,6 +59,3 @@
 /FLIGHTWAY_LAUNCH_REVIEW_BRIEF.md  /  302
 /igor_work_2_repo/*  /  302
 /FLIGHTWAY_UI_POLISH_AND_AUDIT_BRIEF.md  /  302
-/PUSH.md          /  302
-/err.txt          /  302
-/__probe_rm       /  302

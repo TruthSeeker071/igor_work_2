@@ -5,7 +5,9 @@ let registryCache = null;
 export async function loadDimensionRegistry(baseUrl) {
   if (registryCache) return registryCache;
   const url = new URL('/data/onet/dimension-registry-v1.json', baseUrl).toString();
-  const res = await fetch(url);
+  // Workers fetch has no default timeout — an upstream hang here would stall
+  // roadmap generation past the client's abort.
+  const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
   if (!res.ok) throw new Error(`registry fetch failed: ${res.status}`);
   registryCache = await res.json();
   return registryCache;

@@ -8,9 +8,10 @@
  * {name, domain, user, target, tier?}) so there is no vector recompute and no
  * need to edit the large hydrate files beyond a one-line guarded hook.
  *
- * Contribution ∝ user × role-weight per dimension (the same product that sums to
- * the cosine fit), mirroring FWOnetMath.fitContributions. Provenance chips reuse
- * the A2 confidence tiers when the caller threads a `tier` onto each row.
+ * Contribution ∝ residual-user × residual-role per dimension (the same product
+ * that sums to the distinctive fit), mirroring FWOnetMath.fitContributions.
+ * Provenance chips reuse the A2 confidence tiers when the caller threads a
+ * `tier` onto each row.
  */
 (function (global) {
   'use strict';
@@ -22,21 +23,47 @@
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  /** Rank comparison rows by contribution (user × target); return top-k with share. */
+  /**
+   * Rank comparison rows by contribution; return top-k with share.
+   *
+   * The product is taken on baseline-subtracted levels, matching the fit the
+   * headline % comes from. Ranked on raw user × target instead, the drawer
+   * names whatever both sides score high on — Reading Comprehension, Active
+   * Listening, Speaking — for every desk career alike, because that is the
+   * generic-occupation profile distinctive fit subtracts before scoring.
+   *
+   * Rows are then restricted to dimensions where BOTH sides sit above the
+   * baseline. Two unusually LOW scores also multiply to a large positive
+   * residual, and for a quant-finance profile the second and third strongest
+   * were "Handling and Moving Objects — you 1, role wants 23" and "Performing
+   * General Physical Activities". Mathematically those are real contributors;
+   * as the sentence this drawer actually prints — "your top overlaps with this
+   * role are…" — they are false. FWOnetMath.fitContributions deliberately keeps
+   * them: it feeds narrative generation, which can say "neither of you needs
+   * much physical work". This surface cannot.
+   *
+   * The displayed levels stay raw: the residual decides the ranking, "you 88 /
+   * role wants 90" is what a human can recognise. Rows without a dimension
+   * index (or a page with no FWOnetMath) fall back to the raw product.
+   */
   function fromComparisons(comparisons, k) {
     if (!Array.isArray(comparisons) || !comparisons.length) return [];
+    var baseline = (global.FWOnetMath && global.FWOnetMath.LV_BASELINE) || null;
     var rows = comparisons.map(function (c) {
       var user = Number(c.user) || 0;
       var target = Number(c.target) || 0;
+      var b = (baseline && c.index != null && baseline[c.index] != null)
+        ? baseline[c.index] : 0;
       return {
         name: c.name,
         domain: c.domain || null,
         user: user,
         target: target,
         tier: c.tier || c.confidence || null,
-        product: user * target,
+        product: (user - b) * (target - b),
+        overlap: user > b && target > b,
       };
-    }).filter(function (r) { return r.product > 0; });
+    }).filter(function (r) { return r.product > 0 && r.overlap; });
     var total = rows.reduce(function (s, r) { return s + r.product; }, 0);
     rows.sort(function (a, b) { return b.product - a.product; });
     rows.forEach(function (r) { r.share = total > 0 ? r.product / total : 0; });

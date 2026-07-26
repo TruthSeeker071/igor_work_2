@@ -9,14 +9,7 @@ import {
   geminiGenerateContent,
   geminiTextFromResponse,
 } from './_lib.js';
-import {
-  authPreflight,
-  authJsonResponse,
-  authErrorResponse,
-  optionalSession,
-  checkRateLimit,
-  clientIp,
-} from './_lib/auth.js';
+import { authPreflight, authJsonResponse, authErrorResponse, optionalSession, checkRateLimit, hashedIpKey } from './_lib/auth.js';
 import { maybeSyncRoadmap } from './_lib/roadmap-sync.js';
 import { loadUserBlob, saveUserBlob } from './_lib/user.js';
 import { maybePatchSectorFitForUser } from './_lib/sector-fit-sheet.js';
@@ -254,7 +247,7 @@ export async function onRequest(context) {
   // throttle per-IP before any model work. 20/hour tolerates a campus NAT
   // while capping anonymous cost abuse.
   try {
-    await checkRateLimit(env, `resume-parse:${clientIp(request)}`, { max: 20 });
+    await checkRateLimit(env, `resume-parse:${await hashedIpKey(env, request)}`, { max: 20 });
   } catch (err) {
     return authErrorResponse(err, origin);
   }

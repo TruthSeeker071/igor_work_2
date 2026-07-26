@@ -1,0 +1,158 @@
+/* FlightWay V2 S19 — the NPS card + consented-quote ask (D28).
+   Client half: assets/js/shared/nps.js. Loaded by the four pages that own a
+   trigger moment: portal.html, flightplan.html, roadmap.html, review.html.
+
+   Its own file rather than rules in flightway-2.css, for the reason S16/S17/S18
+   gave for scorecard.css / network.css / season.css: flightway-2.css is linked
+   by thirteen pages, so one rule there is a thirteen-page cache-buster restamp.
+
+   `.fw-nps-` namespace only. Every colour is a theme token — no literal hex
+   anywhere, which is what keeps this off the wrong side of contrast:check (the
+   hardcoded-dark-plate trap this project has now shipped four times).
+
+   It is a corner card and not a modal ON PURPOSE: there is no backdrop, nothing
+   is trapped, and the page underneath stays fully usable. A survey that blocks
+   the thing the student was doing is a survey that gets answered dishonestly. */
+
+.fw-nps {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  /* Above page chrome, deliberately BELOW the 8500+ band the real modals and
+     interstitials use — if a feature intro is open, it wins and this waits. */
+  z-index: 2000;
+  max-width: min(380px, calc(100vw - 32px));
+}
+
+.fw-nps-card {
+  position: relative;
+  border: 1px solid rgb(var(--border));
+  border-radius: 16px;
+  background: rgb(var(--surface));
+  box-shadow: var(--shadow-md);
+  padding: 20px 22px 18px;
+}
+
+.fw-nps-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgb(var(--text-muted));
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.fw-nps-close:hover { background: rgb(var(--surface-2)); color: rgb(var(--text)); }
+
+.fw-nps-q {
+  margin: 0 26px 14px 0;
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: rgb(var(--text));
+}
+
+.fw-nps-scale {
+  display: grid;
+  grid-template-columns: repeat(11, 1fr);
+  gap: 4px;
+}
+.fw-nps-num {
+  padding: 7px 0;
+  border: 1px solid rgb(var(--border));
+  border-radius: 7px;
+  background: rgb(var(--surface-2));
+  color: rgb(var(--text));
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+}
+.fw-nps-num:hover { border-color: rgb(var(--primary) / 0.55); }
+.fw-nps-num.is-on {
+  background: rgb(var(--primary));
+  border-color: rgb(var(--primary));
+  color: rgb(var(--primary-fg));
+}
+
+.fw-nps-ends {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 11px;
+  color: rgb(var(--text-muted));
+}
+
+.fw-nps-more { margin-top: 14px; }
+.fw-nps-comment,
+.fw-nps-quote {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid rgb(var(--border));
+  border-radius: 9px;
+  background: rgb(var(--surface-2));
+  color: rgb(var(--text));
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 1.5;
+  resize: vertical;
+}
+.fw-nps-comment::placeholder,
+.fw-nps-quote::placeholder { color: rgb(var(--text-muted)); }
+.fw-nps-comment:focus,
+.fw-nps-quote:focus { outline: 2px solid rgb(var(--primary) / 0.5); outline-offset: 1px; }
+
+.fw-nps-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: rgb(var(--text));
+  cursor: pointer;
+}
+.fw-nps-consent input { margin-top: 2px; flex: none; accent-color: rgb(var(--primary)); }
+
+.fw-nps-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.fw-nps-btn {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--border));
+  background: rgb(var(--surface-2));
+  color: rgb(var(--text));
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+}
+.fw-nps-btn--primary {
+  background: rgb(var(--primary));
+  border-color: rgb(var(--primary));
+  color: rgb(var(--primary-fg));
+}
+.fw-nps-btn--primary:hover:not(:disabled) {
+  background: rgb(var(--primary-hover));
+  border-color: rgb(var(--primary-hover));
+}
+.fw-nps-btn--quiet { background: transparent; color: rgb(var(--text-muted)); }
+.fw-nps-btn:disabled { opacity: .55; cursor: not-allowed; }
+
+.fw-nps-msg { margin: 8px 0 0; font-size: 12.5px; color: rgb(var(--text-muted)); min-height: 0; }
+.fw-nps-msg:empty { display: none; }
+.fw-nps-fine { margin: 10px 0 0; font-size: 11.5px; line-height: 1.5; color: rgb(var(--text-muted)); }
+
+/* On a phone the card is a full-width sheet at the bottom: an 11-button scale
+   inside a 380px floating box at 375px viewport leaves 30px targets, which is
+   under the 44px recommendation and reads as a mis-tap generator. */
+@media (max-width: 520px) {
+  .fw-nps { right: 10px; left: 10px; bottom: 10px; max-width: none; }
+  .fw-nps-num { padding: 10px 0; }
+}

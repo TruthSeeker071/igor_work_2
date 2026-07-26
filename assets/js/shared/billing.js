@@ -36,10 +36,7 @@
 
   function signInThen(tier) {
     var next = 'pricing.html?tier=' + encodeURIComponent(tier || '');
-    var url = (global.FWPage && typeof FWPage.authSignInUrl === 'function')
-      ? FWPage.authSignInUrl(next)
-      : 'auth.html#signin?next=' + encodeURIComponent(next);
-    location.href = url;
+    location.href = 'auth.html#signin?next=' + encodeURIComponent(next);
   }
 
   /**
@@ -48,6 +45,15 @@
    * Error carrying .status so the caller can fall back to the intent modal.
    */
   function checkout(tier) {
+    // Logged before the POST so intent survives a 401 into the sign-in detour. That
+    // detour re-enters here via pricing.html's ?tier= resume, so two rows for one
+    // purchase is correct — dedupe per (session, tier) downstream, never with a guard
+    // here, or the drop-off across sign-in becomes invisible. `price` is the tier KEY
+    // (bounded, since checkout() is public on FWBilling), matching the webhook's
+    // checkout_success so attempt and completion join.
+    try {
+      if (global.FWEvents) FWEvents.log('checkout_start', { price: String(tier || '').slice(0, 24) });
+    } catch (_) {}
     return afetch('/stripe/checkout', { method: 'POST', body: { tier: tier } }).then(function (res) {
       if (res.status === 401) { signInThen(tier); return { redirected: true, signIn: true }; }
       return res.json().catch(function () { return {}; }).then(function (data) {

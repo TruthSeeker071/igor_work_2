@@ -114,7 +114,7 @@
       + '<h3 class="career-chat-title" id="portal-career-chat-title">Explore a new target</h3>'
       + '<p class="career-chat-sub">Career switching only — not full coaching</p>'
       + '</div>'
-      + '<button type="button" class="career-chat-close" id="portal-career-chat-close" aria-label="Close">×</button></div>'
+      + '<button type="button" class="career-chat-close" id="portal-career-chat-close" aria-label="Close">' + lucide.svg('x') + '</button></div>'
       + '<div class="career-chat-messages" id="portal-career-chat-messages"></div>'
       + '<div class="career-chat-input-row">'
       + '<textarea id="portal-career-chat-input" class="career-chat-input" rows="2" '

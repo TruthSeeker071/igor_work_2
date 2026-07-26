@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg?v=20260720f">
+  <link rel="icon" href="/favicon.ico?v=20260720a" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/icons/favicon-128.png?v=20260720a">
+  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-180.png?v=20260720a">
+  <title>FlightWay for Career Centers — pilot with your students</title>
+  <meta name="description" content="A 90-second cohort link, a written roadmap before every appointment, and outcomes tracking your office already reports on. See what a FlightWay pilot looks like.">
+  <!-- Absolute canonical: served by both Pages projects, same reasoning as pricing.html. -->
+  <link rel="canonical" href="https://flightway.ai/career-centers">
+  <meta property="og:site_name" content="FlightWay">
+  <meta property="og:url" content="https://flightway.ai/career-centers">
+  <meta property="og:title" content="FlightWay for Career Centers">
+  <meta property="og:description" content="A 90-second cohort link, roadmaps counselors can see before an appointment, and outcomes data your office already tracks.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://flightway.ai/assets/og/og-default.png?v=20260724a">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="FlightWay — career development for students">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="FlightWay for Career Centers">
+  <meta name="twitter:description" content="A 90-second cohort link, roadmaps counselors can see before an appointment, and outcomes data your office already tracks.">
+  <meta name="twitter:image" content="https://flightway.ai/assets/og/og-default.png?v=20260724a">
+  <!-- FAQPage JSON-LD. Text below is byte-identical to the visible answers in
+       #faq — the FAQ section deliberately carries no inline links so that
+       stays true (a linked word would make the schema text and the rendered
+       text diverge). Any real link (privacy policy, pricing) lives outside
+       the marked-up Q&A, same as index.html's .fw-faq-more line. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What happens to student data?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "The same thing that happens for any FlightWay account: quiz answers, fit scores and the plan a student builds are stored under our privacy policy, and a student can delete their own account and data at any time. A pilot does not give your office access to any individual student's account."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does FlightWay replace our career center?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No, and it is not built to. FlightWay covers breadth and week-to-week follow-through. Your office holds what no dataset has — which employers recruit here, and which alumni are reachable."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What does it cost our students?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Nothing changes for them. The quiz, the matches and the weekly plan stay free for individual students whether or not your institution runs a pilot."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Do you integrate with our LMS or Handshake?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Not today. A pilot runs on a single cohort link students open in a browser — there is no LMS, SSO or Handshake integration yet."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What's the time commitment for our office?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "A scoping call, a cohort link with a shared read-out of the results, and a 6 to 8 week run that ends in a written debrief. Pilots are small and hands-on right now, not a self-serve product."
+        }
+      }
+    ]
+  }
+  </script>
+  <link rel="preload" href="/assets/fonts/inter-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/space-grotesk-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260721p">
+  <link rel="stylesheet" href="assets/css/flightway-2.css?v=20260725g">
+  <!-- Same as pricing.html: this page doesn't load flightway-legal.css, and
+       theme.css leaves anchors inside .fw-footer-bar unstyled. -->
+  <style>
+    .fw-footer-bar a { color: inherit; text-decoration: none; }
+    .fw-footer-bar a:hover { color: rgb(var(--text)); text-decoration: underline; }
+
+    /* FAQ list — same pattern as index.html's page-scoped FAQ CSS (kept out of
+       the shared stylesheet on purpose, see that file's comment). */
+    .fw-faq-list { display: grid; gap: 14px; margin-top: 44px; max-width: 860px; }
+    .fw-faq-item {
+      border: 1px solid rgb(var(--border));
+      border-radius: 14px;
+      background: rgb(var(--surface));
+      padding: 20px 22px;
+    }
+    .fw-faq-item h3 { font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 8px; line-height: 1.45; }
+    .fw-faq-item p { margin: 0; color: rgb(var(--text-muted)); line-height: 1.6; font-size: 0.95rem; }
+    .fw-faq-more { margin-top: 26px; font-size: 0.95rem; color: rgb(var(--text-muted)); }
+    .fw-faq-more a { color: rgb(var(--primary)); }
+
+    /* "What a pilot looks like" numbered steps — a page-local restyle of the
+       same numbered-badge idea as index.html's .fw-hiw-step, not shared
+       because that class lives in index.html's own <style> block too. */
+    .fw-step-grid { display: grid; gap: 24px; margin-top: 44px; }
+    @media (min-width: 768px) { .fw-step-grid { grid-template-columns: repeat(3, 1fr); } }
+    .fw-step-card {
+      border: 1px solid rgb(var(--border));
+      border-radius: 16px;
+      background: rgb(var(--surface));
+      padding: 26px 28px;
+    }
+    .fw-step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 9px;
+      background: rgb(var(--primary));
+      color: rgb(var(--primary-fg));
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 16px;
+    }
+    .fw-step-card h3 { font-size: 1.05rem; font-weight: 600; letter-spacing: -0.01em; }
+    .fw-step-card p { margin-top: 10px; color: rgb(var(--text-muted)); line-height: 1.6; font-size: 0.95rem; }
+
+    /* Pricing note + pilot form both sit directly on the page background
+       (.fw-section has none of its own), so a plain bordered card and a
+       plain bordered input both read against it without needing any token
+       outside the allowed colour set. */
+    .fw-note-card {
+      max-width: 640px;
+      margin: 44px auto 0;
+      border: 1px solid rgb(var(--border));
+      border-radius: 16px;
+      background: rgb(var(--surface));
+      padding: 28px 30px;
+      text-align: center;
+    }
+    .fw-note-card p { color: rgb(var(--text-muted)); line-height: 1.65; }
+    .fw-note-card p + p { margin-top: 12px; }
+
+    .fw-pilot-wrap { max-width: 640px; margin: 44px auto 0; }
+    .fw-field { margin-bottom: 18px; }
+    .fw-field label { display: block; font-size: 0.8125rem; font-weight: 600; margin-bottom: 7px; color: rgb(var(--text)); }
+    .fw-field input,
+    .fw-field select,
+    .fw-field textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 11px 13px;
+      border: 1px solid rgb(var(--border));
+      border-radius: 10px;
+      background: rgb(var(--surface));
+      color: rgb(var(--text));
+      font-family: var(--font-body);
+      font-size: 0.9375rem;
+      line-height: 1.5;
+    }
+    .fw-field textarea { min-height: 110px; resize: vertical; }
+    .fw-field input:focus-visible,
+    .fw-field select:focus-visible,
+    .fw-field textarea:focus-visible {
+      outline: 2px solid rgb(var(--primary));
+      outline-offset: 1px;
+      border-color: rgb(var(--primary));
+    }
+    .fw-pilot-submit:disabled { opacity: 0.6; cursor: default; }
+    .fw-pilot-status { margin: 14px 0 0; font-size: 0.875rem; line-height: 1.6; color: rgb(var(--text-muted)); }
+    .fw-pilot-status.is-ok { color: rgb(var(--primary)); }
+    #fw-turnstile:empty { display: none; }
+    #fw-turnstile { margin-bottom: 14px; }
+    .fw-pilot-done {
+      margin: 0;
+      border: 1px solid rgb(var(--border));
+      border-radius: 16px;
+      background: rgb(var(--surface));
+      padding: 26px 28px;
+      font-size: 1rem;
+      line-height: 1.6;
+      color: rgb(var(--text));
+    }
+  </style>
+  <script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
+  <script src="assets/js/shared/flags.js?v=20260716h"></script>
+  <script src="assets/js/shared/fw-busy.js?v=20260720a" defer></script>
+  <script src="assets/js/shared/fw-errors.js?v=20260720a" defer></script>
+  <script src="assets/js/shared/events.js?v=20260724a" defer></script>
+</head>
+<body>
+  <canvas id="fw-data-field" aria-hidden="true"></canvas>
+
+  <header class="fw-nav" id="fw-nav">
+    <div class="fw-container">
+      <nav class="fw-nav-inner">
+        <a href="/" class="fw-brand" data-fw-brand data-fw-brand-href="/" aria-label="FlightWay home"></a>
+        <ul class="fw-nav-links">
+          <li><a href="/#how-it-works">How it works</a></li>
+          <li><a href="/careers">Careers</a></li>
+          <li><a href="/guides">Guides</a></li>
+          <li><a href="/pricing">Pricing</a></li>
+        </ul>
+        <div class="fw-nav-actions" id="fw-nav-actions">
+          <button type="button" class="fw-theme-toggle" aria-label="Switch to light mode" aria-pressed="true">
+            <span class="fw-theme-icon" aria-hidden="true"></span>
+          </button>
+          <a href="auth.html#signin" class="fw-btn fw-btn-ghost fw-btn-sm">Sign in</a>
+          <a href="quiz.html" class="fw-btn fw-btn-primary fw-btn-sm">Get started</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="fw-hero fw-hero--compact">
+      <div class="fw-container fw-hero-content">
+        <p class="fw-eyebrow"><span class="fw-eyebrow-line" aria-hidden="true"></span>FOR CAREER CENTERS</p>
+        <h1 class="fw-h1">Your students already have a plan. Now you can see it.</h1>
+        <p class="fw-lede">
+          Every student who takes FlightWay's quiz gets an explainable career match and a weekly plan to act on it.
+          A pilot gives your office a cohort link, a shared read-out of what your students' matches actually look
+          like, and appointments where the hour goes to judgment calls instead of intake.
+        </p>
+        <div class="fw-hero-ctas">
+          <a href="#pilot" class="fw-btn fw-btn-primary fw-btn-lg">Book a pilot call</a>
+          <a href="/pricing" class="fw-text-link">
+            See student pricing
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="fw-section fw-reveal" id="what-you-get">
+      <div class="fw-container">
+        <div class="fw-heading fw-reveal-item">
+          <h2>What your office gets</h2>
+          <p>Nothing here is a promise about the future — it's what the product does today.</p>
+        </div>
+        <div class="fw-features-grid fw-reveal-stagger">
+          <article class="fw-feature-card fw-reveal-item">
+            <span class="fw-feature-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            </span>
+            <h3>A 90-second cohort link</h3>
+            <p>Students open one link and get a fit score tied to specific O*NET dimensions — an explainable match, not a four-letter personality label.</p>
+          </article>
+          <article class="fw-feature-card fw-reveal-item">
+            <span class="fw-feature-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </span>
+            <h3>Counselors see the plan first</h3>
+            <p>Students arrive at an appointment with a written roadmap and a weekly plan already in hand, so the hour goes to judgment calls, not intake.</p>
+          </article>
+          <article class="fw-feature-card fw-reveal-item">
+            <span class="fw-feature-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg>
+            </span>
+            <h3>Outcomes your office already tracks</h3>
+            <p>Applications, deadlines and evidence of progress are tracked in the product — the same vocabulary your accreditation and administration reporting already speaks.</p>
+          </article>
+          <article class="fw-feature-card fw-reveal-item">
+            <span class="fw-feature-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </span>
+            <h3>It doesn't replace your office</h3>
+            <p>FlightWay covers breadth and week-to-week follow-through. Your career center holds what no dataset has: which employers recruit here, and which alumni are reachable.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="fw-section fw-reveal" id="pilot-look">
+      <div class="fw-container">
+        <div class="fw-heading fw-reveal-item">
+          <h2>What a pilot looks like</h2>
+          <p>Pilots are small and hands-on right now — we're working directly with a handful of offices, not running a self-serve funnel.</p>
+        </div>
+        <div class="fw-step-grid fw-reveal-stagger">
+          <article class="fw-step-card fw-reveal-item">
+            <span class="fw-step-num" aria-hidden="true">1</span>
+            <h3>A scoping call</h3>
+            <p>Thirty minutes to understand your office, your students, and what a useful pilot would actually look like for you.</p>
+          </article>
+          <article class="fw-step-card fw-reveal-item">
+            <span class="fw-step-num" aria-hidden="true">2</span>
+            <h3>A cohort link and a read-out</h3>
+            <p>Your students take the quiz through one link. We walk your team through what the cohort's matches actually look like — your real students, not a demo.</p>
+          </article>
+          <article class="fw-step-card fw-reveal-item">
+            <span class="fw-step-num" aria-hidden="true">3</span>
+            <h3>A 6–8 week run, then a debrief</h3>
+            <p>The cohort uses FlightWay for six to eight weeks. At the end you get a written debrief: what we saw, what worked, and whether it's worth continuing.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="fw-section fw-reveal" id="pilot-pricing">
+      <div class="fw-container">
+        <div class="fw-heading fw-reveal-item">
+          <h2>What a pilot costs</h2>
+        </div>
+        <div class="fw-note-card fw-reveal-item">
+          <p>Pilot pricing is per institution and negotiated — there's no published number yet, because it depends on your students, your timeline and what your office needs from it. Let's talk.</p>
+          <p>Either way, the individual student product stays free for your students. A pilot changes what your office can see — not what a student pays. See <a href="/pricing">student pricing</a>.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="fw-section fw-reveal" id="pilot">
+      <div class="fw-container">
+        <div class="fw-heading fw-reveal-item">
+          <h2>Book a pilot</h2>
+          <p>Tell us about your office. We read every message and reply directly — no sales queue.</p>
+        </div>
+        <div class="fw-pilot-wrap fw-reveal-item">
+          <form id="fw-pilot-form" novalidate>
+            <div class="fw-field">
+              <label for="fw-pilot-institution">Institution name</label>
+              <input id="fw-pilot-institution" name="institution" type="text" required maxlength="120" autocomplete="organization">
+            </div>
+            <div class="fw-field">
+              <label for="fw-pilot-name">Your name</label>
+              <input id="fw-pilot-name" name="name" type="text" required maxlength="80" autocomplete="name">
+            </div>
+            <div class="fw-field">
+              <label for="fw-pilot-email">Work email</label>
+              <input id="fw-pilot-email" name="email" type="email" required maxlength="200" autocomplete="email">
+            </div>
+            <div class="fw-field">
+              <label for="fw-pilot-students">Approximate number of students</label>
+              <select id="fw-pilot-students" name="students" required>
+                <option value="" selected disabled>Choose one</option>
+                <option value="Under 1,000">Under 1,000</option>
+                <option value="1,000–5,000">1,000–5,000</option>
+                <option value="5,000–20,000">5,000–20,000</option>
+                <option value="20,000+">20,000+</option>
+              </select>
+            </div>
+            <div class="fw-field">
+              <label for="fw-pilot-message">Anything else? <span style="font-weight:400;opacity:.65">(optional)</span></label>
+              <textarea id="fw-pilot-message" name="message" maxlength="2000" placeholder="Timeline, what you're hoping to learn, who else should be on the call."></textarea>
+            </div>
+            <!-- Rendered only on a deployment that configured Turnstile. The
+                 server (functions/contact.js) REJECTS a missing token whenever
+                 both keys are set, so a form that never renders the challenge
+                 would break the day Jacob turns it on — same wiring as
+                 contact.html, which posts to the same endpoint. -->
+            <div id="fw-turnstile"></div>
+            <button type="submit" class="fw-btn fw-btn-primary fw-btn-md fw-btn--block fw-pilot-submit" id="fw-pilot-submit">Request a pilot call</button>
+            <p class="fw-pilot-status" id="fw-pilot-status" role="status" aria-live="polite"></p>
+          </form>
+          <div class="fw-pilot-done" id="fw-pilot-done" hidden>
+            Thanks — that reached us. We reply directly within two business days.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="fw-section fw-reveal" id="faq">
+      <div class="fw-container">
+        <div class="fw-heading fw-reveal-item">
+          <h2>Questions career centers ask</h2>
+          <p>Short, honest answers.</p>
+        </div>
+        <div class="fw-faq-list fw-reveal-stagger">
+          <article class="fw-faq-item fw-reveal-item">
+            <h3>What happens to student data?</h3>
+            <p>The same thing that happens for any FlightWay account: quiz answers, fit scores and the plan a student builds are stored under our privacy policy, and a student can delete their own account and data at any time. A pilot does not give your office access to any individual student's account.</p>
+          </article>
+          <article class="fw-faq-item fw-reveal-item">
+            <h3>Does FlightWay replace our career center?</h3>
+            <p>No, and it is not built to. FlightWay covers breadth and week-to-week follow-through. Your office holds what no dataset has — which employers recruit here, and which alumni are reachable.</p>
+          </article>
+          <article class="fw-faq-item fw-reveal-item">
+            <h3>What does it cost our students?</h3>
+            <p>Nothing changes for them. The quiz, the matches and the weekly plan stay free for individual students whether or not your institution runs a pilot.</p>
+          </article>
+          <article class="fw-faq-item fw-reveal-item">
+            <h3>Do you integrate with our LMS or Handshake?</h3>
+            <p>Not today. A pilot runs on a single cohort link students open in a browser — there is no LMS, SSO or Handshake integration yet.</p>
+          </article>
+          <article class="fw-faq-item fw-reveal-item">
+            <h3>What's the time commitment for our office?</h3>
+            <p>A scoping call, a cohort link with a shared read-out of the results, and a 6 to 8 week run that ends in a written debrief. Pilots are small and hands-on right now, not a self-serve product.</p>
+          </article>
+        </div>
+        <p class="fw-faq-more">More on data and deletion in our <a href="/privacy">privacy policy</a>. General questions go to <a href="/contact">contact</a>.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="fw-footer">
+    <div class="fw-container">
+      <div class="fw-footer-grid">
+        <div>
+          <a href="/" class="fw-brand" data-fw-brand data-fw-brand-href="/" aria-label="FlightWay"></a>
+          <p class="fw-footer-tagline">The talent development platform for students.</p>
+        </div>
+        <div class="fw-footer-col">
+          <h3>Product</h3>
+          <ul>
+            <li><a href="/careers">All careers</a></li>
+            <li><a href="/guides">Guides</a></li>
+            <li><a href="/#features">Features</a></li>
+            <li><a href="/pricing">Pricing</a></li>
+            <li><a href="/quiz">Career Quiz</a></li>
+            <li><a href="/auth#signin">Sign in</a></li>
+          </ul>
+        </div>
+        <div class="fw-footer-col">
+          <h3>Company</h3>
+          <ul>
+            <li><a href="/#how-it-works">How it works</a></li>
+            <li><a href="/career-centers">Career centers</a></li>
+            <li><a href="/community">Community</a></li>
+            <li><a href="/contact">Contact</a></li>
+          </ul>
+        </div>
+        <div class="fw-footer-col">
+          <h3>Legal</h3>
+          <ul>
+            <li><a href="/privacy">Privacy</a></li>
+            <li><a href="/terms">Terms</a></li>
+            <li><a href="/security">Security</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="fw-footer-bar">
+        <p>© 2026 FlightWay, Inc. All rights reserved.</p>
+        <p><a href="/career-centers">Career-center pricing →</a></p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/js/shared/brand.js?v=20260720i" defer></script>
+  <script src="assets/js/shared/theme.js?v=20260703p" defer></script>
+  <script src="assets/js/shared/data-field.js?v=20260703p" defer></script>
+  <script>
+    (function () {
+      function log(type, data) { try { if (window.FWEvents) FWEvents.log(type, data); } catch (_) {} }
+      var form = document.getElementById('fw-pilot-form');
+      var statusEl = document.getElementById('fw-pilot-status');
+      var submitEl = document.getElementById('fw-pilot-submit');
+      var doneEl = document.getElementById('fw-pilot-done');
+      var slot = document.getElementById('fw-turnstile');
+      var turnstileWidget = null;
+      var turnstileExpected = false;
+
+      // Opt-in per deployment: /config carries the site key only where one is
+      // set, so no key means no external script request at all.
+      fetch('/config', { headers: { Accept: 'application/json' } })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (cfg) {
+          var key = cfg && cfg.turnstileSiteKey;
+          if (!key) return;
+          // Remember that a challenge is EXPECTED, so a broken script load
+          // becomes a message the visitor can act on rather than a server
+          // rejection about a verification they never saw.
+          turnstileExpected = true;
+          window.fwTurnstileReady = function () {
+            try {
+              turnstileWidget = window.turnstile.render(slot, { sitekey: key, theme: 'auto' });
+            } catch (err) { console.warn('turnstile render failed', err); }
+          };
+          var sc = document.createElement('script');
+          sc.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=fwTurnstileReady';
+          sc.async = true;
+          sc.defer = true;
+          document.head.appendChild(sc);
+        })
+        .catch(function () { /* the form works without it */ });
+
+      function say(msg, ok) {
+        statusEl.textContent = msg;
+        statusEl.classList.toggle('is-ok', !!ok);
+      }
+
+      if (form) form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var institution = document.getElementById('fw-pilot-institution').value.trim();
+        var name = document.getElementById('fw-pilot-name').value.trim();
+        var email = document.getElementById('fw-pilot-email').value.trim();
+        var students = document.getElementById('fw-pilot-students').value;
+        var message = document.getElementById('fw-pilot-message').value.trim();
+
+        if (!institution) { say('Please enter your institution name.'); return; }
+        if (!name) { say('Please enter your name.'); return; }
+        if (!email || email.indexOf('@') < 0) { say('Please enter a work email we can reply to.'); return; }
+        if (!students) { say('Please choose an approximate student count.'); return; }
+
+        // Composed for a human reader on the other end — always well over the
+        // server's 10-character floor on its own, so the free-text field being
+        // empty can never fail that check.
+        var body = 'Institution: ' + institution + '\nStudents: ' + students + '\n\n' + (message || '(no message)');
+
+        var token = '';
+        try {
+          if (turnstileWidget !== null && window.turnstile) token = window.turnstile.getResponse(turnstileWidget) || '';
+        } catch (_) { token = ''; }
+        if (turnstileExpected && !token) {
+          say(turnstileWidget === null
+            ? 'The verification widget could not load — please email hello@flightway.ai instead.'
+            : 'Please complete the verification above.');
+          return;
+        }
+
+        submitEl.disabled = true;
+        say('Sending…');
+        fetch('/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: email, name: name, topic: 'career-center', body: body, turnstileToken: token,
+          }),
+        })
+          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+          .then(function (res) {
+            if (!res.ok) throw new Error((res.data && res.data.error) || 'Something went wrong.');
+            log('pilot_requested', { students: students });
+            form.hidden = true;
+            doneEl.hidden = false;
+          })
+          .catch(function (err) {
+            submitEl.disabled = false;
+            say(err.message || 'Something went wrong. Please email hello@flightway.ai instead.');
+            // A spent challenge is single-use; a stale token guarantees the retry fails too.
+            try { if (turnstileWidget !== null && window.turnstile) window.turnstile.reset(turnstileWidget); } catch (_) {}
+          });
+      });
+    })();
+  </script>
+</body>
+</html>

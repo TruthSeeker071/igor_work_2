@@ -12,7 +12,7 @@
 //     → { debrief: { scores, verdict, highlights, actions }, sessionId }
 //   GET  → { sessions: [{ id, career, persona, company, scores, created_at }] }
 //
-// House patterns: session-gated + requirePlan('premium') + IP rate limit +
+// House patterns: session-gated + metered (FEATURE_LIMITS) + IP rate limit +
 // 3-sessions/day cap spent once at session start, with a stateless peppered
 // session token (interview-token.js) proving later turns and the debrief
 // belong to a paid session; client holds the transcript (no server beacon,
@@ -23,10 +23,10 @@
 
 import { originFromEnv, jsonResponse, preflightResponse } from './_lib.js';
 import { callGeminiJson } from './_lib/gemini-json.js';
-import { getSessionEmail, checkRateLimit, clientIp } from './_lib/auth.js';
+import { getSessionEmail, checkRateLimit, hashedIpKey } from './_lib/auth.js';
 import { resolveSchool } from './_lib/school.js';
-import { requirePlan } from './_lib/entitlements.js';
-import { checkFeatureLimit } from './_lib/plan-limits.js';
+import { resolveEntitlement } from './_lib/entitlements.js';
+import { checkFeatureLimit, refundFeatureUse } from './_lib/plan-limits.js';
 import { resolveCareerFamily } from './_lib/career-family.js';
 import { groundingEnabled, researchWeb, buildEvidenceBlock, GROUNDING_TTL } from './_lib/gemini-grounded.js';
 import {
@@ -35,6 +35,8 @@ import {
   sanitizeDebrief, playbookForFamily,
 } from './_lib/interview-core.js';
 import { mintInterviewToken, verifyInterviewToken, mintDifficultyTag, verifyDifficultyTag } from './_lib/interview-token.js';
+import { seasonStampFor } from './_lib/season-store.js';
+import { logServerEvent } from './_lib/events.js';
 
 const HISTORY_CAP = 50;
 const TURN_TIMEOUT_MS = 18000;
@@ -48,9 +50,11 @@ async function gate(context) {
   const origin = originFromEnv(env, request);
   const email = await getSessionEmail(request, env);
   if (!email) return { origin, error: jsonResponse(401, { error: 'Not signed in.' }, origin) };
-  const ent = await requirePlan(env, email, 'premium');
-  if (!ent.ok) return { origin, error: jsonResponse(402, { error: 'Mock interviews are a Flight Plan feature.', upgrade: true }, origin) };
-  return { origin, email, env, request, plan: ent.plan };
+  // V2 §4: no plan wall here any more — free gets ONE lifetime taste and
+  // premium 3/day, and only FEATURE_LIMITS knows which. A binary requirePlan
+  // above the counter would refuse the free session before it could be counted.
+  const ent = await resolveEntitlement(env, email);
+  return { origin, email, env, request, plan: ent.effective };
 }
 
 function parseContext(body) {
@@ -113,9 +117,13 @@ export async function onRequestPost(context) {
   try { body = await request.json(); } catch { return jsonResponse(400, { error: 'Invalid JSON body.' }, origin); }
   const action = body?.action === 'debrief' ? 'debrief' : 'turn';
   const ctx = parseContext(body);
+  // Set when a session-start turn spends one of the daily interview sessions
+  // (3/day on Flight Plan) — a server-side failure after the spend refunds it,
+  // because the session the user paid for never started.
+  let capSpent = false;
 
   try {
-    await checkRateLimit(env, `mockiv:${clientIp(request)}`, { max: 30 });
+    await checkRateLimit(env, `mockiv:${await hashedIpKey(env, request)}`, { max: 30 });
   } catch (err) {
     return jsonResponse(err.status || 429, { error: err.message || 'Too many attempts.' }, origin);
   }
@@ -140,6 +148,7 @@ export async function onRequestPost(context) {
         if (!cap.ok) {
           return jsonResponse(429, { error: cap.message, upgrade: !!cap.upgrade, remaining: 0 }, origin);
         }
+        capSpent = true;
         sessionsLeft = cap.remaining;
         sessionStartTs = Date.now();
         sessionToken = await mintInterviewToken(env, email, sessionStartTs);
@@ -242,20 +251,39 @@ export async function onRequestPost(context) {
       return jsonResponse(502, { error: 'Could not build your debrief — try again.' }, origin);
     }
 
+    // S18. Which week of which Interview Season this session belongs to, decided
+    // by the SERVER from the season row and the clock — the request body carries
+    // nothing about it, so no client can claim a week. Null is the normal answer
+    // (no season, or a session run outside its six weeks) and, importantly, is
+    // also the answer while migration 0026 is pending: `seasonStampFor` probes
+    // for the table, and the two `interview_sessions` columns ship in the SAME
+    // migration, so one null covers both and the legacy INSERT below stays
+    // correct rather than failing on columns that do not exist yet.
+    let stamp = null;
+    try {
+      stamp = await seasonStampFor(env, email);
+    } catch (err) {
+      console.warn('mock-interview season stamp failed', err?.message || err);
+    }
+
     // Persist the metric log (D1) so the over-time chart is a straight query;
     // transcript itself stays client-owned (lean by design).
     let sessionId = null;
     try {
       sessionId = crypto.randomUUID();
       const now = new Date().toISOString();
-      await env.DB.prepare(
-        'INSERT INTO interview_sessions (id, email, career, soc, persona, company, scores_json, debrief_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      ).bind(
+      const cols = 'id, email, career, soc, persona, company, scores_json, debrief_json, created_at';
+      const vals = [
         sessionId, email, ctx.careerName, ctx.soc || null, ctx.persona, ctx.company || null,
         JSON.stringify(debrief.scores),
         JSON.stringify({ verdict: debrief.verdict, highlights: debrief.highlights, actions: debrief.actions }),
         now,
-      ).run();
+      ];
+      await env.DB.prepare(
+        stamp
+          ? `INSERT INTO interview_sessions (${cols}, season_id, season_week) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          : `INSERT INTO interview_sessions (${cols}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).bind(...(stamp ? vals.concat([stamp.seasonId, stamp.week]) : vals)).run();
       await env.DB.prepare(
         'DELETE FROM interview_sessions WHERE email = ? AND id NOT IN (SELECT id FROM interview_sessions WHERE email = ? ORDER BY created_at DESC LIMIT ?)',
       ).bind(email, email, HISTORY_CAP).run();
@@ -263,9 +291,37 @@ export async function onRequestPost(context) {
       console.warn('mock-interview persist failed', err?.message || err);
       sessionId = null; // debrief still returns — persistence is best-effort
     }
-    return jsonResponse(200, { debrief, sessionId }, origin);
+
+    // S18. `mock_completed` is SERVER-written even though §6 lists it under the
+    // client taxonomy: the overall score is a weighted composite computed in
+    // `sanitizeDebrief` and never returned by the model, so a client-side event
+    // would either re-derive a number it does not own or report the model's.
+    // Logged after persistence and never allowed to affect it.
+    await logServerEvent(env, 'mock_completed', {
+      userId: email,
+      props: {
+        score: Number(debrief.scores.overall) || 0,
+        persona: ctx.persona,
+        technical: state.technicalAsked ? 1 : 0,
+        company: ctx.company ? 1 : 0,
+        season: stamp ? 1 : 0,
+        week: stamp ? stamp.week : 0,
+      },
+    });
+    return jsonResponse(200, { debrief, sessionId, seasonWeek: stamp ? stamp.week : null }, origin);
   } catch (err) {
-    const status = err.status || 500;
+    // chat.js's mapping. An upstream cascade carries 429 (load) or 503 (down)
+    // and those are worth passing on; every other upstream status is about
+    // OUR call, not the user's request — shipping a retired model's 404 told
+    // the client "your interview does not exist", which is a lie with a
+    // matching UI. Anything unclassified is ours: 500.
+    const status = err && (err.status === 429 || err.status === 503) ? err.status : 500;
+    // Everything user-caused (auth, plan gate, rate wall, bad body) fails
+    // before the spend — a spent session reaching this catch never started,
+    // so the user gets it back whatever status the upstream error carried.
+    if (capSpent) {
+      await refundFeatureUse(env, email, 'mock-interview', { plan });
+    }
     return jsonResponse(status, { error: err._userFacing ? err.message : 'The mock interviewer is unavailable right now.' }, origin);
   }
 }

@@ -299,6 +299,31 @@
 
   // ---- ATS score (near the preview; recomputed on edit + on active-doc switch) ----
 
+  // atsCheck() emits machine-readable issue strings that scripts/test-resume-ats.cjs
+  // asserts on. They are the wrong voice for a person reading a resume, so the
+  // display layer rewrites the four stable prefixes and passes anything else through.
+  function humanizeAtsIssue(issue) {
+    var s = String(issue || '');
+    var m = s.match(/^Missing contact (name|email|phone)$/);
+    if (m) return 'Add your ' + m[1] + ' so a recruiter can reach you.';
+    m = s.match(/^Empty section: (.+)$/);
+    if (m) return m[1] + ' has no entries yet.';
+    m = s.match(/^Missing dates on experience item: (.+)$/);
+    if (m) return 'Add start and end dates to ' + m[1] + '.';
+    m = s.match(/^Malformed date "(.+)" in (.+)$/);
+    if (m) return 'The date "' + m[1] + '" in ' + m[2] + ' is not in a format parsers read.';
+    m = s.match(/^Bullet too long \((\d+) chars\) in (.+)$/);
+    if (m) return 'A bullet in ' + m[2] + ' runs ' + m[1] + ' characters — tighten it to about 200.';
+    return s;
+  }
+
+  function atsVerdict(score) {
+    if (score >= 90) return 'Ready to send';
+    if (score >= 70) return 'Nearly there';
+    if (score >= 40) return 'Needs work';
+    return 'Just getting started';
+  }
+
   function renderAtsBox() {
     if (!els.atsScore || !els.atsIssues) return;
     var result = null;
@@ -310,21 +335,25 @@
     if (!result) {
       // Never show a fake perfect score when the checker isn't available.
       els.atsScore.textContent = '— / 100';
+      if (els.atsVerdict) els.atsVerdict.textContent = 'Check unavailable';
+      if (els.atsMeterFill) els.atsMeterFill.style.width = '0%';
       els.atsIssues.innerHTML = '';
       return;
     }
     els.atsScore.textContent = result.score + ' / 100';
+    if (els.atsVerdict) els.atsVerdict.textContent = atsVerdict(result.score);
+    if (els.atsMeterFill) els.atsMeterFill.style.width = result.score + '%';
     els.atsIssues.innerHTML = '';
     if (!result.issues || !result.issues.length) {
       var ok = document.createElement('li');
       ok.className = 'resume-ats-ok';
-      ok.textContent = 'No ATS issues found.';
+      ok.textContent = 'Nothing an applicant tracking system would trip on.';
       els.atsIssues.appendChild(ok);
       return;
     }
     result.issues.forEach(function (issue) {
       var li = document.createElement('li');
-      li.textContent = issue;
+      li.textContent = humanizeAtsIssue(issue);
       els.atsIssues.appendChild(li);
     });
   }
@@ -462,16 +491,46 @@
     });
   }
 
+  /**
+   * S12 — arriving from an application card in the tracker
+   * (`resume.html?tailorRole=…&tailorCompany=…`). It fills the job TITLE and
+   * puts the cursor in the posting box; it deliberately does NOT invent posting
+   * text, because the tailor's whole anti-fabrication design rests on matching
+   * against a real posting, and a fabricated one would produce a confident
+   * variant tuned to nothing. The params are stripped afterwards so a refresh
+   * does not re-scroll the page out from under someone mid-edit.
+   */
+  function applyTailorPrefill() {
+    if (!els.tailorTitle || !global.location) return;
+    var role = '';
+    var company = '';
+    try {
+      var q = new URLSearchParams(global.location.search || '');
+      role = (q.get('tailorRole') || '').slice(0, 120);
+      company = (q.get('tailorCompany') || '').slice(0, 120);
+    } catch (_) { return; }
+    if (!role) return;
+    els.tailorTitle.value = company ? role + ' — ' + company : role;
+    try {
+      history.replaceState(null, '', location.pathname + location.hash);
+    } catch (_) { /* non-browser host */ }
+    var card = els.tailorBtn && els.tailorBtn.closest ? els.tailorBtn.closest('.resume-tailor-card') : null;
+    if (card && card.scrollIntoView) {
+      try { card.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) { card.scrollIntoView(); }
+    }
+    if (els.tailorJobText) setTimeout(function () { els.tailorJobText.focus(); }, 240);
+    showTailorMsg('Paste the posting for this role and we will tailor against it.');
+  }
+
   function tailorRequest(jobTitle, jobText) {
     apiTailor({ resumeId: state.id, jobTitle: jobTitle, jobText: jobText })
       .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
       .then(function (res) {
         setTailorBusy(false);
         if (!res.ok) {
-          if (res.d && res.d.upgrade) {
-            if (els.gateHost && global.FWEnt && typeof FWEnt.gate === 'function') FWEnt.gate(els.gateHost, 'resume-builder');
-            showTailorMsg('Tailoring is a Flight Plan feature.', true);
-            return;
+          if (res.d && res.d.upgrade && global.FWPlanSurface && typeof FWPlanSurface.capCard === 'function') {
+            var tailorHost = els.tailorBtn && els.tailorBtn.closest('.resume-tailor-card');
+            if (tailorHost) { FWPlanSurface.capCard(tailorHost, res.d.feature || 'resume-tailor', res.d.error); return; }
           }
           showTailorMsg((res.d && res.d.error) || 'Could not tailor this resume — try again.', true);
           return;
@@ -616,9 +675,10 @@
       .then(function (res) {
         setSuggestBusy(false);
         if (!res.ok) {
-          if (res.d && res.d.upgrade && els.gateHost && global.FWEnt && typeof FWEnt.gate === 'function') {
-            FWEnt.gate(els.gateHost, 'resume-builder');
-          }
+          // V2 §4: bullet suggestions are free (only mode='draft-doc' is metered),
+          // so `upgrade` can no longer arrive here. The old full-page FWEnt.gate
+          // is removed rather than left dead — if anything ever did set it, that
+          // branch would wall the whole builder over a free feature.
           showSuggestMsg((res.d && res.d.error) || 'Could not draft suggestions — try again.', true);
           return;
         }
@@ -752,7 +812,7 @@
     els.guidedCard.classList.toggle('resume-guided-card--hero', empty);
     if (els.guidedCopy) {
       els.guidedCopy.textContent = empty
-        ? 'FlightWay drafts your complete resume — summary, experience, projects, skills — from everything it knows about you, asking a few quick questions along the way. You refine the result below.'
+        ? 'FlightWay drafts your complete resume — summary, experience, projects, skills — from everything it knows about you, asking a few quick questions along the way. Start here rather than with the blank sections below: a draft you argue with beats a page you stare at.'
         : 'Re-run the guided build any time — it rebuilds the sections below from your profile and your answers. Contact info is never touched.';
     }
     if (els.guidedBtn && !els.guidedBtn.disabled) els.guidedBtn.textContent = guidedCtaLabel();
@@ -926,8 +986,9 @@
       .then(function (res) {
         setGuidedBusy(false);
         if (!res.ok || !res.d || !res.d.resume) {
-          if (res.d && res.d.upgrade && els.gateHost && global.FWEnt && typeof FWEnt.gate === 'function') {
-            FWEnt.gate(els.gateHost, 'resume-builder');
+          if (res.d && res.d.upgrade && els.guidedCard && global.FWPlanSurface && typeof FWPlanSurface.capCard === 'function') {
+            FWPlanSurface.capCard(els.guidedCard, res.d.feature || 'resume-draft', res.d.error);
+            return;
           }
           showGuidedMsg((res.d && res.d.error) || 'Could not build the resume — your answers are saved, try again.', true);
           return;
@@ -993,7 +1054,7 @@
     var rm = document.createElement('button');
     rm.type = 'button';
     rm.className = 'resume-remove-btn';
-    rm.textContent = '✕';
+    rm.innerHTML = lucide.svg('x');
     rm.setAttribute('aria-label', 'Remove bullet');
     rm.addEventListener('click', function () {
       item.bullets.splice(bulletIdx, 1);
@@ -1086,7 +1147,7 @@
       tag.innerHTML = '<span>' + esc(skill) + '</span>';
       var rm = document.createElement('button');
       rm.type = 'button';
-      rm.textContent = '✕';
+      rm.innerHTML = lucide.svg('x');
       rm.setAttribute('aria-label', 'Remove skill');
       rm.addEventListener('click', function () {
         section.flat.splice(idx, 1);
@@ -1112,6 +1173,13 @@
   function renderSwitcher() {
     if (!els.switcher) return;
     els.switcher.innerHTML = '';
+    if (!state.resumes.length) {
+      var none = document.createElement('p');
+      none.className = 'resume-switcher-empty';
+      none.textContent = 'No saved resumes yet — this one appears here once you save it.';
+      els.switcher.appendChild(none);
+      return;
+    }
     state.resumes.forEach(function (r) {
       var btn = document.createElement('button');
       btn.type = 'button';
@@ -1355,11 +1423,7 @@
     var draft = loadDraft();
     apiGet().then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); }).then(function (res) {
       if (!res.ok) {
-        if (res.d && res.d.upgrade) {
-          if (els.gateHost && global.FWEnt && typeof FWEnt.gate === 'function') FWEnt.gate(els.gateHost, 'resume-builder');
-        } else {
-          showError((res.d && res.d.error) || 'Could not load your resumes.');
-        }
+        showError((res.d && res.d.error) || 'Could not load your resumes.');
         if (draft) { state.resume = draft.resume; state.title = draft.title || state.title; state.id = draft.id || null; syncTemplateFromResume(); renderAll(); applyDefaultTemplate(); }
         return;
       }
@@ -1473,6 +1537,8 @@
     els.suggestList = document.getElementById('resume-suggest-list');
     els.variantList = document.getElementById('resume-variant-list');
     els.atsScore = document.getElementById('resume-ats-score');
+    els.atsVerdict = document.getElementById('resume-ats-verdict');
+    els.atsMeterFill = document.getElementById('resume-ats-meter-fill');
     els.atsIssues = document.getElementById('resume-ats-issues');
     els.docxBtn = document.getElementById('resume-docx-btn');
     els.texBtn = document.getElementById('resume-tex-btn');
@@ -1493,6 +1559,7 @@
     if (els.printBtn) els.printBtn.addEventListener('click', function () { renderPreview(); global.print(); });
     if (els.deleteBtn) els.deleteBtn.addEventListener('click', deleteCurrent);
     if (els.tailorBtn) els.tailorBtn.addEventListener('click', runTailor);
+    applyTailorPrefill();
     if (els.suggestBtn) els.suggestBtn.addEventListener('click', runSuggest);
     if (els.guidedBtn) els.guidedBtn.addEventListener('click', runGuided);
     if (els.docxBtn) els.docxBtn.addEventListener('click', exportDocx);
@@ -1501,12 +1568,6 @@
     bindStaticFields();
     bindAddButtons();
     bindSkillInput();
-
-    if (global.FWEnt && typeof FWEnt.boot === 'function') {
-      FWEnt.boot().then(function () {
-        if (els.gateHost && !FWEnt.has('premium')) FWEnt.gate(els.gateHost, 'resume-builder');
-      });
-    }
 
     boot();
     loadFormatProfile();

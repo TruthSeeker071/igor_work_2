@@ -10,6 +10,7 @@ import { computeUmapLayout, orbColorForZone, ZONE_ORB_COLORS } from './layout-um
 import { computeSectorUmapLayout } from './sector-preset-layout.mjs';
 import { classifyCareer } from './collar-scope.mjs';
 import { buildZoneDimensionProfiles } from './build-zone-profiles.mjs';
+import { hubZoneForSoc, zoneAggregateEntry } from './zone-weighting.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
@@ -27,15 +28,6 @@ const DOMAIN_FILES = [
   { domain: 'abilities', files: ['Abilities.txt'] },
   { domain: 'workActivities', files: ['Work Activities.txt'] },
 ];
-
-const SOC_MAJOR_TO_ZONE = {
-  '11': 'business', '13': 'finance', '15': 'tech', '17': 'engineering',
-  '19': 'science', '21': 'social', '23': 'law', '25': 'education',
-  '27': 'creative', '29': 'healthcare', '31': 'healthcare', '33': 'law',
-  '35': 'government', '37': 'operations', '39': 'social', '41': 'business',
-  '43': 'government', '45': 'agriculture', '47': 'trades', '49': 'trades',
-  '51': 'trades', '53': 'operations', '55': 'government',
-};
 
 const ZONE_W = 200;
 const ZONE_H = 175;
@@ -93,21 +85,6 @@ function imTo100(raw) {
 
 function socMajor(soc) {
   return String(soc || '').slice(0, 2);
-}
-
-function hubZoneForSoc(soc, title) {
-  const major = socMajor(soc);
-  const t = String(title || '').toLowerCase();
-  if (/cyber|security|information security/.test(t)) return 'cybersecurity';
-  if (/software|computer|data scien|web dev|programmer/.test(t)) return 'tech';
-  if (/nurse|physician|surgeon|medical|health|therapist|pharmac/.test(t)) return 'healthcare';
-  if (/hotel|restaurant|hospitality|chef|concierge/.test(t)) return 'hospitality';
-  if (/marketing|public relations|advertis/.test(t)) return 'marketing';
-  if (/journal|media|broadcast|film|video/.test(t)) return 'media';
-  if (/lawyer|attorney|legal|paralegal/.test(t)) return 'law';
-  if (/teacher|professor|education|instructional/.test(t)) return 'education';
-  if (/farm|agricultur/.test(t)) return 'agriculture';
-  return SOC_MAJOR_TO_ZONE[major] || 'business';
 }
 
 function buildRegistry(inputDir) {
@@ -263,17 +240,11 @@ function buildZoneAggregateVectors(inScopeCareers, lvBuffer) {
   });
   const out = {};
   for (const [zone, list] of byZone) {
-    const lvMean = new Float32Array(DIM_COUNT);
-    list.forEach((c) => {
+    const vectors = list.map((c) => {
       const off = c.vectorIndex * DIM_COUNT;
-      for (let d = 0; d < DIM_COUNT; d++) lvMean[d] += lvBuffer[off + d];
+      return Array.from(lvBuffer.subarray(off, off + DIM_COUNT));
     });
-    const n = list.length || 1;
-    for (let d = 0; d < DIM_COUNT; d++) lvMean[d] /= n;
-    out[zone] = {
-      count: list.length,
-      lvMean: Array.from(lvMean).map((v) => Math.round(v * 1000) / 1000),
-    };
+    out[zone] = zoneAggregateEntry(vectors);
   }
   return out;
 }

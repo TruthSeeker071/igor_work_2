@@ -13,7 +13,11 @@ import {
   sanitizeSchoolName,
   normalizeSchoolKey,
   opportunityId,
+  opportunityCacheKey,
 } from '../functions/_lib/opportunity-core.js';
+import {
+  loadUpcomingDeadlines, deadlinesPromptBlock, schoolForCacheKey,
+} from '../functions/_lib/deadlines.js';
 
 let failures = 0;
 async function test(name, fn) {
@@ -233,6 +237,77 @@ await test('prompt: school scopes what may be listed; no school → open-to-anyo
   const noSchool = buildOpportunityPrompt(args);
   assert.ok(!noSchool.includes("STUDENT'S SCHOOL"), 'no school line when unset');
   assert.ok(/open to any student/i.test(noSchool), 'falls back to open-to-anyone');
+});
+
+/* ── WS-D D4: deadlines are read out of the finder's own cache ───────── */
+
+const D4_GAPS = [
+  { label: 'Complex Problem Solving', domain: 'skills', dimIndex: 12, gap: 20 },
+  { label: 'Mathematics', domain: 'skills', dimIndex: 5, gap: 14 },
+];
+const D4_ROADMAP = { targetCareerSlug: 'quant-trader', focusTracker: { skillGaps: D4_GAPS } };
+const D4_QUIZ = { school: 'UChicago', careerFocus: { soc: '13-2099' } };
+const NOW = Date.parse('2026-07-20T00:00:00Z');
+
+function fakeKv(entries) {
+  return { get: async (k, type) => (type === 'json' ? (entries[k] || null) : null) };
+}
+
+await test('deadlines: the reader and the endpoint agree on one cache key', async () => {
+  // The whole design rests on this: two callers computing the key separately
+  // is how they silently stop agreeing and the rail goes permanently empty.
+  const key = opportunityCacheKey({
+    email: 'a@b.com',
+    career: { soc: '13-2099', slug: 'quant-trader' },
+    gaps: D4_GAPS,
+    school: 'UChicago',
+  });
+  assert.equal(key, `oppfind:v2:a@b.com:13-2099:12.5:${normalizeSchoolKey('UChicago')}`);
+  const body = {
+    opportunities: [
+      { title: 'Late', deadline: '2026-12-01', url: 'https://x.test/late' },
+      { title: 'Soon', deadline: '2026-08-01', url: 'https://x.test/soon' },
+      { title: 'Undated', deadline: null },
+      { title: 'Past', deadline: '2026-01-01' },
+    ],
+  };
+  const out = await loadUpcomingDeadlines({ COACH_KV: fakeKv({ [key]: body }) }, 'a@b.com', {
+    quiz: D4_QUIZ, roadmap: D4_ROADMAP, now: NOW,
+  });
+  assert.deepEqual(out.map((d) => d.title), ['Soon', 'Late'], 'soonest first; undated and past dropped');
+  assert.equal(out[0].daysOut, 12, 'daysOut computed from the ISO date');
+});
+
+await test('deadlines: every miss is an empty list, never a thrown request', async () => {
+  assert.deepEqual(await loadUpcomingDeadlines(null, 'a@b.com', {}), [], 'no env');
+  assert.deepEqual(await loadUpcomingDeadlines({}, 'a@b.com', {}), [], 'no KV binding');
+  assert.deepEqual(
+    await loadUpcomingDeadlines({ COACH_KV: fakeKv({}) }, 'a@b.com', { quiz: D4_QUIZ, roadmap: D4_ROADMAP }),
+    [], 'cache miss (grounding off, or the panel was never opened)',
+  );
+  assert.deepEqual(
+    await loadUpcomingDeadlines({ COACH_KV: fakeKv({}) }, 'a@b.com', { quiz: D4_QUIZ, roadmap: null }),
+    [], 'no roadmap gaps → no key to look up',
+  );
+  const boom = { COACH_KV: { get: async () => { throw new Error('kv down'); } } };
+  assert.deepEqual(
+    await loadUpcomingDeadlines(boom, 'a@b.com', { quiz: D4_QUIZ, roadmap: D4_ROADMAP }),
+    [], 'a KV outage degrades to hidden, it does not break the chat',
+  );
+});
+
+await test('deadlines: the school key resolves with no I/O, profile before dossier', async () => {
+  assert.equal(schoolForCacheKey({ quiz: { school: 'UChicago' }, dossier: 'school: MIT' }), 'UChicago');
+  assert.equal(schoolForCacheKey({ quiz: {}, dossier: 'v3\nschool: MIT\n' }), 'MIT');
+  assert.equal(schoolForCacheKey({ quiz: null, dossier: '' }), '');
+});
+
+await test('deadlines: the prompt block carries dates only, and never invents one', async () => {
+  assert.equal(deadlinesPromptBlock([]), '', 'no deadlines → no block at all');
+  const block = deadlinesPromptBlock([{ title: 'Jane Street', deadline: '2026-08-01', daysOut: 12 }]);
+  assert.ok(block.includes('Jane Street (2026-08-01, closes in 12 days)'), 'title + date + countdown');
+  assert.ok(/never invent a date/i.test(block), 'invention explicitly barred');
+  assert.ok(!/https?:/.test(block), 'no URLs — Marco cites the date, not the listing');
 });
 
 if (failures) {

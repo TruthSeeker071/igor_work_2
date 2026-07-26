@@ -6,13 +6,41 @@
  */
 (function (global) {
   // Site areas — append here to surface new features on the home page.
+  //
+  // S7 (IA flip, D2): ordered development-first. The four cards a student opens
+  // to MOVE — roadmap, this week's plan, Marco, resume — come before the two
+  // discovery cards (Explore, Sharpen) and the switch advisor. The order is the
+  // product's claim about what Home is for, so it is deliberate, not incidental.
   const AREAS = [
     {
-      key: 'hub',
-      label: 'Career Hub',
-      desc: 'Explore your matched careers and AI deep dives.',
-      icon: 'compass',
-      go: function () { location.href = (global.FWPageBoot && FWPageBoot.URLS.hub) || 'dashboard.html'; },
+      key: 'roadmap',
+      label: 'Career Roadmap',
+      desc: 'Step-by-step plan for your target career.',
+      icon: 'map',
+      go: function () { goRoadmap(); },
+    },
+    {
+      key: 'plan',
+      label: 'Flight Plan',
+      desc: 'This week’s tasks, your deadlines, and the tools to act on them.',
+      icon: 'plane-takeoff',
+      go: function () { location.href = 'flightplan.html'; },
+    },
+    {
+      key: 'advisor',
+      label: 'Marco',
+      desc: 'He has read your profile. Ask him the questions you actually have.',
+      icon: 'message-circle',
+      go: function () {
+        location.href = ((global.FWPageBoot && FWPageBoot.URLS.coach) || 'coach.html');
+      },
+    },
+    {
+      key: 'resume',
+      label: 'Resume Builder',
+      desc: 'Build a recruiter-ready resume from your real experience.',
+      icon: 'file-text',
+      go: function () { location.href = 'resume.html'; },
     },
     {
       key: 'profile-build',
@@ -24,12 +52,13 @@
         location.href = (global.FWPageBoot && FWPageBoot.URLS.profile) || 'profile-build.html';
       },
     },
+    // ── discovery block ──
     {
-      key: 'resume',
-      label: 'Resume Builder',
-      desc: 'Build a recruiter-ready resume from your real experience.',
-      icon: 'file-text',
-      go: function () { location.href = 'resume.html'; },
+      key: 'hub',
+      label: 'Explore careers',
+      desc: 'The map of real careers, scored against you — plus AI deep dives.',
+      icon: 'compass',
+      go: function () { location.href = (global.FWPageBoot && FWPageBoot.URLS.hub) || 'dashboard.html'; },
     },
     {
       key: 'refine',
@@ -51,22 +80,6 @@
           if (input) input.focus();
         }
       },
-    },
-    {
-      key: 'advisor',
-      label: 'Marco',
-      desc: 'Chat with Marco, your AI advisor who knows your profile.',
-      icon: 'message-circle',
-      go: function () {
-        location.href = ((global.FWPageBoot && FWPageBoot.URLS.coach) || 'coach.html');
-      },
-    },
-    {
-      key: 'roadmap',
-      label: 'Career Roadmap',
-      desc: 'Step-by-step plan for your target career.',
-      icon: 'map',
-      go: function () { goRoadmap(); },
     },
   ];
 
@@ -250,8 +263,8 @@
       '<div class="portal-greeting-row">'
       + '<div>'
       + '<div class="portal-eyebrow">Your FlightWay home</div>'
-      + '<h1 class="portal-title">Hey ' + esc(name) + '</h1>'
-      + '<p class="portal-email">Built from your quiz answers &middot; <a href="quiz.html" class="portal-retake">retake quiz</a>' + (email ? ' &middot; ' + esc(email) : '') + '</p>'
+      + '<h1 class="portal-title">Welcome back, ' + esc(name) + '.</h1>'
+      + (email ? '<p class="portal-email">' + esc(email) + '</p>' : '')
       + '</div>'
       + '</div>'
       + (showPbCta
@@ -314,7 +327,13 @@
       + '<p class="portal-onboard-title"><strong>Your setup checklist</strong></p>'
       + '<ol class="portal-onboard-steps">' + steps.map(function (s) {
         return '<li class="portal-onboard-step' + (s.done ? ' is-done' : '') + '">'
+          // The ✓/○ is decorative (P2-d: a typographic marker, not a control),
+          // so it is aria-hidden — which left the per-step state carried only by
+          // a glyph and a class. A screen reader heard the labels with no way to
+          // tell done from pending. The banner's "Next:" line names one step; it
+          // does not describe the other four.
           + '<span class="portal-onboard-check" aria-hidden="true">' + (s.done ? '✓' : '○') + '</span>'
+          + '<span class="fw-vh">' + (s.done ? 'Done: ' : 'Not done: ') + '</span>'
           + esc(s.label) + '</li>';
       }).join('') + '</ol>'
       + '<p class="portal-prompt-banner-text">Next: <strong>' + esc(next.label) + '</strong>'
@@ -331,7 +350,7 @@
         : next.key === 'profile' ? 'Get started'
           : next.key === 'academics' ? 'Add academics'
             : 'Continue') + '</button>'
-      + '<button type="button" class="portal-prompt-dismiss" id="portal-pb-banner-dismiss" aria-label="Dismiss">✕</button>'
+      + '<button type="button" class="portal-prompt-dismiss" id="portal-pb-banner-dismiss" aria-label="Dismiss">' + lucide.svg('x') + '</button>'
       + '</div></div>';
     var cta = wrap.querySelector('#portal-onboard-cta');
     var dismiss = wrap.querySelector('#portal-pb-banner-dismiss');
@@ -612,7 +631,7 @@
       + '<aside id="portal-profile-drawer" class="portal-profile-drawer" role="dialog" aria-modal="true" aria-labelledby="portal-profile-drawer-title" hidden>'
       + '<header class="portal-profile-drawer-head">'
       + '<h2 id="portal-profile-drawer-title" class="portal-profile-drawer-title">Your profile</h2>'
-      + '<button type="button" class="portal-profile-drawer-close" id="portal-profile-drawer-close" aria-label="Close profile">✕</button>'
+      + '<button type="button" class="portal-profile-drawer-close" id="portal-profile-drawer-close" aria-label="Close profile">' + lucide.svg('x') + '</button>'
       + '</header>'
       + '<div class="portal-profile-drawer-body" id="portal-profile-drawer-body"></div>'
       + '</aside>';
@@ -759,7 +778,10 @@
       + '<div class="portal-drawer-section portal-drawer-section--sectors" role="region" aria-labelledby="portal-drawer-sector-title">'
       + '<div class="portal-drawer-card">'
       + '<h3 id="portal-drawer-sector-title" class="portal-drawer-section-title">Career Hub sector fit</h3>'
-      + '<p class="portal-drawer-section-sub">Fit across Career Hub sectors — overall fit from your personality and objective vectors.</p>'
+      // The sheet only lists sectors scoring above 0 — rare now, but a strongly
+      // specialised profile still truncates, and a panel titled "fit across
+      // sectors" showing two of ten reads broken unless it says why.
+      + '<p class="portal-drawer-section-sub">How the way you like to work lines up with each Career Hub sector. Sectors that score 0% aren\'t listed.</p>'
       + '<div class="portal-drawer-card-body" id="portal-hub-zone-fit">'
       + initialZoneFitHtml()
       + '</div></div></div>'
@@ -968,7 +990,10 @@
     wrap.innerHTML =
       '<div class="portal-panel portal-empty">'
       + '<h2 class="portal-panel-title">Unlock your profile</h2>'
-      + '<p class="portal-empty-text">Take the ~90 second career quiz to reveal your top industries, skills, and best-fit careers.</p>'
+      + '<p class="portal-empty-text">The ~90 second quiz scores every real career against how you actually like to work. '
+      + 'Everything else here — your map, your roadmap, what Marco says — is built on those answers.</p>'
+      + '<p class="portal-empty-hint">Answer for the person you are now, not the one you think a job wants. '
+      + 'Nothing is locked in; every later step re-scores it.</p>'
       + '<button type="button" class="cta-btn portal-empty-cta" id="portal-empty-quiz-cta">Take the quiz &rarr;</button>'
       + '</div>';
     const cta = wrap.querySelector('#portal-empty-quiz-cta');
@@ -978,7 +1003,6 @@
   function reinjectPortalActionExtras() {
     // renderActions wipes #portal-actions; re-mount FW2 inject cards that live there.
     try { if (global.FWSimPortalCard && typeof FWSimPortalCard.inject === 'function') FWSimPortalCard.inject(); } catch (_) {}
-    try { if (global.FWResumeBuilder && typeof FWResumeBuilder.inject === 'function') FWResumeBuilder.inject(); } catch (_) {}
   }
 
   function renderActions(wrap) {
@@ -1201,8 +1225,6 @@
     var doom = document.getElementById('portal-doom-btn');
     if (doom && !doom._fwBound) {
       doom._fwBound = true;
-      doom.addEventListener('mouseenter', function () { doom.style.background = '#f9d6d1'; });
-      doom.addEventListener('mouseleave', function () { doom.style.background = '#fdecea'; });
       doom.addEventListener('click', function () {
         var ok = window.confirm(
           'Delete your account?\n\nThis permanently erases your profile, roadmap, quiz results, '
@@ -1211,7 +1233,6 @@
         if (!ok) return;
         if (global.FWButtonBusy) FWButtonBusy.start(doom, { label: 'Purging your account…' });
         else { doom.disabled = true; doom.textContent = 'Purging your account…'; }
-        doom.style.opacity = '0.7';
         var finish = function () {
           try { localStorage.clear(); } catch (_) { /* ignore */ }
           try { sessionStorage.clear(); } catch (_) { /* ignore */ }

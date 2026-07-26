@@ -9,6 +9,7 @@ import { COORDINATES_BLOCK_RE, loadDossier } from '../_lib.js';
 import { loadRoadmap } from './auth.js';
 import { loadUser } from './user.js';
 import { normalizeUser } from './user-model.js';
+import { collectCommitments, recentCompletion, PROMPT_COMMITMENT_LIMIT } from './commitments.js';
 
 const pct = (v) => Math.round(Math.max(0, Math.min(100, Number(v) || 0)));
 
@@ -55,6 +56,27 @@ export function buildCoordinateLines(quiz, roadmap) {
   }
   // archetype has no v2 home; the model passes unknown root keys through.
   if (user.archetype) lines.push(`quiz archetype: ${String(user.archetype).slice(0, 60)}`);
+
+  // S10 follow-through memory. Every AI surface that reads the dossier now sees
+  // what this student PROMISED, not just what they are capable of — which is
+  // the difference between a coach who knows you and one who knows about you.
+  // Lives here rather than in each surface for the same reason the vectors do:
+  // one composition point, regenerated per request, impossible to go stale.
+  const commitments = collectCommitments(roadmap);
+  if (commitments.length) {
+    lines.push('open commitments (dates THEY chose on their own roadmap steps):');
+    commitments.slice(0, PROMPT_COMMITMENT_LIMIT).forEach((c) => {
+      const when = c.daysOut == null ? c.dueAt
+        : c.daysOut < 0 ? `${c.dueAt}, ${Math.abs(c.daysOut)}d OVERDUE`
+          : c.daysOut === 0 ? `${c.dueAt}, due TODAY`
+            : `${c.dueAt}, in ${c.daysOut}d`;
+      lines.push(`- ${c.text} (${when})${c.dueMoves ? ` [moved ${c.dueMoves}x]` : ''}`);
+    });
+  }
+  const completion = recentCompletion(roadmap);
+  if (completion.total) {
+    lines.push(`last ${completion.windowDays} days: ${completion.done}/${completion.total} dated steps completed`);
+  }
   return lines;
 }
 

@@ -1,6 +1,6 @@
 /* Skill Gap Tracker v0 */
 .sgt-eyebrow {
-  font-size: 0.8125rem;
+  font-size: 0.78rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -9,13 +9,13 @@
 }
 .sgt-home-sub,
 .sgt-focus-why {
-  font-size: 0.875rem;
+  font-size: 0.92rem;
   color: var(--text-secondary);
   margin: 0 0 14px;
   line-height: 1.5;
 }
 .sgt-empty {
-  font-size: 0.875rem;
+  font-size: 0.92rem;
   color: var(--text-secondary);
   margin: 0;
 }
@@ -28,7 +28,7 @@
 .sgt-gap {
   padding: 14px 16px;
   border: 1px solid var(--border-light);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--surface-solid);
   box-shadow: var(--shadow-sm);
 }
@@ -41,11 +41,11 @@
 }
 .sgt-gap-label {
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.95rem;
   color: var(--text-solid);
 }
 .sgt-gap-status {
-  font-size: 0.6875rem;
+  font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -80,13 +80,13 @@
   height: 100%;
   border-radius: 999px;
   background: rgb(var(--primary));
-  transition: width 0.3s ease;
+  transition: width 0.25s ease;
 }
 [data-theme="dark"] .sgt-bar {
   box-shadow: 0 0 8px rgb(var(--primary) / 0.45);
 }
 .sgt-gap-meta {
-  font-size: 0.8125rem;
+  font-size: 0.78rem;
   color: var(--text-tertiary);
   margin-top: 8px;
 }
@@ -94,7 +94,7 @@
   margin: 10px 0 0;
   padding-left: 0;
   list-style: none;
-  font-size: 0.8125rem;
+  font-size: 0.82rem;
   color: var(--text-secondary);
 }
 .sgt-log-item {
@@ -118,7 +118,7 @@
 .sgt-log-weight {
   flex-shrink: 0;
   display: inline-block;
-  font-size: 0.6875rem;
+  font-size: 0.7rem;
   font-weight: 700;
   padding: 1px 7px;
   border-radius: 999px;
@@ -141,7 +141,7 @@
   cursor: pointer;
   opacity: 0;
   border-radius: 6px;
-  transition: opacity 0.18s ease, color 0.18s ease;
+  transition: opacity 0.15s ease, color 0.15s ease;
 }
 .sgt-log-promote {
   flex-shrink: 0;
@@ -155,7 +155,7 @@
   cursor: pointer;
   opacity: 0;
   border-radius: 6px;
-  transition: opacity 0.18s ease, color 0.18s ease;
+  transition: opacity 0.15s ease, color 0.15s ease;
 }
 .sgt-log-item:hover .sgt-log-remove,
 .sgt-log-item:focus-within .sgt-log-remove,
@@ -183,7 +183,7 @@
   justify-content: center;
   background: rgb(var(--bg) / 0.88);
   z-index: 4;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: var(--text-secondary);
   border-radius: inherit;
@@ -203,7 +203,7 @@
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  font-size: 0.875rem;
+  font-size: 0.9rem;
   cursor: pointer;
 }
 .sgt-step input:disabled + span {
@@ -218,7 +218,7 @@
     border-radius: 999px;
     border: 1px solid var(--border-light);
     background: var(--surface-solid);
-    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease;
   }
   .sgt-step label:hover,
   .sgt-step--gap-only label:hover {
@@ -253,7 +253,7 @@
     opacity: 0;
     width: 0;
     margin-right: 0;
-    transition: transform 0.18s ease, opacity 0.18s ease, width 0.18s ease, margin-right 0.18s ease;
+    transition: transform 0.2s ease, opacity 0.2s ease, width 0.2s ease, margin-right 0.2s ease;
   }
   .sgt-step label:has(input:checked) .sgt-step-tick,
   .sgt-step--gap-only label:has(input:checked) .sgt-step-tick {
@@ -302,7 +302,7 @@
   display: none;
 }
 .sgt-log-preset {
-  font-size: 0.8125rem;
+  font-size: 0.78rem;
   padding: 6px 10px;
   border-radius: 999px;
   border: 1px solid var(--border-light);
@@ -318,16 +318,16 @@
   flex: 1 1 140px;
   min-width: 120px;
   padding: 8px 10px;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 1px solid var(--border-light);
   background: var(--surface-solid);
   color: var(--text-solid);
-  font-size: 0.875rem;
+  font-size: 0.85rem;
 }
 .sgt-log-add {
-  font-size: 0.8125rem;
+  font-size: 0.82rem;
   padding: 8px 12px;
-  border-radius: 10px;
+  border-radius: 8px;
   border: none;
   background: rgb(var(--primary));
   color: rgb(var(--primary-fg, 255 255 255));
@@ -343,7 +343,7 @@
   min-height: 44px;
 }
 .sgt-home-branch-note {
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   color: var(--text-secondary);
   margin: 8px 0 12px;
   padding: 10px 12px;
@@ -356,7 +356,7 @@
   color: var(--text-solid);
 }
 .sgt-section-title {
-  font-size: 0.8125rem;
+  font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -371,7 +371,7 @@
 }
 .sgt-log-gap-label {
   display: block;
-  font-size: 0.8125rem;
+  font-size: 0.82rem;
   font-weight: 600;
   margin-bottom: 6px;
   color: var(--text-solid);
@@ -393,7 +393,7 @@
   background: transparent;
   color: var(--text-secondary);
   font-family: inherit;
-  font-size: 0.8125rem;
+  font-size: 0.82rem;
   font-weight: 600;
   padding: 6px 14px;
   border-radius: 999px;
@@ -416,7 +416,7 @@
   color: var(--text-solid);
 }
 .sgt-focus-target {
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   color: var(--text-tertiary);
   margin: 0 0 14px;
 }
@@ -431,20 +431,20 @@
   border: none;
   background: none;
   color: rgb(var(--primary));
-  font-size: 0.875rem;
+  font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
   padding: 0;
   margin-bottom: 12px;
 }
 .roadmap-hud-sub {
-  font-size: 0.8125rem;
+  font-size: 0.82rem;
   color: var(--text-secondary);
   margin: 2px 0 8px;
 }
 .fit-gaps-track {
   margin: 8px 0 0;
-  font-size: 0.875rem;
+  font-size: 0.85rem;
 }
 .fit-gaps-track a {
   color: rgb(var(--primary));
@@ -469,7 +469,7 @@
   justify-content: center;
   background: rgb(var(--bg) / 0.88);
   z-index: 4;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: var(--text-secondary);
 }
@@ -520,7 +520,7 @@
   margin-bottom: 0;
 }
 .sgt-focus-col--steps .sgt-step label {
-  font-size: 1rem;
+  font-size: 1.02rem;
   gap: 10px;
   line-height: 1.4;
 }
@@ -532,7 +532,7 @@
 }
 .sgt-focus-col--steps .sgt-step-gap {
   margin-left: 30px;
-  font-size: 0.8125rem;
+  font-size: 0.8rem;
 }
 
 /* Step "kind" chips — small rounded tag before the step text, tinted per kind.
@@ -541,7 +541,7 @@
 .sgt-step-kind {
   display: inline-block;
   flex-shrink: 0;
-  font-size: 0.6875rem;
+  font-size: 0.66rem;
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
@@ -637,7 +637,7 @@
 .sgt-gap-row-label {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 0.875rem;
+  font-size: 0.86rem;
   font-weight: 600;
   color: var(--text-solid);
   white-space: nowrap;
@@ -652,7 +652,7 @@
 }
 .sgt-gap-row-pct {
   flex: 0 0 auto;
-  font-size: 0.75rem;
+  font-size: 0.74rem;
   font-variant-numeric: tabular-nums;
   color: var(--text-tertiary);
 }
@@ -661,9 +661,9 @@
 }
 .sgt-gap-chevron {
   flex: 0 0 auto;
-  font-size: 0.6875rem;
+  font-size: 0.7rem;
   color: var(--text-tertiary);
-  transition: transform 0.18s ease;
+  transition: transform 0.15s ease;
 }
 .sgt-gap-row--open .sgt-gap-chevron {
   transform: rotate(-180deg);
@@ -681,7 +681,7 @@
   border-radius: 10px;
   background: rgba(234, 179, 8, 0.12);
   color: var(--text-secondary);
-  font-size: 0.875rem;
+  font-size: 0.88rem;
   margin-bottom: 12px;
 }
 [data-theme="dark"] .sgt-gap {
@@ -696,7 +696,7 @@
 }
 .sgt-gap-domain {
   display: inline-block;
-  font-size: 0.6875rem;
+  font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -724,7 +724,7 @@
 }
 .sgt-cmp-tag {
   flex: 0 0 44px;
-  font-size: 0.6875rem;
+  font-size: 0.72rem;
   font-weight: 700;
   color: var(--text-secondary);
 }
@@ -749,7 +749,7 @@
 .sgt-cmp-val {
   flex: 0 0 28px;
   text-align: right;
-  font-size: 0.75rem;
+  font-size: 0.76rem;
   font-variant-numeric: tabular-nums;
   color: var(--text-secondary);
 }
@@ -765,7 +765,7 @@
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  font-size: 0.875rem;
+  font-size: 0.88rem;
   line-height: 1.4;
   cursor: pointer;
   color: var(--text-solid);
@@ -785,7 +785,7 @@
   margin-top: 12px;
   padding-top: 10px;
   border-top: 1px dashed var(--border-light);
-  font-size: 0.8125rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: var(--text-secondary);
   cursor: pointer;
@@ -807,18 +807,18 @@
   gap: 8px;
 }
 .sgt-log-field-label {
-  font-size: 0.8125rem;
+  font-size: 0.78rem;
   font-weight: 600;
   color: var(--text-secondary);
 }
 .sgt-log-gap-select {
   width: 100%;
   padding: 8px 10px;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 1px solid var(--border-light);
   background: var(--surface-solid);
   color: var(--text-solid);
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   font-family: inherit;
 }
 .sgt-log-input-row {
@@ -844,7 +844,7 @@
   -webkit-backdrop-filter: blur(3px);
 }
 .sgt-confirm-overlay[hidden] {
-  display: none; /* attribute selector already outranks the base rule */
+  display: none !important;
 }
 .sgt-confirm-modal {
   width: min(400px, 100%);
@@ -856,13 +856,13 @@
 }
 .sgt-confirm-title {
   margin: 0 0 10px;
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--text-solid);
 }
 .sgt-confirm-body {
   margin: 0 0 18px;
-  font-size: 0.875rem;
+  font-size: 0.92rem;
   line-height: 1.55;
   color: var(--text-secondary);
 }
@@ -886,19 +886,19 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  font-size: 0.875rem;
+  font-size: 0.86rem;
   color: var(--text-secondary);
   padding: 14px 16px;
   border: 1px solid var(--border-light);
-  border-radius: 12px;
+  border-radius: 14px;
   background: rgb(var(--surface-2) / 0.5);
 }
 .sgt-plan-skeleton-copy { margin: 0 0 2px; }
 /* Size only — .fw-skeleton (flightway-theme.css) supplies the shimmer. */
-.sgt-plan-skel-line { display: block; height: 12px; width: 100%; border-radius: 6px; }
+.sgt-plan-skel-line { display: block; height: 12px; width: 100%; border-radius: 4px; }
 .sgt-plan-skel-line--short { width: 62%; }
 .sgt-plan-error {
-  font-size: 0.875rem;
+  font-size: 0.86rem;
   color: var(--text-tertiary);
   margin: 0;
   padding: 10px 2px;
@@ -915,7 +915,7 @@
 }
 
 .sgt-plan-overview {
-  font-size: 1rem;
+  font-size: 1.02rem;
   line-height: 1.55;
   color: var(--text-secondary);
   margin: 0 0 20px;
@@ -955,7 +955,7 @@
   margin-bottom: 6px;
 }
 .sgt-plan-phase-weeks {
-  font-size: 0.6875rem;
+  font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -967,12 +967,12 @@
 }
 .sgt-plan-phase-title {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.98rem;
   font-weight: 700;
   color: var(--text-solid);
 }
 .sgt-plan-phase-focus {
-  font-size: 0.8125rem;
+  font-size: 0.82rem;
   color: var(--text-secondary);
   margin: 0 0 12px;
   line-height: 1.45;
@@ -1000,13 +1000,13 @@
   flex-wrap: wrap;
 }
 .sgt-plan-item-text {
-  font-size: 0.875rem;
+  font-size: 0.86rem;
   color: var(--text-solid);
   line-height: 1.4;
 }
 .sgt-plan-item-how {
   margin: 4px 0 0;
-  font-size: 0.75rem;
+  font-size: 0.76rem;
   color: var(--text-tertiary);
   line-height: 1.4;
 }
@@ -1016,7 +1016,7 @@
   background: none;
   border: none;
   padding: 0;
-  font-size: 0.75rem;
+  font-size: 0.74rem;
   font-weight: 600;
   color: rgb(var(--primary));
   cursor: pointer;
@@ -1029,7 +1029,7 @@
   animation: sgt-step-flash 1.2s ease;
 }
 @keyframes sgt-step-flash {
-  0% { background: rgb(var(--primary) / 0.18); border-radius: 10px; }
+  0% { background: rgb(var(--primary) / 0.18); border-radius: 8px; }
   100% { background: transparent; }
 }
 
@@ -1040,7 +1040,7 @@
   margin-bottom: 18px;
 }
 .sgt-plan-cadence-pill {
-  font-size: 0.8125rem;
+  font-size: 0.78rem;
   color: var(--text-secondary);
   background: rgb(var(--surface-2));
   border: 1px solid var(--border-light);
@@ -1050,14 +1050,14 @@
 
 .sgt-plan-protocol {
   padding: 14px 18px;
-  border-radius: 12px;
+  border-radius: 14px;
   border: 1px solid rgb(var(--primary) / 0.25);
   background: rgb(var(--primary) / 0.06);
   margin-bottom: 18px;
 }
 .sgt-plan-protocol-label {
   margin: 0 0 4px;
-  font-size: 0.6875rem;
+  font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -1065,7 +1065,7 @@
 }
 .sgt-plan-protocol-text {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: 0.88rem;
   line-height: 1.5;
   color: var(--text-solid);
 }
@@ -1088,7 +1088,7 @@
 }
 .sgt-plan-target-label {
   margin: 0 0 4px;
-  font-size: 0.6875rem;
+  font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -1099,7 +1099,7 @@
 }
 .sgt-plan-target-text {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: 0.86rem;
   line-height: 1.45;
   color: var(--text-solid);
 }
@@ -1126,7 +1126,7 @@
   background: none;
   border: none;
   padding: 0;
-  font-size: 0.75rem;
+  font-size: 0.74rem;
   font-weight: 600;
   color: rgb(var(--primary));
   cursor: pointer;
@@ -1145,17 +1145,17 @@
 }
 .sgt-elab-text,
 .sgt-elab-a {
-  font-size: 0.8125rem;
+  font-size: 0.82rem;
   line-height: 1.55;
   margin: 0 0 8px;
 }
 .sgt-elab-q {
-  font-size: 0.8125rem;
+  font-size: 0.8rem;
   font-weight: 600;
   margin: 8px 0 4px;
 }
 .sgt-elab-loading {
-  font-size: 0.8125rem;
+  font-size: 0.8rem;
   opacity: 0.7;
   margin: 0;
 }
@@ -1168,19 +1168,19 @@
   flex: 1;
   min-width: 0;
   font: inherit;
-  font-size: 0.8125rem;
+  font-size: 0.8rem;
   padding: 7px 10px;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 1px solid var(--border-strong, rgb(var(--border)));
   background: rgb(var(--surface));
   color: inherit;
 }
 .sgt-elab-send {
   font: inherit;
-  font-size: 0.8125rem;
+  font-size: 0.78rem;
   font-weight: 600;
   padding: 7px 14px;
-  border-radius: 10px;
+  border-radius: 8px;
   border: none;
   background: rgb(var(--primary));
   color: #fff;
@@ -1192,7 +1192,7 @@
 .sgt-marco {
   margin-top: 26px;
   padding: 16px 18px;
-  border-radius: 12px;
+  border-radius: 14px;
   border: 1px solid var(--border-light);
   background: rgba(var(--text), 0.02);
 }
@@ -1201,7 +1201,7 @@
   background: rgba(255, 255, 255, 0.03);
 }
 .sgt-marco-hint {
-  font-size: 0.8125rem;
+  font-size: 0.78rem;
   opacity: 0.75;
   margin: 2px 0 10px;
 }
@@ -1218,7 +1218,7 @@
   margin: 0;
   padding: 8px 12px;
   border-radius: 12px;
-  font-size: 0.8125rem;
+  font-size: 0.82rem;
   line-height: 1.5;
   max-width: 85%;
 }
@@ -1242,7 +1242,7 @@
   flex: 1;
   min-width: 0;
   font: inherit;
-  font-size: 0.8125rem;
+  font-size: 0.82rem;
   padding: 9px 12px;
   border-radius: 10px;
   border: 1px solid var(--border-strong, rgb(var(--border)));
@@ -1251,7 +1251,7 @@
 }
 .sgt-marco-send {
   font: inherit;
-  font-size: 0.8125rem;
+  font-size: 0.8rem;
   font-weight: 600;
   padding: 9px 18px;
   border-radius: 10px;
@@ -1270,7 +1270,7 @@
 }
 .sgt-gaps-hint {
   margin: -4px 0 10px;
-  font-size: 0.8125rem;
+  font-size: 0.8rem;
   color: var(--text-tertiary);
 }
 .sgt-gap-meter {
@@ -1287,13 +1287,13 @@
   margin-bottom: 8px;
 }
 .sgt-gap-meter-label {
-  font-size: 0.875rem;
+  font-size: 0.86rem;
   font-weight: 600;
   color: var(--text);
 }
 .sgt-gap-meter-status {
   flex: 0 0 auto;
-  font-size: 0.6875rem;
+  font-size: 0.72rem;
   font-weight: 700;
   color: var(--text-tertiary);
   text-transform: uppercase;

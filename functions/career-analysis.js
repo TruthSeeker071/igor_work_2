@@ -37,24 +37,35 @@ import {
   loadCareerAnalysis,
   ANALYSIS_FRESH_MS,
   checkRateLimit,
+  hashedIpKey,
   RATE_LIMIT_ANALYSIS_MAX,
 } from './_lib/auth.js';
 import {
   isExplicitCareerPivotIntent,
   resolveCareerTargetFromMessage,
 } from './_lib/roadmap.js';
-import {
-  maybeSyncRoadmap,
-  recordCareerFocus,
-} from './_lib/roadmap-sync.js';
+import { recordCareerFocus } from './_lib/roadmap-sync.js';
+import { checkFeatureLimit } from './_lib/plan-limits.js';
 import { maybePatchSectorFitForUser } from './_lib/sector-fit-sheet.js';
 import { maybePatchObjectiveForUser } from './_lib/onet/objective-patch.js';
 import { assertSingleCareerAiRequest } from './_lib/onet/guardrails.js';
 import { buildProfileSignalsBlock } from './_lib/profile-alignment.js';
+import { logServerError } from './_lib/events.js';
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const MAX_SLUG_LEN = 64;
 const MAX_NAME_LEN = 120;
+
+/**
+ * Anonymous analysis is metered by IP, and this product's users are students —
+ * a dorm, campus or library NAT can put hundreds of legitimate visitors behind
+ * one address. RATE_LIMIT_ANALYSIS_MAX (20/hr) is the right ceiling for a single
+ * account but would throttle a whole shared network, so the anonymous bucket
+ * gets more headroom. It still caps one address at 60 generations/hour against
+ * today's unbounded, which is the point — an IP limit is a cost brake, not a
+ * wall, and anything stricter breaks the pre-signup browse this path exists for.
+ */
+const RATE_LIMIT_ANALYSIS_ANON_MAX = 60;
 const MAX_DOSSIER_LEN = 2800;
 const MAX_MSG_LEN = 600;
 const MAX_HISTORY = 8;
@@ -291,7 +302,7 @@ function careerCacheKey(kind, careerName) {
   return `gw:ca:${kind}:${String(careerName || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 80)}`;
 }
 
-async function governedCareerFetch(env, { kind, careerName, ttlSeconds, liveFetch, fallback }) {
+async function governedCareerFetch(env, { kind, careerName, ttlSeconds, liveFetch, fallback, budgetKey }) {
   const key = careerCacheKey(kind, careerName);
   if (env.COACH_KV) {
     try {
@@ -299,8 +310,13 @@ async function governedCareerFetch(env, { kind, careerName, ttlSeconds, liveFetc
       if (cached && cached.v !== undefined) return cached.v;
     } catch (_) { /* miss */ }
   }
-  if (await groundingBudgetAllows(env)) {
-    await groundingBudgetSpend(env);
+  // budgetKey is load-bearing: without it budgetAllows() checks only the GLOBAL
+  // daily cap, so one caller could drain the grounded-search budget that every
+  // paying user shares. The KV cache above is no defence — its key derives from
+  // careerName, which is caller-supplied free text, so varying the name misses
+  // the cache every time and spends a live search per request.
+  if (await groundingBudgetAllows(env, budgetKey)) {
+    await groundingBudgetSpend(env, budgetKey);
     const live = await liveFetch();
     if (live != null) {
       if (env.COACH_KV) {
@@ -312,7 +328,7 @@ async function governedCareerFetch(env, { kind, careerName, ttlSeconds, liveFetc
   return fallback();
 }
 
-async function fetchCareerWebContext(env, careerName, onetProfile) {
+async function fetchCareerWebContext(env, careerName, onetProfile, budgetKey) {
   const profileBlock = onetProfile && typeof onetProfile === 'object'
     ? `O*NET profile (levels 0–7):\n${JSON.stringify(onetProfile)}`
     : '';
@@ -339,13 +355,13 @@ Return ONLY JSON: {"summary":"plain text, max 800 chars, no markdown"}`;
   };
   if (groundingEnabled(env)) {
     return governedCareerFetch(env, {
-      kind: 'context', careerName, ttlSeconds: 14 * 24 * 3600, liveFetch, fallback: async () => null,
+      kind: 'context', careerName, ttlSeconds: 14 * 24 * 3600, liveFetch, fallback: async () => null, budgetKey,
     });
   }
   return liveFetch();
 }
 
-async function fetchCareerMetrics(env, careerName) {
+async function fetchCareerMetrics(env, careerName, budgetKey) {
   const metricsPrompt = `US labor stats for "${careerName}". Return ONLY JSON:
 {"entrySalary":"$Xk","midSalary":"$Xk","seniorSalary":"$Xk+","jobGrowth":"+X%","jobGrowthLabel":"short label","aiAutomationPercent":1-100}
 Use BLS/O*NET when possible. One value per field — never use "|" or "or N/A". Estimate if needed.`;
@@ -380,7 +396,7 @@ Use BLS/O*NET when possible. One value per field — never use "|" or "or N/A". 
   };
   if (groundingEnabled(env)) {
     return governedCareerFetch(env, {
-      kind: 'metrics', careerName, ttlSeconds: 7 * 24 * 3600, liveFetch, fallback: parametricFallback,
+      kind: 'metrics', careerName, ttlSeconds: 7 * 24 * 3600, liveFetch, fallback: parametricFallback, budgetKey,
     });
   }
   const live = await liveFetch();
@@ -976,6 +992,9 @@ export async function onRequest(context) {
       let reset = false;
       let roadmapRetargeted = false;
       let focusUpdated = false;
+      let roadmapBuild = null;
+      let roadmapCapped = false;
+      let roadmapCapMessage = '';
 
       if (isExplicitCareerPivotIntent(userMessage)) {
         try {
@@ -993,16 +1012,23 @@ export async function onRequest(context) {
               soc: target.soc || null,
             });
             focusUpdated = true;
-            const syncResult = await maybeSyncRoadmap(env, sessionEmail, {
-              reason: 'deep_dive_pivot',
-              userPivotNote: userMessage,
-            });
-            if (syncResult?.roadmap && !syncResult.cached) {
-              roadmapRetargeted = !!syncResult.retargeted;
+            // §4/§5 (option C): the pivot always switches the focus (above). The
+            // REBUILD is handed to the same client wizard the primary build uses —
+            // roadmap.html auto-launches the clarifying questions then the metered
+            // action:'generate' — rather than silently regenerating server-side for
+            // free (the leak this closes). Peek the one-roadmap allowance so a capped
+            // user is told here and keeps their initial-career roadmap, instead of
+            // answering the wizard only to hit the cap at generate.
+            const cap = await checkFeatureLimit(env, sessionEmail, 'roadmap-generate', { spend: false });
+            if (cap.ok) {
+              roadmapBuild = { slug: target.slug, name: target.name };
+            } else {
+              roadmapCapped = true;
+              roadmapCapMessage = `I've set ${target.name} as your target, but rebuilding your full roadmap is a Flight Plan feature — your roadmap still reflects your previous target. Upgrade to rebuild it around ${target.name}.`;
             }
           }
         } catch (pivotErr) {
-          console.warn('deep-dive career pivot sync failed', pivotErr);
+          console.warn('deep-dive career pivot handoff failed', pivotErr);
         }
       }
 
@@ -1058,6 +1084,9 @@ export async function onRequest(context) {
         personalized: true,
         roadmapRetargeted,
         focusUpdated,
+        roadmapBuild: roadmapBuild || undefined,
+        roadmapCapped: roadmapCapped || undefined,
+        roadmapCapMessage: roadmapCapMessage || undefined,
         sectorFitSheet: sectorPatch?.sectorFitSheet || undefined,
         sectorFitUpdated: !!(sectorPatch && sectorPatch.changed),
         personalityVector: sectorPatch?.personalityVector || undefined,
@@ -1078,9 +1107,27 @@ export async function onRequest(context) {
       }
     }
 
-    if (sessionEmail) {
-      await checkRateLimit(env, `career-analysis:${sessionEmail}`, { max: RATE_LIMIT_ANALYSIS_MAX });
-    }
+    // Anonymous analysis is a real product path — a visitor reads a career page
+    // before they ever sign up — so this cannot require a session. But it reaches
+    // Gemini AND the shared grounding budget, so skipping the meter for anonymous
+    // callers (as this did) left an unauthenticated, unmetered LLM endpoint on the
+    // live site: four concurrent no-cookie POSTs to flightway.ai all returned 200
+    // with distinct generations and no 429.
+    //
+    // Meter everyone. Signed-in callers keep their per-account bucket; everyone
+    // else is keyed by IP, the same way resume-parse.js meters its anonymous path.
+    // Keyed by IP rather than a shared "anonymous" bucket on purpose — one bucket
+    // for all anonymous traffic would let a single abuser lock out every logged-out
+    // visitor on the site.
+    // Peppered hash of the IP, computed once and reused for both the anonymous
+    // rate-limit bucket and the anonymous grounding-budget key below — so an
+    // anonymous caller is metered per-IP without the IP ever landing in KV.
+    const anonIpKey = sessionEmail ? '' : await hashedIpKey(env, request);
+    await checkRateLimit(
+      env,
+      sessionEmail ? `career-analysis:${sessionEmail}` : `career-analysis-ip:${anonIpKey}`,
+      { max: sessionEmail ? RATE_LIMIT_ANALYSIS_MAX : RATE_LIMIT_ANALYSIS_ANON_MAX },
+    );
 
     const needsWebMetrics = !resolvedStaticMetrics
       || ['entrySalary', 'midSalary', 'seniorSalary', 'jobGrowth'].some(
@@ -1126,12 +1173,15 @@ export async function onRequest(context) {
     // best-effort enrichment — run them concurrently, each capped with a
     // soft timeout, so a slow/503-prone grounded call can't stack sequential
     // delay onto the essential main analysis call below.
+    // Same identity the rate limiter uses, so an anonymous caller gets its own
+    // per-IP grounding allowance instead of drawing on the global pool alone.
+    const groundingBudgetKey = sessionEmail || `ip:${anonIpKey}`;
     const [webMetricsRaw, careerWebContext] = await Promise.all([
       needsWebMetrics
-        ? withSoftTimeout(fetchCareerMetrics(env, careerName), 15000, null)
+        ? withSoftTimeout(fetchCareerMetrics(env, careerName, groundingBudgetKey), 15000, null)
         : Promise.resolve(null),
       (onetProfile || careerName)
-        ? withSoftTimeout(fetchCareerWebContext(env, careerName, onetProfile), 15000, null)
+        ? withSoftTimeout(fetchCareerWebContext(env, careerName, onetProfile, groundingBudgetKey), 15000, null)
         : Promise.resolve(null),
     ]);
     const webMetrics = sanitizeWebMetrics(webMetricsRaw);
@@ -1186,6 +1236,7 @@ export async function onRequest(context) {
     }
     return authJsonResponse(200, { analysis, personalized: true }, origin);
   } catch (err) {
+    await logServerError(env, 'career-analysis', err);
     console.error('career-analysis failed', {
       slug: careerSlug,
       soc: payloadSoc,
@@ -1195,7 +1246,13 @@ export async function onRequest(context) {
     const msg = err && err._userFacing
       ? err.message
       : 'Could not generate personalized analysis. Please try again.';
-    const status = err && err._userFacing ? 502 : 500;
+    // checkRateLimit throws { status: 429, _userFacing: true }. Collapsing that to
+    // 502 tells a throttled caller "server error", which is both wrong and
+    // actively harmful: a client retry loop treats a deliberate throttle as a
+    // transient fault and hammers it. Only 429 is forwarded — other _userFacing
+    // errors keep 502 so an upstream Gemini 401/403 can never surface as the
+    // caller's own auth status.
+    const status = err && err._userFacing ? (err.status === 429 ? 429 : 502) : 500;
     return authJsonResponse(status, {
       error: msg,
       errorCode: (err && err._errorCode) || 'analysis_failed',

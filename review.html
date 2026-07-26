@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Signed-in only: page-boot bounces a visitor to /auth before anything renders, so a crawler sees a blank shell under a FlightWay title. -->
+<meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg?v=20260720f">
+  <link rel="icon" href="/favicon.ico?v=20260720a" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/icons/favicon-128.png?v=20260720a">
+  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-180.png?v=20260720a">
+<title>FlightWay — Month in Review</title>
+<meta name="description" content="What you did this month, the deadlines you hit or missed, and the one thing to focus on next.">
+<link rel="preload" href="/assets/fonts/inter-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/space-grotesk-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260721p">
+<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260724i">
+<link rel="stylesheet" href="assets/css/flightway-2.css?v=20260725g">
+<link rel="stylesheet" href="assets/css/feature-intro.css?v=20260721a">
+<link rel="stylesheet" href="assets/css/nps.css?v=20260725f">
+<script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
+<script src="assets/js/shared/global-shim.js?v=20260703p"></script>
+<script src="assets/js/shared/flags.js?v=20260716h"></script>
+<script src="assets/js/shared/events.js?v=20260724a" defer></script>
+<script src="assets/vendor/lucide-lite.js?v=20260724d" defer></script>
+<style>
+  /* Month in Review (S11 UI) — scoped to #month-review. Client half of
+     functions/month-review.js + functions/_lib/month-review.js; see
+     assets/js/app/month-review.js. Section cards reuse the shared
+     .fp-head/.fp-module/.fp-empty classes flightway-2.css already ships for
+     flightplan.html, so this page reads as the same product rather than a
+     new visual system — only the bits unique to this page (the month picker,
+     list rows, the coordinates line, the skeleton, the error line) get rules
+     here. Same house rule as flightplan.html's own block: --ok/--warn/--err
+     only on border-color/background, never as a text color value. */
+  #month-review { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+
+  #month-review .mr-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+  #month-review .mr-select-label {
+    display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px;
+    font-weight: 600; color: rgb(var(--text-muted)); max-width: 100%;
+  }
+  #month-review .mr-select {
+    padding: 7px 10px; border-radius: 8px; border: 1px solid rgb(var(--border));
+    background: rgb(var(--surface)); color: rgb(var(--text)); font: inherit;
+    font-size: 13px; max-width: 100%; box-sizing: border-box; transition: var(--transition);
+  }
+  #month-review .mr-select:hover { border-color: rgb(var(--border-strong)); }
+
+  #month-review .mr-headline {
+    margin: 0; font-size: 15.5px; line-height: 1.5; color: rgb(var(--text)); max-width: 70ch;
+  }
+
+  #month-review .mr-sections { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+  #month-review .mr-list { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  #month-review .mr-row {
+    display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
+    gap: 4px 12px; padding: 10px 12px; border-radius: 10px; min-width: 0;
+    border: 1px solid rgb(var(--border)); background: rgb(var(--surface));
+  }
+  #month-review .mr-row-title {
+    font-size: 13.5px; font-weight: 600; color: rgb(var(--text)); min-width: 0; overflow-wrap: anywhere;
+  }
+  #month-review .mr-row-meta { font-size: 12px; color: rgb(var(--text-muted)); }
+
+  #month-review .mr-coordinates { margin: 0; font-size: 13.5px; line-height: 1.5; color: rgb(var(--text)); }
+
+  #month-review .mr-focus {
+    padding: 12px 14px; border-radius: 10px; min-width: 0;
+    border: 1px dashed rgb(var(--border-strong)); background: rgb(var(--surface-2) / 0.5);
+  }
+  #month-review .mr-focus-text { margin: 0; font-size: 14px; font-weight: 600; color: rgb(var(--text)); overflow-wrap: anywhere; }
+  #month-review .mr-focus-meta { margin: 6px 0 0; font-size: 12px; color: rgb(var(--text-muted)); }
+
+  #month-review .mr-empty { display: flex; flex-direction: column; gap: 14px; }
+
+  #month-review .mr-skeleton { display: flex; flex-direction: column; gap: 10px; }
+  #month-review .mr-skel-line {
+    height: 46px; border-radius: 12px; background: rgb(var(--surface-2));
+    animation: mr-pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes mr-pulse { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+  /* House rule (every animated stylesheet carries this): the skeleton holds
+     still for reduced-motion readers — it is a placeholder, not information. */
+  @media (prefers-reduced-motion: reduce) {
+    #month-review .mr-skel-line { animation: none; }
+  }
+
+  /* Same house rule as flightplan.html's .fp-radar-form-error/.fp-commit-error:
+     hue on the border, text stays on --text. */
+  #month-review .mr-error {
+    margin: 0; font-size: 13px; color: rgb(var(--text));
+    padding: 10px 12px; border-left: 3px solid rgb(var(--err));
+    background: rgb(var(--surface-2) / 0.5); border-radius: 0 10px 10px 0;
+  }
+</style>
+</head>
+<body class="portal-page review-page">
+<div id="fw-page-veil" class="fw-page-veil" aria-live="polite" aria-busy="true">
+</div>
+
+<canvas id="fw-data-field" aria-hidden="true"></canvas>
+
+<nav>
+  <div class="nav-inner">
+    <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay home"></a>
+    <div class="nav-links app-nav" aria-label="App">
+      <a href="portal.html" class="app-nav-tab" data-app-nav="home"><span class="app-nav-label">Home</span></a>
+      <a href="flightplan.html" class="app-nav-tab is-active" data-app-nav="plan" aria-current="page"><span class="app-nav-label">Flight Plan</span></a>
+      <a href="roadmap.html" class="app-nav-tab" data-app-nav="roadmap"><span class="app-nav-label">Roadmap</span></a>
+      <a href="coach.html" class="app-nav-tab" data-app-nav="advisor"><span class="app-nav-label">Marco</span></a>
+      <a href="dashboard.html" class="app-nav-tab" data-app-nav="explore"><span class="app-nav-label">Explore</span></a>
+      <a href="auth.html#signin" class="app-nav-tab nav-signin-link" id="nav-signin-link">Sign in</a>
+      <button type="button" class="fw-theme-toggle" aria-label="Switch to dark mode" aria-pressed="false">
+        <span class="fw-theme-icon" aria-hidden="true"></span>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<div id="page-review" class="page active">
+  <section class="portal-wrap">
+    <header class="fp-head">
+      <h1 class="fp-title">Month in Review</h1>
+      <p class="fp-sub">What you did this month, the deadlines you hit or missed, and the one thing to focus on next.</p>
+    </header>
+
+    <!-- FWMonthReview.mount() renders the month picker and one GET
+         /month-review payload into this container — see
+         assets/js/app/month-review.js. -->
+    <div id="month-review" aria-live="polite" aria-busy="true"></div>
+  </section>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-left">
+      <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay"></a>
+      <p>&copy; 2026 FlightWay. All rights reserved.</p>
+    </div>
+    <div class="footer-links">
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+      <a href="/security">Security</a>
+      <a href="/contact">Contact</a>
+      <a href="/invite">Invite a friend</a>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/js/shared/page-veil.js?v=20260721a" defer></script>
+<script src="assets/js/shared/page-boot.js?v=20260703p" defer></script>
+<script src="assets/js/shared/fw-errors.js?v=20260720a" defer></script>
+<script src="assets/js/shared/auth.js?v=20260725b" defer></script>
+<script src="assets/js/shared/nps.js?v=20260725f" defer></script>
+<script src="assets/js/shared/fw-busy.js?v=20260720a" defer></script>
+<script src="assets/js/shared/user.js?v=20260725e" defer></script>
+<script src="assets/js/shared/auth-nav.js?v=20260724d" defer></script>
+<script src="assets/js/shared/user-chip.js?v=20260721a" defer></script>
+<script src="assets/js/shared/fw-toast.js?v=20260718i" defer></script>
+<script src="assets/js/app/month-review.js?v=20260725g" defer></script>
+<script src="assets/js/shared/feature-intro.js?v=20260725e" defer></script>
+<script src="assets/js/shared/data-field.js?v=20260703p" defer></script>
+<script src="assets/js/shared/brand.js?v=20260720i" defer></script>
+<script src="assets/js/shared/app-nav.js?v=20260724d" defer></script>
+<script src="assets/js/shared/theme.js?v=20260703p" defer></script>
+<script>
+  // Deferred scripts finish before DOMContentLoaded, so globals exist here.
+  document.addEventListener('DOMContentLoaded', function () {
+    FWPageBoot.authBootThen(function () {
+      if (!FWPageBoot.requireAuth('review.html')) return;
+      if (window.FWMonthReview) FWMonthReview.mount();
+      if (window.FWAppNav) FWAppNav.sync('plan');
+      if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+      if (window.FWPageVeil) FWPageVeil.notifyRender();
+    });
+  });
+</script>
+</body>
+</html>

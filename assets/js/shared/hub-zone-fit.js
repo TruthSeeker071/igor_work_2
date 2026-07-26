@@ -31,10 +31,12 @@
     business: 'business-finance', finance: 'business-finance',
   };
 
-  // Fold raw 18-zone aggregates into the 11 display macro-sectors via a
-  // count-weighted average. Already-display-keyed input passes through
-  // unchanged (merged ids aren't in DISPLAY_ZONE_MERGE), so callers can pass
-  // either shape safely.
+  // Fold raw 18-zone aggregates into the 11 display macro-sectors. lvMean folds
+  // by career count; lvMeanW (the representativeness-weighted centroid, see
+  // scripts/onet-etl/zone-weighting.mjs) folds by repWeightSum, its own mass —
+  // folding it by count would re-import the outlier pull the weighting exists to
+  // remove. Already-display-keyed input passes through unchanged (merged ids
+  // aren't in DISPLAY_ZONE_MERGE), so callers can pass either shape safely.
   function mergeToDisplayZones(aggregates) {
     if (!aggregates) return aggregates;
     var acc = {};
@@ -43,19 +45,42 @@
       if (!a || !a.lvMean) return;
       var dz = DISPLAY_ZONE_MERGE[z] || z;
       var n = a.count || 0;
+      var w = a.lvMeanW ? (Number(a.repWeightSum) || 0) : 0;
       if (!acc[dz]) {
-        acc[dz] = { count: n, sum: a.lvMean.map(function (v) { return v * n; }) };
+        acc[dz] = {
+          count: n,
+          sum: a.lvMean.map(function (v) { return v * n; }),
+          repWeightSum: w,
+          sumW: a.lvMeanW ? a.lvMeanW.map(function (v) { return v * w; }) : null,
+        };
       } else {
         acc[dz].count += n;
         acc[dz].sum = acc[dz].sum.map(function (v, d) { return v + a.lvMean[d] * n; });
+        if (acc[dz].sumW && a.lvMeanW) {
+          acc[dz].repWeightSum += w;
+          acc[dz].sumW = acc[dz].sumW.map(function (v, d) { return v + a.lvMeanW[d] * w; });
+        } else {
+          acc[dz].sumW = null;
+        }
       }
     });
     var out = {};
     Object.keys(acc).forEach(function (dz) {
       var a = acc[dz];
       out[dz] = { count: a.count, lvMean: a.count ? a.sum.map(function (v) { return v / a.count; }) : a.sum };
+      if (a.sumW && a.repWeightSum > 0) {
+        out[dz].repWeightSum = a.repWeightSum;
+        out[dz].lvMeanW = a.sumW.map(function (v) { return v / a.repWeightSum; });
+      }
     });
     return out;
+  }
+
+  // Sector fit is measured against the zone's representative careers, not its
+  // outliers — fall back to the unweighted mean only for artifacts built before
+  // lvMeanW existed.
+  function zoneCentroid(agg) {
+    return (agg && agg.lvMeanW) || (agg && agg.lvMean) || null;
   }
 
   var AGGREGATES_URL = '/data/onet/artifacts/zone-aggregate-vectors.json';
@@ -101,16 +126,17 @@
     Object.keys(aggregates).forEach(function (zone) {
       var agg = aggregates[zone];
       if (!agg || !agg.lvMean || !agg.count) return;
-      var pFit = cosinePercent(V, V.cosine(personality.values, agg.lvMean));
+      var centroid = zoneCentroid(agg);
+      var pFit = V.personalityFitPercent(personality.values, centroid);
       var oFit = objOn && V.objectiveFitFromVectors
-        ? V.objectiveFitFromVectors(objective.values, agg.lvMean)
-        : (objOn ? cosinePercent(V, V.cosine(objective.values, agg.lvMean)) : null);
+        ? V.objectiveFitFromVectors(objective.values, centroid)
+        : (objOn ? cosinePercent(V, V.cosine(objective.values, centroid)) : null);
       byZone[zone] = {
         personalityFit: pFit,
         rawPersonality: pFit,
         objectiveFit: oFit,
         rawObjective: oFit != null ? oFit : null,
-        overallFit: V.overallFitScore ? V.overallFitScore(pFit, oFit) : pFit,
+        overallFit: V.displayFitPercent ? V.displayFitPercent(personality.values, centroid) : pFit,
       };
     });
     return byZone;
@@ -244,6 +270,8 @@
   global.FWHubZoneFit = {
     ZONE_ORDER: ZONE_ORDER,
     ZONE_LABELS: ZONE_LABELS,
+    mergeToDisplayZones: mergeToDisplayZones,
+    zoneCentroid: zoneCentroid,
     computeZoneFitsMap: computeZoneFitsMap,
     zoneRowsFromMap: zoneRowsFromMap,
     zoneFitsFromHub: zoneFitsFromHub,

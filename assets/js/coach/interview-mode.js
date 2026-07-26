@@ -262,10 +262,21 @@
   function handleTurnFailure(res, isFirst) {
     setTurnBusy(false);
     if (res.status === 402) { showUpgradeGate(); return; }
+    if (res.status === 429 && res.d && res.d.upgrade) {
+      stopTimer();
+      if (isFirst) setSetupBusy(false);
+      var body = overlay.querySelector('.fw-iv-body');
+      if (body && global.FWPlanSurface && typeof FWPlanSurface.capCard === 'function') {
+        FWPlanSurface.capCard(body, 'mock-interview', res.d.error);
+        return;
+      }
+    }
     if (isFirst) {
       setSetupBusy(false);
       if (res.status === 429) {
-        showSetupError((res.d && res.d.error) || 'You’ve used your 3 mock interviews for today — come back tomorrow.');
+        // No hand-written cap in the fallback: §4 gives free ONE session ever and
+        // premium three a day, so a literal number here is wrong for somebody.
+        showSetupError((res.d && res.d.error) || 'You’ve used your mock interviews for now — check your plan for what’s left.');
       } else {
         showSetupError((res.d && res.d.error) || 'Could not start the interview — try again.');
       }
@@ -684,18 +695,68 @@
     overlay.querySelector('#fw-iv-new').addEventListener('click', newInterview);
     wirePersonaCards();
     fillSetupDefaults();
+  }
 
-    // Premium gate (dark until PAYWALL_ENABLED — then locked users see the CTA).
-    if (global.FWEnt && typeof FWEnt.boot === 'function') {
-      FWEnt.boot().then(function () {
-        if (!FWEnt.has('premium')) FWEnt.gate(overlay.querySelector('.fw-iv-body'), 'mock-interview');
+  // First entry gets the interstitial instead of the panel — and on the free
+  // plan that interstitial IS the upgrade surface, so its CTA navigates away
+  // and the panel never opens. Both outcomes mark the feature seen, so this
+  // branch runs at most once per student.
+  function open() {
+    if (global.FWFeatureIntro && typeof FWFeatureIntro.isSeen === 'function'
+        && !FWFeatureIntro.isSeen('mock-interview')) {
+      FWFeatureIntro.show('mock-interview').then(function (how) {
+        if (how === 'go') openPanel();
       });
+      return;
+    }
+    openPanel();
+  }
+
+  // S12 — role context handed over by an application card in the tracker
+  // (`coach.html?ivRole=…&ivCompany=…#practice`). Held here rather than applied
+  // at read time because open() may route through the first-run interstitial
+  // first, and the panel does not exist until the student comes back from it.
+  var pendingPrefill = null;
+
+  function applyPendingPrefill() {
+    if (!pendingPrefill || !overlay) return;
+    var p = pendingPrefill;
+    pendingPrefill = null;
+    var career = overlay.querySelector('#fw-iv-career');
+    if (career && p.role) {
+      career.value = p.role;
+      // Not the student's O*NET target career, so the soc must not ride along:
+      // a specific posting is a job title, and `startInterview` keys the soc off
+      // exactly this comparison.
+      state.prefilledCareerName = '';
+      state.soc = '';
+    }
+    var company = overlay.querySelector('#fw-iv-company');
+    if (company && p.company) {
+      company.value = p.company;
+      var details = company.closest ? company.closest('details') : null;
+      if (details) details.open = true;
+    }
+    // S18 — the Interview Season's week carries its own persona (week 4 is the
+    // pressure week, and composure is the axis that comfortable practice never
+    // touches). Selecting the card here rather than telling the student which
+    // toggle to find is the whole reason the program links in with context.
+    if (p.persona) {
+      var grid = overlay.querySelector('#fw-iv-persona-grid');
+      var card = grid && grid.querySelector('.fw-iv-persona-card[data-persona="' + p.persona + '"]');
+      if (card) {
+        var cards = grid.querySelectorAll('.fw-iv-persona-card');
+        for (var i = 0; i < cards.length; i++) cards[i].classList.remove('is-active');
+        card.classList.add('is-active');
+        state.persona = p.persona === 'pressure' ? 'pressure' : 'coach';
+      }
     }
   }
 
-  function open() {
+  function openPanel() {
     if (!overlay) buildPanel();
     overlay.hidden = false;
+    applyPendingPrefill();
     logEvent('mockiv_open');
     setTimeout(function () {
       var input = overlay.querySelector('#fw-iv-career');
@@ -716,7 +777,42 @@
     actions.insertBefore(btn, actions.firstChild);
   }
 
-  function init() { buildPanel(); mountLauncher(); }
+  // S7: the Flight Plan's Mock Interview door links to coach.html#practice, so
+  // the door opens the thing it names instead of dropping the student on the
+  // chat page to hunt for a button. Goes through open() so the first-time
+  // interstitial (and, on the free plan, its upsell) still fires.
+  function openFromHash() {
+    if ((location.hash || '') !== '#practice') return;
+    // S12: read the role context BEFORE the URL is cleaned, then drop the whole
+    // query with the hash — leaving `?ivRole=` behind would re-prefill on every
+    // later open in the same tab.
+    try {
+      var q = new URLSearchParams(location.search || '');
+      var role = (q.get('ivRole') || '').trim().slice(0, 120);
+      var company = (q.get('ivCompany') || '').trim().slice(0, MAX_COMPANY_CHARS);
+      // S18. A QUERY param, not part of the fragment: `openFromHash` matches the
+      // hash EXACTLY, so a `#practice&persona=pressure` would silently fail to
+      // open the panel at all — the deep link would look broken with nothing in
+      // the console to say why.
+      var persona = (q.get('ivPersona') || '').trim() === 'pressure' ? 'pressure' : '';
+      if (role || company || persona) pendingPrefill = { role: role, company: company, persona: persona };
+      q.delete('ivRole');
+      q.delete('ivCompany');
+      q.delete('ivPersona');
+      var rest = q.toString();
+      history.replaceState(null, '', location.pathname + (rest ? '?' + rest : ''));
+    } catch (_) {
+      try { history.replaceState(null, '', location.pathname + location.search); } catch (__) {}
+    }
+    open();
+  }
+
+  function init() {
+    buildPanel();
+    mountLauncher();
+    openFromHash();
+    global.addEventListener('hashchange', openFromHash);
+  }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 

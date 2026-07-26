@@ -148,5 +148,6 @@
     subscribe: subscribe,
     bindPageshowRefresh: bindPageshowRefresh,
     flushSave: flushSave,
+    dispatchUpdated: dispatchUpdated,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

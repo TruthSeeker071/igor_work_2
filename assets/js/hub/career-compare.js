@@ -89,7 +89,7 @@
     return FWOnetVectors.resolvePersonality({}).then(function (personality) {
       if (!personality) return null;
       var M = global.FWOnetMath;
-      var entry = { personalityFit: M.cosinePercent(M.cosine(personality.values, careerVec)) };
+      var entry = { personalityFit: M.personalityFitPercent(personality.values, careerVec) };
       var objective = FWOnetVectors.readQuizVectors().objective;
       if (objective && objective.values && FWOnetVectors.magnitude(objective.values) > 0.01) {
         entry.objectiveFit = M.objectiveFitPercent(objective.values, careerVec);

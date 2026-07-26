@@ -33,6 +33,8 @@ const DEFAULT_TTL = 7 * 24 * 3600;
 const RESEARCH_TIMEOUT_MS = 12000;
 const RESEARCH_MAX_TOKENS = 900;
 const RESEARCH_RETRYABLE = new Set([500, 503]);
+// Statuses that mean "this request was never valid" rather than "try later".
+const CONFIG_ERROR_STATUS = new Set([400, 404]);
 const PER_SOURCE_TITLE_CAP = 120;
 const SOURCE_RESOLVE_TIMEOUT_MS = 3500;
 const BRIEF_CAP = 3000;
@@ -218,6 +220,27 @@ async function budgetSpend(env, budgetKey) {
   }));
 }
 
+/**
+ * Give the daily budget back. Spending up front is right — Google bills a
+ * request it actually served, so an overloaded or empty answer stays paid for.
+ * It is NOT right when the request was rejected before any work happened: a
+ * 404 means the model name is retired or wrong, and nobody was billed for a
+ * model that does not exist. Without this, a stale model name burns the whole
+ * day's grounding budget on requests Google refused.
+ */
+async function budgetRefund(env, budgetKey) {
+  try {
+    const keys = budgetKeys(budgetKey);
+    await Promise.all(keys.map(async (k) => {
+      const n = Number(await env.COACH_KV.get(k)) || 0;
+      if (n <= 0) return;
+      await env.COACH_KV.put(k, String(n - 1), { expirationTtl: 26 * 3600 });
+    }));
+  } catch (err) {
+    console.warn('grounding budget refund failed', err && err.message ? err.message : err);
+  }
+}
+
 // Budget gate for legacy/bespoke grounded call sites (pre-Pillar-W features
 // that already make their own google_search calls, e.g. career-analysis).
 // Lets them join the shared daily budgets without changing their output shape.
@@ -270,8 +293,14 @@ export async function researchWeb(env, opts) {
     // Live fetch spends budget even if it fails — Google bills the attempt.
     await budgetSpend(env, budgetKey);
 
-    // Research runs on the primary model only (fallback models may not
-    // support google_search; a failed research is just an ungrounded answer).
+    // Research runs on the primary model only. This is the repo's convention,
+    // not a local guess: career-analysis.js:213 and chat.js both build their
+    // cascades as `useSearch && m === primaryModel`, so a fallback attempt
+    // everywhere DROPS google_search rather than carrying it. Audited
+    // 2026-07-21 and left alone — adding a grounded fallback here would make
+    // this the one place that assumes a capability the other two refuse to.
+    // A failed research is just an ungrounded answer; what it must not be is
+    // silent, which is what the CONFIG_ERROR_STATUS branch below is for.
     const model = resolveGeminiModels(env)[0];
     const body = {
       contents: [{ role: 'user', parts: [{ text: researchPrompt(norm) }] }],
@@ -296,6 +325,19 @@ export async function researchWeb(env, opts) {
         if (attempt === 0 && RESEARCH_RETRYABLE.has(err && err.status)) {
           await new Promise((res) => setTimeout(res, 800));
           continue;
+        }
+        // A rejected REQUEST is not weather. 404/400 here means the model name
+        // is retired or wrong — grounding is then off for every user, all day,
+        // and the only symptom is answers quietly losing their sources. Say so
+        // at error level with the model name, and hand the budget back: Google
+        // billed nothing for a model it refused.
+        if (CONFIG_ERROR_STATUS.has(err && err.status)) {
+          console.error(
+            `researchWeb: grounding model "${model}" was rejected (status=${err.status}) — grounding is OFF until the model name is fixed`,
+            err && err.message ? err.message : err,
+          );
+          await budgetRefund(env, budgetKey);
+          return null;
         }
         console.warn('researchWeb fetch failed:', err && err.message ? err.message : err);
         return null;

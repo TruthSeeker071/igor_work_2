@@ -154,7 +154,7 @@
   // "Your strengths" combines personality with background (objective) evidence
   // using the standardized project weighting: 0.75*personality + 0.25*objective
   // per dimension. Blend only when the objective vector is actually populated —
-  // mirrors overallFitScore's null handling so accounts without a resume or
+  // mirrors overall fit's null handling so accounts without a resume or
   // academics keep showing their raw quiz personality instead of a scaled-down
   // (0.75x) version.
   function blendStrengthsForDisplay(personality, objective) {

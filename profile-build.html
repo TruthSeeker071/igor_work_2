@@ -3,31 +3,34 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" href="/favicon.ico?v=20260717h" sizes="any">
-  <link rel="icon" type="image/png" href="/assets/favicon.png?v=20260717h">
-  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=20260717h">
+<!-- This page is an empty shell until JS fetches and draws it post sign-in, so a crawler would index a blank page under the FlightWay title -->
+<meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg?v=20260720f">
+  <link rel="icon" href="/favicon.ico?v=20260720a" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/icons/favicon-128.png?v=20260720a">
+  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-180.png?v=20260720a">
 <title>FlightWay — Help us know you better</title>
-<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260720c">
-<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260720c">
-<link rel="stylesheet" href="assets/css/profile-building.css?v=20260720c">
+<link rel="preload" href="/assets/fonts/inter-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/space-grotesk-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260721p">
+<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260724i">
+<link rel="stylesheet" href="assets/css/profile-building.css?v=20260721a">
+<link rel="stylesheet" href="assets/css/feature-intro.css?v=20260721a">
 <script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
 <script src="assets/js/shared/flags.js?v=20260716h"></script>
-<script src="assets/js/shared/events.js?v=20260716h" defer></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="assets/js/shared/events.js?v=20260724a" defer></script>
 </head>
-<body class="profile-page">
+<body class="profile-page" data-fw-intro="know-you">
 
 <nav>
   <div class="nav-inner">
     <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay home"></a>
     <div class="nav-links app-nav" aria-label="App">
       <a href="portal.html" class="app-nav-tab" data-app-nav="home"><span class="app-nav-label">Home</span></a>
-      <a href="dashboard.html" class="app-nav-tab" data-app-nav="hub"><span class="app-nav-label">Career Hub</span></a>
+      <a href="flightplan.html" class="app-nav-tab" data-app-nav="plan"><span class="app-nav-label">Flight Plan</span></a>
+      <a href="roadmap.html" class="app-nav-tab" data-app-nav="roadmap"><span class="app-nav-label">Roadmap</span></a>
       <a href="coach.html" class="app-nav-tab" data-app-nav="advisor"><span class="app-nav-label">Marco</span></a>
-      <a href="roadmap.html" class="app-nav-tab" data-app-nav="roadmap"><span class="app-nav-label">Career Roadmap</span></a>
-      <a href="quiz.html" class="app-nav-tab app-nav-tab--muted" data-app-nav="quiz"><span class="app-nav-label">Career Quiz</span></a>
+      <a href="dashboard.html" class="app-nav-tab" data-app-nav="explore"><span class="app-nav-label">Explore</span></a>
       <a href="auth.html#signin" class="app-nav-tab nav-signin-link" id="nav-signin-link">Sign in</a>
       <button type="button" class="fw-theme-toggle" aria-label="Switch to dark mode" aria-pressed="false">
         <span class="fw-theme-icon" aria-hidden="true"></span>
@@ -37,26 +40,45 @@
 </nav>
 
 <div id="page-profile-build" class="page active">
+  <div data-fw-ribbon="know-you"></div>
   <div id="pb-root"></div>
 </div>
 
+<footer>
+  <div class="footer-inner">
+    <div class="footer-left">
+      <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay"></a>
+      <p>&copy; 2026 FlightWay, Inc. All rights reserved.</p>
+    </div>
+    <div class="footer-links">
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+      <a href="/security">Security</a>
+      <a href="/contact">Contact</a>
+    </div>
+  </div>
+</footer>
+
 <script src="assets/js/shared/page-boot.js?v=20260703p" defer></script>
 <script src="assets/js/shared/fw-errors.js?v=20260720a" defer></script>
-<script src="assets/js/shared/auth.js?v=20260720c" defer></script>
+<script src="assets/js/shared/auth.js?v=20260725b" defer></script>
 <script src="assets/js/shared/fw-busy.js?v=20260720a" defer></script>
-<script src="assets/js/shared/user.js?v=20260719g" defer></script>
+<script src="assets/js/shared/user.js?v=20260725e" defer></script>
+<script src="assets/vendor/lucide-lite.js?v=20260724d" defer></script>
+<script src="assets/js/shared/feature-intro.js?v=20260725e" defer></script>
 <script src="assets/js/shared/profile-alignment.js?v=20260703p" defer></script>
-<script src="assets/js/shared/auth-nav.js?v=20260703p" defer></script>
-<script src="assets/js/shared/sector-fit-sheet.js?v=20260703p" defer></script>
-<script src="assets/js/shared/onet-math.js?v=20260713a" defer></script>
+<script src="assets/js/shared/auth-nav.js?v=20260724d" defer></script>
+<script src="assets/js/shared/user-chip.js?v=20260721a" defer></script>
+<script src="assets/js/shared/sector-fit-sheet.js?v=20260721u" defer></script>
+<script src="assets/js/shared/onet-math.js?v=20260721v" defer></script>
 <script src="assets/js/hub/hub-careers.js?v=20260719b" defer></script>
-<script src="assets/js/shared/onet-catalog.js?v=20260718f" defer></script>
-<script src="assets/js/shared/onet-vectors.js?v=20260719a" defer></script>
+<script src="assets/js/shared/onet-catalog.js?v=20260720c" defer></script>
+<script src="assets/js/shared/onet-vectors.js?v=20260726a" defer></script>
 <script src="assets/js/quiz/onet-quiz-seed.js?v=20260710m" defer></script>
 <script src="assets/js/profile/profile-building-fallback.js?v=20260718q" defer></script>
-<script src="assets/js/profile/profile-building.js?v=20260720d" defer></script>
-<script src="assets/js/shared/brand.js?v=20260717g" defer></script>
-<script src="assets/js/shared/app-nav.js?v=20260703p" defer></script>
+<script src="assets/js/profile/profile-building.js?v=20260721a" defer></script>
+<script src="assets/js/shared/brand.js?v=20260720i" defer></script>
+<script src="assets/js/shared/app-nav.js?v=20260724d" defer></script>
 <script src="assets/js/shared/theme.js?v=20260703p" defer></script>
 <script>
   // Deferred scripts finish before DOMContentLoaded, so globals exist here.

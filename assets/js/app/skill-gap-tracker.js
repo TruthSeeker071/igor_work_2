@@ -226,7 +226,9 @@
     return (tree.nodes || []).find(function (n) { return n.id === id; }) || null;
   }
 
-  var MAX_BRANCH_FOCUSES = 2;
+  // Up to 4 distinct branches tracked at once (the spine is always implicitly
+  // trackable on top and does NOT count toward this). UI-articulated cap.
+  var MAX_BRANCH_FOCUSES = 4;
 
   // Branch-root id for the branch a node belongs to (WS6). Walk the parentId chain
   // to the first node that is a decision option's childNodeId; that is the branch
@@ -333,6 +335,21 @@
     return immediateWaypointForBranch(tree, key);
   }
 
+  // Next UNDONE waypoint in the ACTIVE focus context. Branch-aware: on a secondary
+  // branch it returns that branch's next-undone waypoint, and null when the branch
+  // has no further undone waypoint. Unlike nextWaypoint(), which only ever walks the
+  // spine activePath — so on a finished branch it would point at a spine waypoint the
+  // branch focus never renders, making the focus try to "advance" forever.
+  function nextFocusWaypoint(tree) {
+    var key = activeBranchKey(tree);
+    if (key === 'spine') return nextWaypoint(tree);
+    var chain = branchChainNodes(tree, key);
+    for (var i = 0; i < chain.length; i += 1) {
+      if (!chain[i].done) return chain[i];
+    }
+    return null;
+  }
+
   // Whitelist the round-trippable per-branch focus fields off an existing tracker,
   // dropping any branchFocus whose branchKey/waypoint no longer resolves. Mirrors
   // the server's branchFocusFieldsFrom so neither side clobbers the other on save.
@@ -344,6 +361,7 @@
     var list = [];
     ((existing && existing.branchFocuses) || []).forEach(function (b) {
       if (!b || typeof b !== 'object') return;
+      if (list.length >= MAX_BRANCH_FOCUSES) return; // enforce cap BEFORE push
       var key = b.branchKey;
       if (!key || seen[key]) return;
       if (key !== 'spine' && !nodeIds[key]) return;
@@ -354,7 +372,6 @@
         waypointId: b.waypointId || null,
         updatedAt: b.updatedAt || new Date().toISOString(),
       });
-      if (list.length >= MAX_BRANCH_FOCUSES) return;
     });
     if (list.length) out.branchFocuses = list;
     var akey = existing && existing.activeBranchKey;
@@ -362,38 +379,119 @@
       && (akey === 'spine' || list.some(function (b) { return b.branchKey === akey; }))) {
       out.activeBranchKey = akey;
     }
+    // Spine is tracked by default; only an explicit untrack is round-tripped, so
+    // old trees (no field) stay tracked. Mirrors the server whitelist.
+    if (existing && existing.spineTracked === false) out.spineTracked = false;
     return out;
   }
 
-  // Add/switch the secondary branchFocus (WS6). Main path ('spine') is always
-  // implicitly present; we track at most one secondary branch. Sets it active.
+  // Track a branch in Focus (WS6 → multi-track): ADD the branch to
+  // focusTracker.branchFocuses (dedup by key) and make it the active focus. The
+  // spine is always implicitly present unless explicitly untracked. Up to
+  // MAX_BRANCH_FOCUSES distinct branches; a NEW branch beyond the cap returns
+  // null so the caller articulates the limit. Re-tracking an already-tracked
+  // branch (or the spine) just re-activates it — never drops a sibling.
   function trackBranchFocus(tree, branchNodeId, quizScores) {
     if (!tree || !tree.focusTracker || !branchNodeId) return null;
     var key = branchKeyForNode(tree, branchNodeId);
+    var now = new Date().toISOString();
     if (key === 'spine') {
-      // Node is on the main path — just make main active.
+      var swp = nextWaypoint(tree);
       return Object.assign({}, tree, {
-        focusTracker: Object.assign({}, tree.focusTracker, {
+        focusTracker: Object.assign({}, tree.focusTracker, branchFocusFields(tree, tree.focusTracker), {
           activeBranchKey: 'spine',
-          updatedAt: new Date().toISOString(),
+          spineTracked: true,
+          waypointId: swp ? swp.id : tree.focusTracker.waypointId,
+          needsRecompute: true,
+          updatedAt: now,
         }),
       });
     }
+    var existing = (branchFocusFields(tree, tree.focusTracker).branchFocuses) || [];
+    var already = existing.some(function (b) { return b.branchKey === key; });
+    if (!already && existing.length >= MAX_BRANCH_FOCUSES) return null; // at cap
     var wp = immediateWaypointForBranch(tree, key);
-    var entry = {
-      branchKey: key,
-      waypointId: wp ? wp.id : null,
-      updatedAt: new Date().toISOString(),
-    };
-    // Keep only the secondary slot (drop any prior secondary), main is implicit.
-    var focuses = [entry];
+    var entry = { branchKey: key, waypointId: wp ? wp.id : null, updatedAt: now };
+    var focuses = already
+      ? existing.map(function (b) { return b.branchKey === key ? entry : b; })
+      : existing.concat([entry]);
     return Object.assign({}, tree, {
       focusTracker: Object.assign({}, tree.focusTracker, {
         branchFocuses: focuses,
         activeBranchKey: key,
-        updatedAt: new Date().toISOString(),
+        waypointId: entry.waypointId || tree.focusTracker.waypointId,
+        needsRecompute: true,
+        updatedAt: now,
       }),
     });
+  }
+
+  // The user-facing "uncommit": untrack a path from Focus so its waypoints are
+  // no longer prompted, focus-openable, or fed to the Flight Plan. The branch
+  // itself STAYS on the map (this never prunes the tree). 'spine' toggles
+  // spineTracked:false. Refuses (returns null) if it would leave nothing
+  // tracked. Re-activates a survivor so the focus view never strands.
+  function untrackFocus(tree, branchKey) {
+    if (!tree || !tree.focusTracker || !branchKey) return null;
+    var ft = tree.focusTracker;
+    var fields = branchFocusFields(tree, ft);
+    var focuses = fields.branchFocuses || [];
+    var spineTracked = ft.spineTracked !== false;
+    var trackedCount = (spineTracked ? 1 : 0) + focuses.length;
+    if (trackedCount <= 1) return null; // keep at least one tracked path
+    if (branchKey === 'spine' && !spineTracked) return tree;
+    if (branchKey !== 'spine' && !focuses.some(function (b) { return b.branchKey === branchKey; })) return tree;
+    var nextSpineTracked = branchKey === 'spine' ? false : spineTracked;
+    var nextFocuses = branchKey === 'spine'
+      ? focuses
+      : focuses.filter(function (b) { return b.branchKey !== branchKey; });
+    var active = ft.activeBranchKey || 'spine';
+    if (active === branchKey) {
+      active = nextSpineTracked ? 'spine' : (nextFocuses[0] ? nextFocuses[0].branchKey : 'spine');
+    }
+    var wp = active === 'spine' ? nextWaypoint(tree) : immediateWaypointForBranch(tree, active);
+    var nextFt = Object.assign({}, ft, {
+      branchFocuses: nextFocuses,
+      activeBranchKey: active,
+      waypointId: wp ? wp.id : ft.waypointId,
+      needsRecompute: true,
+      updatedAt: new Date().toISOString(),
+    });
+    if (nextSpineTracked) delete nextFt.spineTracked; else nextFt.spineTracked = false;
+    return Object.assign({}, tree, { focusTracker: nextFt });
+  }
+
+  function isPathTracked(tree, branchKey) {
+    if (!tree || !tree.focusTracker) return false;
+    if (branchKey === 'spine') return tree.focusTracker.spineTracked !== false;
+    return (tree.focusTracker.branchFocuses || []).some(function (b) { return b.branchKey === branchKey; });
+  }
+
+  function trackedBranchCount(tree) {
+    if (!tree || !tree.focusTracker) return 0;
+    return (branchFocusFields(tree, tree.focusTracker).branchFocuses || []).length;
+  }
+
+  // All tracked paths, each resolved to its current focus waypoint, spine-first.
+  // Single source of truth for: the drawer's "open focus?" prompt, the cap
+  // counter, and the Flight Plan's per-waypoint aggregation.
+  function trackedPaths(tree) {
+    if (!tree || !tree.focusTracker) return [];
+    var byId = {};
+    (tree.nodes || []).forEach(function (n) { byId[n.id] = n; });
+    var out = [];
+    if (tree.focusTracker.spineTracked !== false) {
+      var swp = nextWaypoint(tree);
+      out.push({ key: 'spine', isSpine: true, waypointId: swp ? swp.id : null, node: swp || null, title: 'Main path' });
+    }
+    (branchFocusFields(tree, tree.focusTracker).branchFocuses || []).forEach(function (b) {
+      if (b.branchKey === 'spine') return;
+      var root = byId[b.branchKey];
+      if (!root) return;
+      var wp = immediateWaypointForBranch(tree, b.branchKey);
+      out.push({ key: b.branchKey, isSpine: false, waypointId: wp ? wp.id : (b.waypointId || null), node: wp || null, title: root.shortTitle || root.title || 'Branch' });
+    });
+    return out;
   }
 
   function setActiveBranchKey(tree, branchKey) {
@@ -486,7 +584,7 @@
   }
 
   function resolveFocusWaypoint(tree, existing, opts) {
-    if (opts && opts.advance) return nextWaypoint(tree);
+    if (opts && opts.advance) return nextFocusWaypoint(tree);
     if (existing && existing.waypointId) {
       const pinned = waypointById(tree, existing.waypointId);
       if (pinned && pinMatchesActiveBranch(tree, pinned)) return pinned;
@@ -506,7 +604,7 @@
     const wpId = tree.focusTracker.waypointId;
     const wp = waypointById(tree, wpId);
     if (!wp || !isWaypointStepsComplete(wp)) return false;
-    const next = nextWaypoint(tree);
+    const next = nextFocusWaypoint(tree);
     return !!(next && next.id !== wpId);
   }
 
@@ -658,12 +756,16 @@
     const entries = deriveGapEntries(tree, breakdown, wp);
     const skillGaps = syncProgressForGaps(wp, linkStepsToGaps(wp, entries, []));
     return Object.assign({}, tree, {
-      focusTracker: {
+      // Preserve the tracked-branch set through a mark-undone reset — dropping it
+      // here silently un-tracked every branch the moment the user rolled a
+      // waypoint back.
+      focusTracker: Object.assign({
         version: 1,
         waypointId: waypointId,
         skillGaps: skillGaps,
+      }, branchFocusFields(tree, tree.focusTracker), {
         updatedAt: new Date().toISOString(),
-      },
+      }),
     });
   }
 
@@ -1327,7 +1429,7 @@
           + '<span class="sgt-log-text">' + esc(l.text) + '</span>'
           + (l.w ? '<span class="sgt-log-weight" title="Evidence contribution toward closing this gap">+' + l.w + '%</span>' : '')
           + (isArt ? '' : '<button type="button" class="sgt-log-promote" data-gap-id="' + escAttr(g.id) + '" data-log-id="' + escAttr(logId) + '" title="Save as portfolio artifact">↗</button>')
-          + '<button type="button" class="sgt-log-remove" data-gap-id="' + escAttr(g.id) + '" data-log-id="' + escAttr(logId) + '" aria-label="Remove note">×</button>'
+          + '<button type="button" class="sgt-log-remove" data-gap-id="' + escAttr(g.id) + '" data-log-id="' + escAttr(logId) + '" aria-label="Remove note">' + lucide.svg('x') + '</button>'
           + '</li>';
       }).join('') + '</ul>'
       : '';
@@ -1368,7 +1470,7 @@
             + '<span class="sgt-log-text">' + esc(l.text) + '</span>'
           + (l.w ? '<span class="sgt-log-weight" title="Evidence contribution toward closing this gap">+' + l.w + '%</span>' : '')
             + (isArt ? '' : '<button type="button" class="sgt-log-promote" data-gap-id="' + escAttr(g.id) + '" data-log-id="' + escAttr(logId) + '" title="Save as portfolio artifact">↗</button>')
-            + '<button type="button" class="sgt-log-remove" data-gap-id="' + escAttr(g.id) + '" data-log-id="' + escAttr(logId) + '" aria-label="Remove log">×</button>'
+            + '<button type="button" class="sgt-log-remove" data-gap-id="' + escAttr(g.id) + '" data-log-id="' + escAttr(logId) + '" aria-label="Remove log">' + lucide.svg('x') + '</button>'
             + '</li>';
         }).join('') + '</ul>'
         : '';
@@ -1420,7 +1522,7 @@
         + '<span class="sgt-log-text">' + esc(l.text) + '</span>'
           + (l.w ? '<span class="sgt-log-weight" title="Evidence contribution toward closing this gap">+' + l.w + '%</span>' : '')
         + (isArt ? '' : '<button type="button" class="sgt-log-promote" data-gap-id="' + escAttr(g.id) + '" data-log-id="' + escAttr(logId) + '" title="Save as portfolio artifact">↗</button>')
-        + '<button type="button" class="sgt-log-remove" data-gap-id="' + escAttr(g.id) + '" data-log-id="' + escAttr(logId) + '" aria-label="Remove note">×</button>'
+        + '<button type="button" class="sgt-log-remove" data-gap-id="' + escAttr(g.id) + '" data-log-id="' + escAttr(logId) + '" aria-label="Remove note">' + lucide.svg('x') + '</button>'
         + '</li>';
     }).join('') + '</ul>';
   }
@@ -1475,7 +1577,7 @@
       + '<div class="sgt-bar-wrap sgt-bar-wrap--slim"><div class="sgt-bar" style="width:' + pct + '%"></div></div>'
       + '<span class="sgt-gap-row-pct">' + pct + '%</span>'
       + '<span class="sgt-gap-status sgt-gap-status--' + esc(status) + '">' + esc(statusLabel(g)) + '</span>'
-      + '<span class="sgt-gap-chevron" aria-hidden="true">▾</span>'
+      + '<span class="sgt-gap-chevron" aria-hidden="true">' + lucide.svg('chevron-down') + '</span>'
       + '</button>'
       + '<div class="sgt-gap-expand"' + (isOpen ? '' : ' hidden') + '>' + renderGapExpandBody(g) + '</div>'
       + '</div>';
@@ -1593,7 +1695,12 @@
     root.querySelectorAll('.sgt-step-check').forEach(function (cb) {
       cb.addEventListener('change', function () {
         if (waypointId && onPersist) {
+          // The Focus view takes this branch and returns — it never reaches
+          // opts.onToggleStep, so roadmap.js's toggleStep emit is blind to the
+          // primary step surface. Read .checked before the persist re-render.
+          var stepDone = !!cb.checked;
           handleStepCheckboxChange(cb, persistCtx);
+          try { if (global.FWEvents) FWEvents.log('step_done', { done: stepDone }); } catch (_) {}
           return;
         }
         if (opts.onToggleStep) opts.onToggleStep(cb.getAttribute('data-step-id'));
@@ -1727,7 +1834,8 @@
     var focuses = (ft && ft.branchFocuses) || [];
     if (!focuses.length) return '';
     var active = activeBranchKey(tree);
-    var chips = [{ key: 'spine', label: 'Main path' }];
+    // Spine chip only when the spine is still tracked (the user can uncommit it).
+    var chips = (ft && ft.spineTracked === false) ? [] : [{ key: 'spine', label: 'Main path' }];
     focuses.forEach(function (b) {
       if (b.branchKey === 'spine') return;
       var root = waypointById(tree, b.branchKey);
@@ -2019,6 +2127,11 @@
   // follows every persist doesn't eat the conversation.
   var MARCO_THREADS = {};
 
+  // skill_gap_view de-dupe. Module scope, not el._sgt*: roadmap.js render()
+  // rebuilds #roadmap-focus-view wholesale before every renderFocusPanel, so
+  // any per-element flag is gone by the time the repaint arrives.
+  var lastGapViewSig = '';
+
   function renderMarcoInline(wp) {
     var thread = MARCO_THREADS[wp.id] || [];
     var msgs = thread.map(function (m) {
@@ -2139,6 +2252,15 @@
     // survives the full innerHTML rebuild that follows every onPersist call.
     const expandedGapId = el._sgtExpandedGapId || (gaps[0] && gaps[0].id) || '';
 
+    // Once per distinct waypoint+branch actually shown. Every checkbox tick, log
+    // add and Marco reply re-runs this whole function, so an unguarded emit would
+    // count repaints instead of opens.
+    var gapViewSig = (wp ? wp.id : '') + '|' + activeKey;
+    if (gapViewSig !== lastGapViewSig) {
+      lastGapViewSig = gapViewSig;
+      try { if (global.FWEvents) FWEvents.log('skill_gap_view', { n: gaps.length }); } catch (_) {}
+    }
+
     el.innerHTML = ''
       + '<div class="roadmap-focus-inner">'
       + '<div class="sgt-focus-head">'
@@ -2177,7 +2299,14 @@
     if (wp && wp.id) loadPlanInto(el, wp.id, wp);
 
     const back = el.querySelector('.sgt-back-map');
-    if (back && opts.onBack) back.addEventListener('click', opts.onBack);
+    if (back && opts.onBack) {
+      back.addEventListener('click', function (e) {
+        // Back only hides the panel, so clear the signature or a genuine
+        // re-open of the SAME waypoint would be swallowed as a repaint.
+        lastGapViewSig = '';
+        opts.onBack(e);
+      });
+    }
 
     el.querySelectorAll('.sgt-branch-chip').forEach(function (chip) {
       chip.addEventListener('click', function () {
@@ -2220,6 +2349,10 @@
   }
 
   global.FWSkillGapTracker = {
+    // Clears the skill_gap_view de-dupe. roadmap.js closes the focus panel from
+    // three places; only one of them is the Back button, and a stale signature
+    // makes a genuine re-open of the SAME waypoint read as a repaint.
+    resetGapViewSig: function () { lastGapViewSig = ''; },
     PRESET_LOGS: PRESET_LOGS,
     KEYWORD_PROGRESS_PER_MATCH: KEYWORD_PROGRESS_PER_MATCH,
     ensureFocusTracker: ensureFocusTracker,
@@ -2251,6 +2384,11 @@
     renderHomePanel: renderHomePanel,
     renderFocusView: renderFocusView,
     trackBranchFocus: trackBranchFocus,
+    untrackFocus: untrackFocus,
+    isPathTracked: isPathTracked,
+    trackedBranchCount: trackedBranchCount,
+    trackedPaths: trackedPaths,
+    maxTrackedBranches: MAX_BRANCH_FOCUSES,
     setActiveBranchKey: setActiveBranchKey,
     activeBranchKey: activeBranchKey,
     branchFocusWaypoint: branchFocusWaypoint,

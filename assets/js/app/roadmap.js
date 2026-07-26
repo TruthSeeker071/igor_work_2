@@ -11,10 +11,14 @@
     generating: false,
     syncing: false,
     committing: false,
+    breakingDown: false,
     previewNodeId: null,
+    previewStep: 0,
+    previewLockTimer: null,
     regenHintShown: false,
     stepsHintShown: false,
     error: '',
+    errorUpgrade: false,   // WS-G: the refusal was a plan cap, not a failure
     chatOpen: false,
     chatHistory: [],
     exchangeCount: 0,
@@ -35,6 +39,9 @@
   let lastBootSyncAt = 0;
   let focusLoadingTimer = null;
   let focusLoadingSafetyTimer = null;
+  // One plan_cap_hit per refusal, not per render(): the cap card is a string
+  // rebuilt on every render pass while state.errorUpgrade stays true.
+  let capCardLogged = false;
   const BOOT_SYNC_DEBOUNCE_MS = 5 * 60 * 1000;
   const FOCUS_LOADING_SAFETY_MS = 10000;
   const GENERATE_TIMEOUT_MS = 120000;
@@ -56,7 +63,9 @@
     const name = (err && err.name) || '';
     // Plan limits (free/paid merge §1) already carry user-facing copy from the
     // server — never rewrite them into a generic "generation failed".
-    if (err && err.upgrade) return msg + ' You can see what Flight Plan adds on the pricing page.';
+    // WS-G: the pricing pointer used to be appended here as a sentence; it is
+    // now the cap card's own CTA (renderErrorPanel), so the server line stands alone.
+    if (err && err.upgrade) return msg;
     if (name === 'AbortError' || name === 'TimeoutError' || /signal timed out|timed out/i.test(msg)) {
       return 'Roadmap generation is taking longer than expected. Please try again — your profile may still be processing.';
     }
@@ -121,6 +130,12 @@
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
+  // §3C.5: esc() leaves quotes intact; for attribute contexts (data-slug/name/soc)
+  // also escape quotes so a value with a " can't break out of the attribute.
+  function escAttr(s) {
+    return esc(s).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
   function readRoadmap() {
     let rm = null;
     if (global.FWAuth && typeof FWAuth.readLocalRoadmap === 'function') {
@@ -145,8 +160,8 @@
       ? FWAuth.readCareerFocus() : null;
     if (!focus || !focus.slug || !focus.name) return null;
     let score = null;
-    let rarity = (global.FWCareerTarget && FWCareerTarget.fitRarity)
-      ? FWCareerTarget.fitRarity(50) : { tier: 'common', base: '#9AA0AD' };
+    let rarity = (global.FWCareerTarget && FWCareerTarget.neutralRarity)
+      ? FWCareerTarget.neutralRarity() : { tier: 'common', base: '#9AA0AD' };
     if (global.FWCareerTarget && typeof FWCareerTarget.rankedCareerMatches === 'function') {
       const hit = FWCareerTarget.rankedCareerMatches(40).find(function (m) { return m.slug === focus.slug; });
       if (hit) {
@@ -166,9 +181,28 @@
 
   function renderErrorPanel(message) {
     if (!message) return '';
+    // WS-G: a cap is not a failure. When the server refused because the free
+    // lifetime generation is spent, the student gets the upgrade card instead
+    // of a red "could not build your roadmap" — nothing broke.
+    if (state.errorUpgrade && global.FWPlanSurface) {
+      // capCardHtml() is a pure string builder — unlike FWPlanSurface.capCard()
+      // it logs nothing, so the biggest wall in the product was invisible.
+      if (!capCardLogged) {
+        capCardLogged = true;
+        try { if (global.FWEvents) FWEvents.log('plan_cap_hit', { feature: 'roadmap-generate' }); } catch (_) {}
+      }
+      return FWPlanSurface.capCardHtml('roadmap-generate', message);
+    }
     return '<div class="roadmap-error-panel" role="alert">'
       + '<strong>Could not build your roadmap</strong>'
       + '<p>' + esc(message) + '</p></div>';
+  }
+
+  // WS-G: the generations-remaining chip. A slot, not a number — plan-surface.js
+  // fills it from the enforced cap table once /config and /auth/me have answered,
+  // and leaves it hidden on any plan where generations aren't capped.
+  function planChipHtml() {
+    return '<span class="fw-plan-chip" data-fw-plan-chip="roadmap-generate" hidden></span>';
   }
 
   function fitLabel(score, suffix) {
@@ -317,6 +351,11 @@
     return rm;
   }
 
+  // persist: true/undefined = cache locally + save to the server (default);
+  //   'local' = the tree is ALREADY saved server-side (a branch-action response),
+  //   so update the local cache + notify — render() reloads localStorage, so the
+  //   fresh tree must land there — but skip the redundant server save;
+  //   false = update in-memory state only.
   function setRoadmap(roadmap, persist) {
     let rm = roadmap;
     if (rm && isTreeRoadmap(rm) && global.FWRoadmapTree && FWRoadmapTree.ensureWaypointContent) {
@@ -324,18 +363,18 @@
     }
     rm = withFocusTracker(rm);
     state.roadmap = rm;
-    if (persist !== false && rm) {
-      if (global.FWRoadmapSync && typeof FWRoadmapSync.publish === 'function') {
-        rm = FWRoadmapSync.publish(rm, { source: 'roadmap' });
-        state.roadmap = rm;
-      } else {
-        try {
-          localStorage.setItem('fw_roadmap_v1', JSON.stringify(rm));
-        } catch (_) { /* ignore */ }
-        debouncedSave(rm);
-      }
-      if (isTreeRoadmap(rm)) notifyPortalRoadmapChanged();
+    if (persist === false || !rm) return;
+    const serverSave = persist !== 'local';
+    if (global.FWRoadmapSync && typeof FWRoadmapSync.publish === 'function') {
+      rm = FWRoadmapSync.publish(rm, { source: 'roadmap', persist: serverSave });
+      state.roadmap = rm;
+    } else {
+      try {
+        localStorage.setItem('fw_roadmap_v1', JSON.stringify(rm));
+      } catch (_) { /* ignore */ }
+      if (serverSave) debouncedSave(rm);
     }
+    if (isTreeRoadmap(rm)) notifyPortalRoadmapChanged();
   }
 
   function notifyPortalRoadmapChanged() {
@@ -348,7 +387,7 @@
   function roadmapEditBlockedMessage() {
     if (!state.roadmap || !global.FWRoadmapTree) return 'Finish your current focus waypoint first.';
     if (!FWRoadmapTree.immediateWaypoint(state.roadmap)) {
-      return 'Only the most recently completed waypoint can be edited.';
+      return 'You can only undo a waypoint that has nothing completed after it.';
     }
     return 'Finish your current focus waypoint first.';
   }
@@ -555,6 +594,8 @@
       if (hit && Number.isFinite(hit.score)) state.generatingFitScore = Math.round(hit.score);
     }
     state.error = '';
+    state.errorUpgrade = false;
+    capCardLogged = false;   // a fresh attempt: the next cap card is a new wall
     render();
 
     try {
@@ -633,7 +674,24 @@
           : new Error('No roadmap returned. Try again in a moment.');
       }
       if (data.roadmap) setRoadmap(data.roadmap, true);
+      // Success-only by construction: !resp.ok and !data.roadmap both throw
+      // above, and the cache-hit path already returned — so no cache inflation.
+      try {
+        if (global.FWEvents) {
+          FWEvents.log('roadmap_generated', {
+            kind: refresh ? 'regen' : 'initial',
+            career: careerSlug,
+            nodes: ((data.roadmap && data.roadmap.nodes) || []).length,
+          });
+        }
+      } catch (_) {}
+      // The endpoint echoes the post-spend counter — feed it in so the chip
+      // updates without a second /auth/me round trip.
+      if (global.FWEnt && typeof FWEnt.setRemaining === 'function' && data.remaining !== undefined) {
+        FWEnt.setRemaining('roadmap-generate', data.remaining);
+      }
     } catch (err) {
+      state.errorUpgrade = !!(err && err.upgrade);
       state.error = friendlyGenerateError(err);
     } finally {
       state.generating = false;
@@ -804,7 +862,7 @@
     const markingUndone = !!node.done;
     if (markingUndone) {
       if (global.FWRoadmapTree && !FWRoadmapTree.canMarkWaypointUndone(state.roadmap, nodeId)) {
-        showRoadmapToast('Only the most recently completed waypoint can be marked undone.');
+        showRoadmapToast('Mark the waypoints after this one undone first.');
         refreshDrawerIfOpen();
         return;
       }
@@ -859,6 +917,15 @@
       refreshDrawerIfOpen();
       return;
     }
+    // Read the pre-toggle flag here: after updateTreeNodes the old value is gone,
+    // and blocked toggles returned above so they log nothing.
+    try {
+      if (global.FWEvents) {
+        const prevStep = (((state.roadmap.nodes || []).find(function (n) { return n.id === nodeId; }) || {}).steps || [])
+          .find(function (s) { return s.id === stepId; });
+        FWEvents.log('step_done', { done: !(prevStep && prevStep.done) });
+      }
+    } catch (_) {}
     updateTreeNodes(function (n) {
       if (n.id !== nodeId) return n;
       const steps = (n.steps || []).map(function (s) {
@@ -877,6 +944,117 @@
     refreshDrawerIfOpen();
   }
 
+  // Commitments (V2 §5 S10) — due date + effort on one step. FWCommitments
+  // owns the rule (mirror of functions/_lib/commitments.js) and returns a NEW
+  // tree, or null when nothing changed, so a no-op click never churns
+  // updatedAt or re-triggers a save. Persisted the same way updateTreeNodes
+  // does: setRoadmap(next, true) then state.roadmap = next (not whatever
+  // setRoadmap's own focusTracker/publish wrapping produced) — same quirk,
+  // mirrored on purpose rather than fixed as a drive-by.
+  function setStepCommitment(nodeId, stepId, dueAt, effort) {
+    if (!state.roadmap || !isTreeRoadmap(state.roadmap) || !global.FWCommitments) return;
+    if (global.FWRoadmapTree && !FWRoadmapTree.canEditWaypoint(state.roadmap, nodeId)) {
+      showRoadmapToast(roadmapEditBlockedMessage());
+      refreshDrawerIfOpen();
+      return;
+    }
+    const prevStep = (((state.roadmap.nodes || []).find(function (n) { return n.id === nodeId; }) || {}).steps || [])
+      .find(function (s) { return s.id === stepId; });
+    const prevMoves = Number(prevStep && prevStep.dueMoves) || 0;
+    const prevDue = prevStep && prevStep.dueAt;
+    const next = FWCommitments.setCommitment(state.roadmap, nodeId, stepId, dueAt, effort);
+    if (!next) return;
+    setRoadmap(next, true);
+    state.roadmap = next;
+    try {
+      if (global.FWEvents) {
+        const due = FWCommitments.normalizeDueAt(dueAt);
+        const days = due ? FWCommitments.daysUntil(due, Date.now()) : null;
+        // Same split the Flight Plan module uses: pushing a date LATER is a
+        // reschedule, everything else is a plain set. Both surfaces have to
+        // agree or "how often do students slip?" needs two queries and a join.
+        if (prevDue && due && due > prevDue) {
+          FWEvents.log('commitment_rescheduled', { moves: prevMoves + 1 });
+        } else {
+          FWEvents.log('commitment_set', {
+            effort: effort || 'none',
+            days: typeof days === 'number' ? days : 0,
+            moved: prevMoves,
+          });
+        }
+      }
+    } catch (_) {}
+    render();
+    refreshDrawerIfOpen();
+  }
+
+  function clearStepCommitment(nodeId, stepId) {
+    if (!state.roadmap || !isTreeRoadmap(state.roadmap) || !global.FWCommitments) return;
+    if (global.FWRoadmapTree && !FWRoadmapTree.canEditWaypoint(state.roadmap, nodeId)) {
+      showRoadmapToast(roadmapEditBlockedMessage());
+      refreshDrawerIfOpen();
+      return;
+    }
+    const next = FWCommitments.clearCommitment(state.roadmap, nodeId, stepId);
+    if (!next) return;
+    setRoadmap(next, true);
+    state.roadmap = next;
+    try { if (global.FWEvents) FWEvents.log('commitment_cleared', {}); } catch (_) {}
+    render();
+    refreshDrawerIfOpen();
+  }
+
+  // "Break this down" — ask the server to split one step into AI-generated
+  // micro-steps (aiBuilt: true, exempt from being broken down again). Not a
+  // graph action (postGraphAction's fallback copy is roadmap-path specific),
+  // so this posts to the same endpoint directly with its own fallback text.
+  function findBreakdownBtn(nodeId, stepId) {
+    const btns = document.querySelectorAll('.roadmap-commit-breakdown-btn');
+    for (let i = 0; i < btns.length; i += 1) {
+      if (btns[i].getAttribute('data-node-id') === nodeId && btns[i].getAttribute('data-step-id') === stepId) {
+        return btns[i];
+      }
+    }
+    return null;
+  }
+
+  async function breakDownStep(nodeId, stepId) {
+    if (!state.roadmap || state.breakingDown) return;
+    if (global.FWRoadmapTree && !FWRoadmapTree.canEditWaypoint(state.roadmap, nodeId)) {
+      showRoadmapToast(roadmapEditBlockedMessage());
+      refreshDrawerIfOpen();
+      return;
+    }
+    state.breakingDown = true;
+    const btn = findBreakdownBtn(nodeId, stepId);
+    const restore = global.FWButtonBusy ? FWButtonBusy.start(btn, { label: 'Breaking down…' }) : function () {};
+    try {
+      const resp = await fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ action: 'step-breakdown', nodeId: nodeId, stepId: stepId }),
+      });
+      const data = await resp.json().catch(function () { return {}; });
+      if (!resp.ok) throw fwRespError(resp, data, 'Could not break that step down.');
+      if (data && data.roadmap) {
+        setRoadmap(data.roadmap, 'local');
+        try {
+          if (global.FWEvents) FWEvents.log('step_breakdown', { added: Number(data.added) || 0 });
+        } catch (_) {}
+        render();
+        refreshDrawerIfOpen();
+      } else if (data && data.reason === 'full') {
+        showRoadmapToast('This waypoint is already at its step limit.');
+      }
+    } catch (err) {
+      showRoadmapToast(fwErr(err, 'Could not break that step down.'));
+    } finally {
+      state.breakingDown = false;
+      restore();
+    }
+  }
+
   function renderFocusPanel() {
     const panel = document.getElementById('roadmap-focus-view');
     const canvasWrap = document.getElementById('roadmap-canvas-wrap');
@@ -886,6 +1064,9 @@
       state.focusOpen = false;
       panel.hidden = true;
       if (canvasWrap) canvasWrap.hidden = false;
+      // Closing here without clearing the view signature would swallow the
+      // skill_gap_view of a genuine re-open of this same waypoint.
+      if (FWSkillGapTracker.resetGapViewSig) FWSkillGapTracker.resetGapViewSig();
       syncRefineFabVisibility();
       return;
     }
@@ -942,6 +1123,9 @@
         const panel = document.getElementById('roadmap-focus-view');
         if (panel) panel.hidden = true;
         if (canvasWrap) canvasWrap.hidden = false;
+        // Same reason as the !wp close above — a timed-out open must not make
+        // the retry look like a repaint.
+        if (global.FWSkillGapTracker && FWSkillGapTracker.resetGapViewSig) FWSkillGapTracker.resetGapViewSig();
         render();
       }, FOCUS_LOADING_SAFETY_MS);
       return;
@@ -981,7 +1165,10 @@
       && hasRoadmap(state.roadmap)
       && !state.chatOpen
       && !state.focusOpen
-      && !drawerOpen;
+      && !drawerOpen
+      // WS-B1: the preview rail's footer (Commit / Exit) sits where the FAB
+      // would; keep the FAB out of the way while previewing.
+      && !state.previewNodeId;
     fab.hidden = !show;
   }
 
@@ -992,7 +1179,7 @@
       + '<div class="career-chat-header"><div><div class="career-chat-eye">Roadmap assistant</div>'
       + '<h3 class="career-chat-title">Refine your plan</h3>'
       + '<p class="career-chat-sub" id="roadmap-chat-count"></p></div>'
-      + '<button type="button" class="career-chat-close" id="roadmap-chat-close" aria-label="Close">×</button></div>'
+      + '<button type="button" class="career-chat-close" id="roadmap-chat-close" aria-label="Close">' + lucide.svg('x') + '</button></div>'
       + '<div class="career-chat-messages" id="roadmap-chat-messages"></div>'
       + '<div class="career-chat-input-row">'
       + '<textarea id="roadmap-chat-input" class="career-chat-input" rows="2" placeholder="Ask to adjust your plan…" aria-label="Message"></textarea>'
@@ -1040,6 +1227,15 @@
     div.className = 'career-chat-msg ' + role;
     div.textContent = text;
     wrap.appendChild(div);
+    wrap.scrollTop = wrap.scrollHeight;
+  }
+
+  // The cap card, inside the thread. FWPlanSurface owns the markup and the
+  // plan_cap_hit event; this only picks the host and keeps the scroll pinned.
+  function appendChatCap(cap) {
+    const wrap = document.getElementById('roadmap-chat-messages');
+    if (!wrap || !global.FWPlanSurface || typeof FWPlanSurface.capCard !== 'function') return;
+    FWPlanSurface.capCard(wrap, cap.feature, cap.message || '');
     wrap.scrollTop = wrap.scrollHeight;
   }
 
@@ -1101,6 +1297,10 @@
       hideChatTyping();
       if (!resp.ok) throw fwRespError(resp, data, 'Marco could not answer that — please try again.');
       appendChatMsg('assistant', data.reply || 'Done.');
+      // WS-G: a cap is not an error. The server answers a capped pivot with a
+      // normal 200 turn — Marco's own line, already appended above — and the
+      // upgrade card goes under it instead of a red "Marco could not answer".
+      if (data.cap && data.cap.feature) appendChatCap(data.cap);
       if (data.intent === 'update' && data.roadmap) setRoadmap(data.roadmap, true);
       state.exchangeCount = data.reset ? 0 : (data.exchangeCount || state.exchangeCount);
       updateChatCount();
@@ -1145,7 +1345,10 @@
       body.innerHTML = '<div class="portal-panel portal-empty">'
         + renderErrorPanel(state.error)
         + '<h2 class="portal-panel-title">Quick match first</h2>'
-        + '<p class="portal-empty-text">Take the short quiz so we can personalize your roadmap.</p>'
+        + '<p class="portal-empty-text">A roadmap is built backwards from one target career — the classes, projects and '
+        + 'applications that lead to it. So we need to know which careers actually fit you before we can plan a route.</p>'
+        + '<p class="portal-empty-hint">About 90 seconds. You can change your target afterwards and the whole plan '
+        + 're-derives around the new one.</p>'
         + '<button type="button" class="coach-secondary-btn portal-empty-cta" id="roadmap-go-quiz">Quick match (~90s) →</button></div>';
       document.getElementById('roadmap-go-quiz').addEventListener('click', function () {
         location.href = (global.FWPageBoot && FWPageBoot.URLS.quiz) || 'quiz.html';
@@ -1182,6 +1385,7 @@
         + (resolvedTarget.slug ? '' : ' disabled')
         + '>'
         + 'Generate roadmap for ' + esc(resolvedTarget.name) + ' →</button>'
+        + planChipHtml()
         + '</div>';
       bodyHtml += '<details class="roadmap-alt-picker">'
         + '<summary class="roadmap-alt-picker-summary">Pick a different career</summary>'
@@ -1199,8 +1403,8 @@
         ? FWHubCareers.careerSlug(m.career.id) : '');
       if (!slug) return;
       const onCls = (slug === selectedSlug) ? ' roadmap-pick-card--on' : '';
-      const socAttr = m.soc ? ' data-soc="' + esc(m.soc) + '"' : '';
-      bodyHtml += '<button type="button" class="portal-card roadmap-pick-card' + onCls + '" data-slug="' + esc(slug) + '" data-name="' + esc(m.career.name) + '"' + socAttr + '>'
+      const socAttr = m.soc ? ' data-soc="' + escAttr(m.soc) + '"' : '';
+      bodyHtml += '<button type="button" class="portal-card roadmap-pick-card' + onCls + '" data-slug="' + escAttr(slug) + '" data-name="' + escAttr(m.career.name) + '"' + socAttr + '>'
         + '<span class="portal-card-body"><span class="portal-card-label">' + esc(m.career.name) + '</span>'
         + '<span class="portal-card-desc">' + esc(fitLabel(m.score, ' fit')) + '</span></span></button>';
     });
@@ -1318,7 +1522,7 @@
     }, 60000).then(function (resp) {
       return resp.json().catch(function () { return {}; }).then(function (data) {
         if (resp.ok && data.roadmap) {
-          setRoadmap(data.roadmap, false);
+          setRoadmap(data.roadmap, 'local');
           render();
           return true;
         }
@@ -1335,17 +1539,21 @@
     if (!path || path.length <= 1) return;
     FWRoadmapTree.setPreviewPath(path);
     state.previewNodeId = nodeId;
-    mountPreviewBanner();
+    state.previewStep = 0;
+    clearTimeout(state.previewLockTimer);
+    // §WS-B2: the rail steps through the previewed branch one waypoint at a time,
+    // starting at the branch root, so the user reads (and walks) the path before
+    // committing (was: the whole chain dumped at once).
+    if (FWRoadmapTree.closeDrawer) FWRoadmapTree.closeDrawer();
+    mountPreviewRail();
+    renderPreviewRail();
     redrawTree();
-    refreshDrawerBranchState();
-    // Previewing a generic branch is the moment to make it real: build it
-    // out in the background and refresh the drawer with the tailored content.
+    // Previewing a generic branch is the moment to make it real: build it out and
+    // swap the rail's generic steps for the tailored ones when it lands.
     ensureBranchBuilt(nodeId).then(function (built) {
-      if (!built) return;
-      showRoadmapToast('This path is now tailored to you — take a look.');
-      if (state.previewNodeId === nodeId && FWRoadmapTree.refreshDrawerForNode && state.roadmap) {
-        FWRoadmapTree.refreshDrawerForNode(state.roadmap, nodeId, {});
-      }
+      if (state.previewNodeId !== nodeId) return;
+      if (built) showRoadmapToast('This path is now tailored to you.');
+      renderPreviewRail();
     });
   }
 
@@ -1353,36 +1561,184 @@
     if (!global.FWRoadmapTree) return;
     FWRoadmapTree.clearPreviewPath();
     state.previewNodeId = null;
-    unmountPreviewBanner();
+    state.previewStep = 0;
+    clearTimeout(state.previewLockTimer);
+    unmountPreviewRail();
     redrawTree();
     refreshDrawerBranchState();
   }
 
-  function mountPreviewBanner() {
-    const panel = document.querySelector('.roadmap-tree-panel');
-    if (!panel) return;
-    let banner = document.getElementById('roadmap-preview-banner');
-    if (!banner) {
-      banner = document.createElement('div');
-      banner.id = 'roadmap-preview-banner';
-      banner.className = 'roadmap-preview-banner';
-      banner.innerHTML = '<span class="roadmap-preview-banner-label">Previewing alternate route</span>'
-        + '<div class="roadmap-preview-banner-actions">'
-        + '<button type="button" class="cta-btn roadmap-preview-commit">Commit</button>'
-        + '<button type="button" class="cta-btn cta-btn-outline roadmap-preview-exit">Exit preview</button>'
+  function mountPreviewRail() {
+    let rail = document.getElementById('roadmap-preview-rail');
+    if (!rail) {
+      rail = document.createElement('aside');
+      rail.id = 'roadmap-preview-rail';
+      rail.className = 'roadmap-preview-rail';
+      rail.setAttribute('aria-label', 'Previewed route');
+      rail.innerHTML = '<div class="roadmap-preview-rail-head">'
+        + '<span class="roadmap-preview-rail-title">Preview route</span>'
+        + '<button type="button" class="roadmap-preview-rail-close" aria-label="Exit preview">×</button>'
+        + '</div>'
+        + '<p class="roadmap-preview-rail-status" hidden><span class="roadmap-preview-rail-spin" aria-hidden="true"></span>Tailoring this path to you…</p>'
+        + '<div class="roadmap-preview-rail-body"></div>'
+        + '<p class="roadmap-preview-lock-msg" role="alert" hidden></p>'
+        + '<div class="roadmap-preview-rail-foot">'
+        + '<button type="button" class="cta-btn roadmap-preview-rail-track">Track in Flight Plan</button>'
+        + '<button type="button" class="cta-btn cta-btn-outline roadmap-preview-rail-exit">Exit preview</button>'
         + '</div>';
-      panel.appendChild(banner);
-      banner.querySelector('.roadmap-preview-commit').addEventListener('click', function () {
-        if (state.previewNodeId) commitBranch(state.previewNodeId);
+      document.body.appendChild(rail);
+      rail.querySelector('.roadmap-preview-rail-track').addEventListener('click', function () {
+        const previewed = state.previewNodeId;
+        if (!previewed) return;
+        // Non-exclusive: tracking the previewed path adds it to the Flight Plan
+        // without rewiring the tree, so the user can still track other branches —
+        // this replaces the old structural "Commit to this path".
+        trackBranchInFocus(previewed);
+        exitBranchPreview();
       });
-      banner.querySelector('.roadmap-preview-exit').addEventListener('click', exitBranchPreview);
+      rail.querySelector('.roadmap-preview-rail-exit').addEventListener('click', exitBranchPreview);
+      rail.querySelector('.roadmap-preview-rail-close').addEventListener('click', exitBranchPreview);
     }
-    banner.hidden = false;
+    rail.hidden = false;
+    syncRefineFabVisibility();
+    requestAnimationFrame(function () { rail.classList.add('open'); });
   }
 
-  function unmountPreviewBanner() {
-    const banner = document.getElementById('roadmap-preview-banner');
-    if (banner) banner.hidden = true;
+  // The ordered waypoints of the branch being previewed (root → the node the user
+  // opened preview on), taken from the same trunk→target chain that lights up the
+  // canvas — so the rail list, the highlight, and the interaction lock all agree
+  // on one path. Falls back to the whole chain when role tags are absent. (WS-B2)
+  function previewBranchNodes() {
+    if (!state.roadmap || !state.previewNodeId || !global.FWRoadmapTree) return [];
+    const path = FWRoadmapTree.computePreviewPath(state.roadmap, state.previewNodeId) || [];
+    const byId = {};
+    (state.roadmap.nodes || []).forEach(function (n) { byId[n.id] = n; });
+    const chain = path
+      .filter(function (id) { return id !== 'trunk' && byId[id]; })
+      .map(function (id) { return byId[id]; });
+    const branchNodes = chain.filter(function (n) { return n.pathRole === 'branch'; });
+    return branchNodes.length ? branchNodes : chain;
+  }
+
+  function setPreviewStep(target) {
+    const nodes = previewBranchNodes();
+    if (!nodes.length) return;
+    const next = Math.min(Math.max(target, 0), nodes.length - 1);
+    // Any move (or a click on any branch waypoint) clears a lingering lock flash.
+    clearTimeout(state.previewLockTimer);
+    const msg = document.querySelector('#roadmap-preview-rail .roadmap-preview-lock-msg');
+    if (msg) msg.hidden = true;
+    if (next === (state.previewStep || 0)) return;
+    state.previewStep = next;
+    renderPreviewRail();
+  }
+
+  function advancePreview(delta) {
+    setPreviewStep((state.previewStep || 0) + delta);
+  }
+
+  // WS-B3: while previewing, clicking any waypoint that lies ON the previewed
+  // branch jumps the rail straight to it (forward or back, any distance) — so
+  // skipping to waypoint 3, or tapping a waypoint whose id changed when the
+  // branch was re-tailored mid-preview, both work instead of hitting the lock.
+  // Only a node OUTSIDE this branch is inert and flashes the lock. Always
+  // returns true so onPointerDown never opens a drawer during preview mode.
+  function handlePreviewNodeClick(nodeId) {
+    const nodes = previewBranchNodes();
+    const targetIdx = nodes.findIndex(function (n) { return n.id === nodeId; });
+    if (targetIdx >= 0) {
+      setPreviewStep(targetIdx);
+    } else {
+      showPreviewLockMessage();
+    }
+    return true;
+  }
+
+  function showPreviewLockMessage() {
+    const rail = document.getElementById('roadmap-preview-rail');
+    const msg = rail && rail.querySelector('.roadmap-preview-lock-msg');
+    if (!msg) return;
+    msg.textContent = 'You cannot interact with other parts of the roadmap in preview mode.';
+    msg.hidden = false;
+    msg.classList.remove('flash');
+    void msg.offsetWidth; // restart the flash animation on repeat mis-clicks
+    msg.classList.add('flash');
+    clearTimeout(state.previewLockTimer);
+    state.previewLockTimer = setTimeout(function () {
+      const m = document.querySelector('#roadmap-preview-rail .roadmap-preview-lock-msg');
+      if (m) m.hidden = true;
+    }, 3400);
+  }
+
+  function renderPreviewRail() {
+    const rail = document.getElementById('roadmap-preview-rail');
+    if (!rail || !state.roadmap) return;
+    const nodes = previewBranchNodes();
+    const root = branchRootFor(state.roadmap, state.previewNodeId);
+    const building = !!state.branchBuilding || !!(root && root.synthetic && !root.aiBuilt);
+    const status = rail.querySelector('.roadmap-preview-rail-status');
+    if (status) status.hidden = !building;
+    const title = rail.querySelector('.roadmap-preview-rail-title');
+    if (title) title.textContent = root ? ('Preview: ' + (root.shortTitle || root.title || 'this path')) : 'Preview route';
+    const body = rail.querySelector('.roadmap-preview-rail-body');
+    if (!body) return;
+    if (!nodes.length) {
+      body.innerHTML = '<p class="roadmap-preview-rail-empty">This route has no additional waypoints yet.</p>';
+      return;
+    }
+    // One waypoint at a time; clamp the pointer — the tree can grow/tailor under
+    // us while a generic branch is being built mid-preview.
+    let idx = state.previewStep || 0;
+    if (idx > nodes.length - 1) idx = nodes.length - 1;
+    if (idx < 0) idx = 0;
+    state.previewStep = idx;
+    const n = nodes[idx];
+    const total = nodes.length;
+    // Show every bullet the waypoint carries (rail scrolls) — capping at 4 read
+    // as "bullets cut off"; steps are already bounded to MAX_STEPS_PER_NODE.
+    const steps = (n.steps || []).slice(0, 8);
+    let stepHtml = '';
+    if (steps.length) {
+      stepHtml = '<ul class="roadmap-preview-wp-steps">'
+        + steps.map(function (s) { return '<li>' + esc(s.text || '') + '</li>'; }).join('')
+        + '</ul>';
+    } else if (building) {
+      stepHtml = '<div class="roadmap-preview-skeleton"><span></span><span></span><span></span></div>';
+    }
+    const nextUp = idx < total - 1 ? nodes[idx + 1] : null;
+    let nav = '<div class="roadmap-preview-nav">'
+      + '<span class="roadmap-preview-progress">Waypoint ' + (idx + 1) + ' of ' + total + '</span>'
+      + '<div class="roadmap-preview-nav-btns">';
+    if (idx > 0) {
+      nav += '<button type="button" class="cta-btn cta-btn-outline roadmap-preview-prev">← Back</button>';
+    }
+    if (nextUp) {
+      nav += '<button type="button" class="cta-btn roadmap-preview-next">Next: '
+        + esc(nextUp.shortTitle || nextUp.title || 'waypoint') + ' →</button>';
+    }
+    nav += '</div></div>';
+    const hint = nextUp
+      ? '<p class="roadmap-preview-hint">Step through this path with Next, or tap the next waypoint on your map.</p>'
+      : '<p class="roadmap-preview-hint">End of this path — Commit below to make it your route.</p>';
+    body.innerHTML = '<div class="roadmap-preview-wp">'
+      + '<div class="roadmap-preview-wp-title">' + (idx + 1) + '. ' + esc(n.shortTitle || n.title || 'Waypoint') + '</div>'
+      + (n.whyItMatters ? '<p class="roadmap-preview-wp-why">' + esc(n.whyItMatters) + '</p>' : '')
+      + stepHtml
+      + '</div>'
+      + nav
+      + hint;
+    const nextBtn = body.querySelector('.roadmap-preview-next');
+    if (nextBtn) nextBtn.addEventListener('click', function () { advancePreview(1); });
+    const prevBtn = body.querySelector('.roadmap-preview-prev');
+    if (prevBtn) prevBtn.addEventListener('click', function () { advancePreview(-1); });
+  }
+
+  function unmountPreviewRail() {
+    const rail = document.getElementById('roadmap-preview-rail');
+    if (!rail) return;
+    rail.classList.remove('open');
+    rail.hidden = true;
+    syncRefineFabVisibility();
   }
 
   async function postGraphAction(body) {
@@ -1397,58 +1753,6 @@
     return data;
   }
 
-  // Commit resolution (WS3): if the target's chain root maps to a decision option,
-  // POST {choose}; otherwise POST {follow}. On success we adopt the saved roadmap,
-  // clear the preview, and offer the AI-extend CTA on the committed branch tip.
-  async function commitBranch(nodeId) {
-    if (!global.FWRoadmapTree || !state.roadmap || state.committing) return;
-    const hit = FWRoadmapTree.findDecisionForNode(state.roadmap, nodeId);
-    if (!hit) {
-      showRoadmapToast('Could not find branch decision.');
-      return;
-    }
-    // Check if the branch choice waypoint (major spine node) is completed
-    const majorNode = (state.roadmap.nodes || []).find(function (n) { return n.id === hit.decision.nodeId; });
-    if (!majorNode || !majorNode.done) {
-      // Show a styled confirm dialog
-      if (global.FWConfirm && typeof FWConfirm.show === 'function') {
-        const confirmed = await FWConfirm.show({
-          title: 'Cannot commit yet',
-          message: 'You must complete the branch choice waypoint ("' + (majorNode?.shortTitle || majorNode?.title || 'Major waypoint') + '") before committing to this branch. Complete that waypoint first, then return here to commit.',
-          confirmText: 'OK',
-          cancelText: '',
-          type: 'info',
-        });
-      } else {
-        showRoadmapToast('Complete the branch choice waypoint ("' + (majorNode?.shortTitle || majorNode?.title || 'Major waypoint') + '") before committing to this branch.');
-      }
-      return;
-    }
-    state.committing = true;
-    refreshDrawerBranchState({ branchPending: true });
-    try {
-      const body = hit
-        ? { action: 'choose', decisionId: hit.decision.id, optionId: hit.option.id, currentRoadmap: state.roadmap }
-        : { action: 'follow', targetNodeId: nodeId, currentRoadmap: state.roadmap };
-      const data = await postGraphAction(body);
-      if (data.roadmap) setRoadmap(data.roadmap, false);
-      exitBranchPreview();
-      showRoadmapToast(data.reply || 'Committed to this branch.');
-      render();
-      // Re-open the drawer on the committed node so the user sees the follow-up
-      // Extend / Track affordances without hunting for the node again.
-      if (FWRoadmapTree.refreshDrawerForNode && state.roadmap) {
-        // Pass the branch root node ID so the drawer can show the branch focus option
-        FWRoadmapTree.refreshDrawerForNode(state.roadmap, nodeId, { committedBranchRoot: hit.option.childNodeId });
-      }
-    } catch (err) {
-      showRoadmapToast(fwErr(err, 'Could not commit to that branch.'));
-      refreshDrawerBranchState({ error: fwErr(err, 'Could not commit to that branch.') });
-    } finally {
-      state.committing = false;
-    }
-  }
-
   async function extendBranch(nodeId) {
     if (!state.roadmap || state.committing) return;
     state.committing = true;
@@ -1460,9 +1764,25 @@
         branchNodeId: nodeId,
         currentRoadmap: state.roadmap,
       });
-      if (data.roadmap) setRoadmap(data.roadmap, false);
+      if (data.roadmap) setRoadmap(data.roadmap, 'local');
+      // Success half only — postGraphAction throws on !resp.ok, so failed
+      // extends fall to the catch and never count here.
+      try {
+        if (global.FWEvents) {
+          FWEvents.log('roadmap_extend', {
+            nodeId: nodeId,
+            nodes: ((data.roadmap && data.roadmap.nodes) || []).length,
+          });
+        }
+      } catch (_) {}
       showRoadmapToast(data.reply || 'Added new steps to your branch.');
       render();
+      // §2.1 finishing touch: the drawer is a render()-untouched sibling, so its
+      // "Extending…" busy button never clears and the new steps never surface
+      // unless we refresh it on the extended node.
+      if (global.FWRoadmapTree && FWRoadmapTree.refreshDrawerForNode && state.roadmap) {
+        FWRoadmapTree.refreshDrawerForNode(state.roadmap, nodeId, {});
+      }
     } catch (err) {
       showRoadmapToast(fwErr(err, 'Could not extend that branch.'));
       refreshDrawerBranchState({ error: fwErr(err, 'Could not extend that branch.') });
@@ -1471,24 +1791,139 @@
     }
   }
 
-  // Track a committed branch in Focus (WS6): add/switch the secondary branchFocus
-  // entry (max 2: main + one secondary), set it active, then open the focus view.
+  // WS-C: reverse a branch commitment. targetOptionId null → uncommit back to
+  // the main path; set → switch to that sibling branch off the same fork. Both
+  // route through the guarded server `uncommit` action, so the fork-is-frontier
+  // deep-history guard is enforced server-side regardless of the entry point.
+  async function changeBranchCommit(nodeId, targetOptionId) {
+    if (!global.FWRoadmapTree || !state.roadmap || state.committing) return;
+    const hit = FWRoadmapTree.findDecisionForNode(state.roadmap, nodeId);
+    if (!hit || !hit.decision) {
+      showRoadmapToast('Could not find branch decision.');
+      return;
+    }
+    const switching = !!targetOptionId;
+    if (global.FWConfirm && typeof FWConfirm.show === 'function') {
+      const confirmed = await FWConfirm.show({
+        title: switching ? 'Switch paths?' : 'Return to your main path?',
+        message: switching
+          ? 'This moves your commitment to the other branch off this fork. You can switch back or return to your main path while you are still standing here.'
+          : 'This un-commits this branch and puts you back on your main path. The branch stays available to preview and commit to again later.',
+        confirmText: switching ? 'Switch' : 'Return to main path',
+        cancelText: 'Cancel',
+        type: 'info',
+      });
+      if (!confirmed) return;
+    }
+    state.committing = true;
+    refreshDrawerBranchState({ branchPending: true });
+    try {
+      const body = { action: 'uncommit', decisionId: hit.decision.id, currentRoadmap: state.roadmap };
+      if (targetOptionId) body.optionId = targetOptionId;
+      const data = await postGraphAction(body);
+      if (data.roadmap) setRoadmap(data.roadmap, 'local');
+      exitBranchPreview();
+      showRoadmapToast(data.reply || (switching ? 'Switched paths.' : 'Returned to your main path.'));
+      render();
+      if (global.FWRoadmapTree && FWRoadmapTree.closeDrawer) FWRoadmapTree.closeDrawer();
+      if (state.focusOpen) renderFocusPanel();
+    } catch (err) {
+      const fallback = switching ? 'Could not switch paths.' : 'Could not return to your main path.';
+      showRoadmapToast(fwErr(err, fallback));
+      refreshDrawerBranchState({ error: fwErr(err, fallback) });
+    } finally {
+      state.committing = false;
+    }
+  }
+
+  function uncommitBranch(nodeId) {
+    changeBranchCommit(nodeId, null);
+  }
+
+  function switchBranch(nodeId, optionId) {
+    changeBranchCommit(nodeId, optionId);
+  }
+
+  // Track a path in Focus (the user's "commit"): add it to the tracked set (up
+  // to 4 branches + spine) and refresh the drawer so the Uncommit control and
+  // the "open focus?" tab appear. A null return means the cap is hit — articulate
+  // it rather than failing silently.
   function trackBranchInFocus(nodeId) {
     if (!global.FWSkillGapTracker || !state.roadmap) return;
     if (typeof FWSkillGapTracker.trackBranchFocus !== 'function') return;
-    // Personalize a generic branch before dropping the user into its focus
-    // view — exploring hardcoded template steps helps no one decide.
+    // Personalize a generic branch before tracking it — template steps in the
+    // Flight Plan help no one.
     const pending = branchNeedsBuild(state.roadmap, nodeId)
       ? ensureBranchBuilt(nodeId)
       : Promise.resolve(false);
     pending.then(function () {
       const updated = FWSkillGapTracker.trackBranchFocus(state.roadmap, nodeId, trackerQuizScores());
-      if (!updated) return;
+      if (!updated) {
+        const max = FWSkillGapTracker.maxTrackedBranches || 4;
+        showRoadmapToast('You can track up to ' + max + ' branches at once — uncommit one first.');
+        return;
+      }
       setRoadmap(updated, true);
       state.roadmap = updated;
-      if (global.FWRoadmapTree && FWRoadmapTree.closeDrawer) FWRoadmapTree.closeDrawer();
-      openFocusView();
+      render();
+      // Past the cap refusal above, so this counts a path that IS tracked, not
+      // a click that asked to be. Both entry points — the drawer button and the
+      // preview rail's "Track in Flight Plan" — come through here.
+      try {
+        if (global.FWEvents) {
+          const trackedKey = FWSkillGapTracker.branchKeyForNode
+            ? FWSkillGapTracker.branchKeyForNode(updated, nodeId) : '';
+          FWEvents.log('roadmap_committed', { kind: 'track', spine: trackedKey === 'spine' });
+        }
+      } catch (_) {}
+      showRoadmapToast('Now tracking this path in your Flight Plan.');
+      // S19: an NPS moment. Tracking a path is the point at which a student has
+      // decided this thing is theirs — untracking is not, so only this branch
+      // asks. The card renders bottom-right and the toast top-centre, so the two
+      // do not stack.
+      try { if (global.FWNps) FWNps.maybeAsk('roadmap_commit'); } catch (_) {}
+      if (global.FWRoadmapTree && FWRoadmapTree.refreshDrawerForNode) {
+        FWRoadmapTree.refreshDrawerForNode(state.roadmap, nodeId, {});
+      }
     });
+  }
+
+  // "Open focus?" → Yes: make the clicked node's path the active focus and open
+  // the focus view for it. Works for the spine and any tracked branch.
+  function openFocusForNode(nodeId) {
+    if (!global.FWSkillGapTracker || !state.roadmap) return;
+    const key = FWSkillGapTracker.branchKeyForNode(state.roadmap, nodeId);
+    if (typeof FWSkillGapTracker.setActiveBranchKey === 'function') {
+      const updated = FWSkillGapTracker.setActiveBranchKey(state.roadmap, key);
+      if (updated) { setRoadmap(updated, true); state.roadmap = updated; }
+    }
+    if (global.FWRoadmapTree && FWRoadmapTree.closeDrawer) FWRoadmapTree.closeDrawer();
+    openFocusView();
+  }
+
+  // The user's "uncommit": untrack the clicked node's path from Focus (drops it
+  // from the Flight Plan + focus prompts). The branch stays on the map — this
+  // never prunes the tree, so AI-extended branches are preserved.
+  function untrackFocusForNode(nodeId) {
+    if (!global.FWSkillGapTracker || !state.roadmap) return;
+    if (typeof FWSkillGapTracker.untrackFocus !== 'function') return;
+    const key = FWSkillGapTracker.branchKeyForNode(state.roadmap, nodeId);
+    const updated = FWSkillGapTracker.untrackFocus(state.roadmap, key);
+    if (!updated) {
+      showRoadmapToast('Keep at least one path tracked — track another before uncommitting this one.');
+      return;
+    }
+    setRoadmap(updated, true);
+    state.roadmap = updated;
+    render();
+    // Past the "keep at least one tracked" refusal, so track − untrack is a
+    // true net of what the student is actually working on.
+    try { if (global.FWEvents) FWEvents.log('roadmap_committed', { kind: 'untrack', spine: key === 'spine' }); } catch (_) {}
+    showRoadmapToast(key === 'spine' ? 'Main path removed from your Flight Plan.' : 'Branch removed from your Flight Plan.');
+    if (global.FWRoadmapTree && FWRoadmapTree.refreshDrawerForNode) {
+      FWRoadmapTree.refreshDrawerForNode(state.roadmap, nodeId, {});
+    }
+    if (state.focusOpen) renderFocusPanel();
   }
 
   function trackerQuizScores() {
@@ -1499,21 +1934,36 @@
   function bindTreeCanvas(wrap, rm) {
     const canvas = wrap.querySelector('#roadmap-canvas');
     if (!canvas || !global.FWRoadmapTree) return;
+    // §3C.3: renderActive rebinds on every action; without destroying the prior
+    // controller its window/visualViewport/theme/ResizeObserver listeners leak and
+    // keep redrawing detached zombie canvases on every resize/theme toggle.
+    if (state.treeController && typeof state.treeController.destroy === 'function') {
+      state.treeController.destroy();
+    }
     state.treeController = FWRoadmapTree.bindCanvas(canvas, rm, {
       getTree: function () { return state.roadmap; },
       onMarkDone: toggleNodeDone,
       onToggleStep: toggleStep,
+      onSetCommitment: setStepCommitment,
+      onClearCommitment: clearStepCommitment,
+      onBreakDownStep: breakDownStep,
       onPreviewPath: startBranchPreview,
       onExitPreview: exitBranchPreview,
-      onCommitBranch: commitBranch,
       onExtendBranch: extendBranch,
       onTrackBranch: trackBranchInFocus,
+      onUncommitBranch: uncommitBranch,
+      onSwitchBranch: switchBranch,
+      onUntrackFocus: untrackFocusForNode,
+      onOpenFocusForNode: openFocusForNode,
       onNodeSelect: function (hit, tree) {
-        const imm = FWRoadmapTree.immediateWaypoint(tree);
-        if (imm && hit.id === imm.id) {
-          openFocusView();
-          return true;
+        // WS-B3: preview mode locks the rest of the roadmap.
+        if (state.previewNodeId) {
+          return handlePreviewNodeClick(hit.id);
         }
+        // WS-multi: every waypoint opens the drawer now. A tracked path's live
+        // focus waypoint shows an overhead "open focus?" tab inside the drawer
+        // instead of jumping straight in, so switch / preview / track options
+        // stay one tap away (and the spine + committed branches are all openable).
         return false;
       },
     });
@@ -1581,6 +2031,7 @@
         + '</div>'
         + '<div class="roadmap-hud-actions">'
         + '<button type="button" class="roadmap-hud-btn roadmap-hud-btn--primary" id="roadmap-regen" title="Regenerate plan" aria-label="Regenerate plan">↻</button>'
+        + planChipHtml()
         + '</div>'
         + '</div>';
 
@@ -1604,6 +2055,7 @@
         + '</div></div>'
         + '<div class="roadmap-hud-actions">'
         + '<button type="button" class="roadmap-hud-btn roadmap-hud-btn--primary" id="roadmap-regen" title="Regenerate plan" aria-label="Regenerate plan">↻</button>'
+        + planChipHtml()
         + '</div></div>'
         + '<div class="roadmap-legacy-empty">'
         + '<p>Your plan was saved in an older format. Upgrade it to the interactive career tree — '
@@ -1630,11 +2082,13 @@
 
     if (isTree) {
       bindTreeCanvas(body, rm);
-      // A live preview survives a re-render of the tree panel DOM — re-mount its
-      // banner (the module still holds previewPathIds) or drop it if stale.
+      // A live preview survives a re-render: the rail lives on <body>, not in the
+      // rebuilt tree panel, so re-show + re-render its content (the module still
+      // holds previewPathIds), or drop it if the preview is stale.
       if (state.previewNodeId && global.FWRoadmapTree && FWRoadmapTree.getPreviewPath
         && FWRoadmapTree.getPreviewPath()) {
-        mountPreviewBanner();
+        mountPreviewRail();
+        renderPreviewRail();
       } else if (state.previewNodeId) {
         exitBranchPreview();
       }
@@ -1792,6 +2246,23 @@
 
     state.roadmap = readRoadmap();
 
+    // §3C.2: the drawer is a render()-untouched sibling of #roadmap-body. On any
+    // full-tree swap (regen, retarget, external sync, reset) its open node id
+    // vanishes; refreshDrawerForNode then silently no-ops, stranding a stale
+    // waypoint whose step toggles fail canEditWaypoint with a confusing toast.
+    // One chokepoint: close it whenever its node is no longer in the tree. (A step
+    // toggle keeps the id, so the drawer correctly stays open in that case.)
+    if (global.FWRoadmapTree && typeof FWRoadmapTree.getOpenDrawerNodeId === 'function') {
+      const openId = FWRoadmapTree.getOpenDrawerNodeId();
+      if (openId && openId !== 'trunk') {
+        const stillThere = state.roadmap && Array.isArray(state.roadmap.nodes)
+          && state.roadmap.nodes.some(function (n) { return n && n.id === openId; });
+        if (!stillThere && typeof FWRoadmapTree.closeDrawer === 'function') {
+          FWRoadmapTree.closeDrawer();
+        }
+      }
+    }
+
     if (state.generating) {
       head.innerHTML = '';
       renderLoading(body);
@@ -1813,6 +2284,10 @@
     }
 
     ensureBackgroundSync();
+
+    // WS-G: every render rebuilds innerHTML, so the plan chips are new nodes
+    // each time. Idempotent and purely local — no fetch on this path.
+    if (global.FWPlanSurface && typeof FWPlanSurface.sync === 'function') FWPlanSurface.sync();
 
     syncRefineFabVisibility();
     mountRoadmapToast();

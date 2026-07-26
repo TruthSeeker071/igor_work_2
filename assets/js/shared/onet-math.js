@@ -100,30 +100,72 @@
     return cosinePercent(cosine(normalizeVector(objectiveVec, len), careerVec, len));
   }
 
+  // ---- Fit chokepoints ----
+
+  // Stamps every stored fit percent (KV rank keys, stretch-fit caches, portal
+  // snapshots) so a cache written by one formula can never be served under
+  // another. Bump it in BOTH math files whenever a chokepoint's output moves.
+  var FIT_MATH_VERSION = 4;
+
+  // THE personality-fit chokepoint. Every personality fit percent in the app,
+  // client and server, comes from here; no call site composes
+  // cosinePercent(cosine(personality, ...)) itself. Changing how personality fit
+  // is scored means changing this function and nothing else.
+  //
+  // This is the mean-centered cosine, restored 2026-07-21 after the
+  // baseline-subtracted ("distinctive") formula shipped and was rejected in use:
+  // it separated desk sectors well but compressed almost the whole catalog into
+  // single digits, which reads as no answer at all. Plain correlation trades that
+  // discrimination for a legible spread — see docs/FIT_MATH.md.
+  function personalityFitPercent(userValues, careerVec, len) {
+    return cosinePercent(cosine(userValues, careerVec, len));
+  }
+
+  // THE display-fit chokepoint. Every fit percent the product SHOWS — sector
+  // clouds, career orbs, career pages, quiz results, Marco — is personality fit:
+  // how the way you like to work lines up with what a career actually involves.
+  //
+  // Objective fit (what you have built so far) is deliberately NOT folded in.
+  // It was, twice: as a 0.75/0.25 blend, then as one correlation against the
+  // summed vector. Both mixed 'would I like this' with 'am I ready for this',
+  // which are different questions a user asks at different moments. Objective
+  // fit is still computed and still shown — beside personality fit on the career
+  // page, and driving preparedness, skill gaps and the stretch panel, which is
+  // where 'am I ready' belongs.
+  function displayFitPercent(personalityValues, careerVec, len) {
+    if (!personalityValues || !personalityValues.length) return null;
+    return personalityFitPercent(personalityValues, careerVec, len);
+  }
   /**
-   * FW2.0 A1 — "why this match": per-dimension contribution to a cosine fit.
-   * Each dim's product u_i*c_i, divided by |u||c|, is its share of the cosine
-   * similarity; summed over all dims it equals the cosine. Returns the top-k
-   * contributors sorted by product (desc), each with its share of the total.
+   * FW2.0 A1 — "why this match": per-dimension contribution to the fit.
+   * Each dim's product, divided by |u||c|, is its share of the correlation;
+   * summed over all dims it equals the cosine. Returns the top-k contributors
+   * sorted by product (desc), each with its share of the total.
    * `labels` (optional) maps dim index → human name (from the ETL registry).
+   *
+   * Products are taken on the raw levels, matching the plain correlation the
+   * displayed percent comes from. The consequence is honest and worth knowing:
+   * the top contributors skew toward what ALL work needs (Reading
+   * Comprehension, Active Listening, Speaking), because that is what a
+   * mean-centered cosine actually scores highest on.
    */
   function fitContributions(userVec, careerVec, k, labels) {
     if (!userVec || !careerVec) return [];
     var len = Math.min(userVec.length, careerVec.length) || DIM;
-    var denom = magnitude(userVec, len) * magnitude(careerVec, len);
+    var n = len;
+    var denom = magnitude(userVec, n) * magnitude(careerVec, n);
     var rows = [];
     var total = 0;
-    for (var i = 0; i < len; i++) {
-      var u = userVec[i] || 0;
-      var c = careerVec[i] || 0;
-      var product = u * c;
+    for (var i = 0; i < n; i++) {
+      var d = i;
+      var product = (userVec[i] || 0) * (careerVec[i] || 0);
       if (product <= 0) continue;
       total += product;
       rows.push({
-        index: i,
-        label: labels && labels[i] != null ? labels[i] : null,
-        userScore: clamp100(u),
-        careerWeight: clamp100(c),
+        index: d,
+        label: labels && labels[d] != null ? labels[d] : null,
+        userScore: clamp100(userVec[d] || 0),
+        careerWeight: clamp100(careerVec[d] || 0),
         product: product,
         contribution: denom > 0 ? product / denom : 0,
       });
@@ -133,13 +175,67 @@
     return rows.slice(0, k && k > 0 ? k : 3);
   }
 
+  // ---- Onboarding layer gating ----
+  // Onboarding stacks several sources (quiz seed, sharpen, know-you / resume)
+  // onto ONE personality vector. Ungated, each source adds positive mass in a
+  // slightly different direction, the sum drifts back toward the generic-
+  // occupation baseline, and every career ends up scoring the same middling
+  // percent. So each source's pending deltas are gated against the vector they
+  // land on, and the whole layer is then held to an L1 budget so no single
+  // source can out-shout the seed. MUST stay identical to
+  // functions/_lib/onet/math.js gateLayerDeltas (client/server parity).
+  var LAYER_GAIN_ALIGNED = 1;    // sharpens a direction the vector already has
+  var LAYER_GAIN_OPEN = 0.5;     // opens a dim the vector has no opinion on
+  var LAYER_GAIN_OPPOSED = 0.25; // fights the direction — new info still moves it, slowly
+
+  // `center` is the vector's neutral point: 50 for personality (an O*NET level
+  // profile), 0 for objective (a sparse target vector built up from nothing).
+  function gateLayerDeltas(baseValues, pending, budget, center) {
+    var c = center == null ? 50 : center;
+    var out = new Array(pending.length);
+    var total = 0;
+    var i;
+    for (i = 0; i < pending.length; i++) {
+      var delta = Number(pending[i]) || 0;
+      if (!delta) { out[i] = 0; continue; }
+      var base = Number(baseValues && baseValues[i]) || 0;
+      var d = base - c;
+      var gain;
+      if (base === 0 || d === 0) gain = LAYER_GAIN_OPEN;
+      else gain = ((delta > 0) === (d > 0)) ? LAYER_GAIN_ALIGNED : LAYER_GAIN_OPPOSED;
+      out[i] = delta * gain;
+      total += Math.abs(out[i]);
+    }
+    if (budget > 0 && total > budget) {
+      var k = budget / total;
+      for (i = 0; i < out.length; i++) out[i] *= k;
+    }
+    return out;
+  }
+
   // CANONICAL FIT-TIER LADDER — single source of truth for every "how good is
-  // this fit" threshold in the app. Calibrated to the mean-centered cosine
-  // distribution above (top real matches ~58-66, so mythic is genuinely rare).
+  // this fit" threshold in the app. Recalibrated 2026-07-21 for the summed-vector
+  // correlation (npm run fit:calibrate, six personas x 782 careers, table in
+  // docs/FIT_MATH.md). Plain correlation puts a decided profile's whole catalog
+  // much higher than the distinctive formula did, so every threshold moved up.
+  // KNOWN LIMIT, measured not assumed: one absolute ladder cannot be fair across
+  // profiles, because how high a profile scores in absolute terms depends on how
+  // typical it is, not how good the match is. Under this ladder a quant-finance
+  // profile reads 17% mythic while a trades profile reads 0%. Percentile tiers —
+  // "mythic = your own top 2%" — are the real fix and are written up as the
+  // follow-up in docs/FIT_MATH.md.
   // Consumers: career-target.js fitRarity, hub-canvas.js rarityOf/isGold/isBest,
   // marco.js isGold, quiz-app.js qzTierFor, hub-dashboard.js highFit. If you
   // change these, you change all of them — that's the point (no drift).
-  var FIT_TIERS = { mythic: 66, legendary: 56, epic: 46, rare: 34, uncommon: 20 };
+  var FIT_TIERS = { mythic: 85, legendary: 75, epic: 60, rare: 45, uncommon: 30 };
+
+  // The score to colour an entry by when there is genuinely no fit yet — a
+  // catalog search hit, a career focus with no rank. It is a display
+  // placeholder, NOT a measured fit, and it is named so that recalibrating
+  // FIT_TIERS cannot silently promote "we don't know" into a legendary badge.
+  // 0 reads "common" under the ladder above; any positive placeholder would
+  // inherit a real tier.
+  var FIT_NEUTRAL = 0;
 
   function fitTier(score) {
     var s = Number(score) || 0;
@@ -158,11 +254,19 @@
     dot: dot,
     magnitude: magnitude,
     cosine: cosine,
+    LAYER_GAIN_ALIGNED: LAYER_GAIN_ALIGNED,
+    LAYER_GAIN_OPEN: LAYER_GAIN_OPEN,
+    LAYER_GAIN_OPPOSED: LAYER_GAIN_OPPOSED,
+    gateLayerDeltas: gateLayerDeltas,
     FIT_TIERS: FIT_TIERS,
+    FIT_NEUTRAL: FIT_NEUTRAL,
     fitTier: fitTier,
     normalizeVector: normalizeVector,
     cosinePercent: cosinePercent,
     computeFitPercent: computeFitPercent,
+    FIT_MATH_VERSION: FIT_MATH_VERSION,
+    personalityFitPercent: personalityFitPercent,
+    displayFitPercent: displayFitPercent,
     objectiveFitPercent: objectiveFitPercent,
     fitContributions: fitContributions,
     percentileRank: percentileRank,

@@ -4,9 +4,19 @@ name = "flightway-cron"
 main = "index.js"
 compatibility_date = "2025-01-01"
 
-# Mondays 14:00 UTC
+# Three schedules, dispatched on `event.cron` inside index.js:
+#   Daily 14:00 UTC — lifecycle dispatcher: day-3 onboarding follow-up every day,
+#                     the Deadline Radar T-3/T-14 alerts + nightly radar refresh
+#                     (V2 S9), the weekly Flight Plan digest on Mondays, and the
+#                     Month in Review on the 1st (V2 S11).
+#   Hourly  :00     — due admin broadcasts only (V2 S11). Separate from the daily
+#                     pass because a broadcast queued at 15:00 UTC would
+#                     otherwise wait 23 hours; the daily dispatcher also sweeps
+#                     them as a backstop, and the atomic scheduled→sending claim
+#                     makes the overlap safe.
+#   Daily 04:00 UTC — the analytics rollup + 90-day raw prune (V2 S1).
 [triggers]
-crons = ["0 14 * * 1"]
+crons = ["0 14 * * *", "0 * * * *", "0 4 * * *"]
 
 [[d1_databases]]
 binding = "DB"
@@ -20,10 +30,60 @@ id = "90baa154928941c3b45ff0ecb4894f05"
 [vars]
 # Must be the host where the users in this D1 actually live — nudge-email
 # task/unsubscribe links resolve against it, and /unsubscribe is a Pages
-# Function on that project. flightway.ai (main) has neither this user base
-# nor the prototype's Functions. Update when a custom domain replaces it,
-# then `npm run deploy:cron`.
-SITE_URL = "https://flightwayjacobprototype.pages.dev"
+# Function on that project.
+#
+# There are TWO separate Pages projects, both in the same Cloudflare account:
+#   flightway           <- git branch `main`        -> flightway.ai (public, live Stripe key)
+#   flightwayprototype  <- git branch `Jacob_Work`  -> flightwayjacobprototype.pages.dev (test key)
+# They are distinct projects with their own secrets, but they share the ONE
+# D1 (`flightway-db`) and the ONE KV (`COACH_KV`) — verified with
+# `wrangler d1 list` / `kv namespace list`: there is no second database. So
+# this worker's user base is the same either way, and flightway.ai is the
+# canonical public host to send people to.
+# After changing this, `npm run deploy:cron`.
+SITE_URL = "https://flightway.ai"
+
+# Not secrets — a from-address and a postal address are printed in every email
+# we send. Kept here rather than as `wrangler secret put` values so they are
+# visible, diffable, and nobody has to remember them. Matches the code default
+# in functions/_lib.js resendConfigFromEnv().
+# The domain must be verified in Resend or the send fails.
+FROM_EMAIL = "FlightWay <careers@flightway.ai>"
+
+# CAN-SPAM requires a real physical postal address in every commercial email.
+# THE VALUE BELOW IS NOT ONE — it is the company name, the same string
+# functions/_lib/email-template.js `mailingAddress()` already fell back to. It
+# is set explicitly so the value is versioned and diffable rather than implicit,
+# but the legal requirement is STILL OPEN, and this line silences both that
+# file's runtime warning and the `npm run verify:env` warning that used to
+# carry the reminder.
+# Before the first commercial send: replace with a real physical postal address
+# (a UPS-store box is fine) HERE and in the root wrangler.toml
+# [env.production.vars], then `npm run deploy:cron` + rebuild both Pages
+# projects.
+MAILING_ADDRESS = "FlightWay, 540 Main St, New York, NY 10044"
+
+# V2 S9 — the NIGHTLY DEADLINE RADAR REFRESH is OFF by default and that is the
+# intended state. It only runs when BOTH of these exist on this Worker:
+#   GROUNDING_ENABLED = "true"   (a var, uncomment below)
+#   GEMINI_API_KEY               (a secret — same key as the Pages projects)
+# `npm run verify:env` warns if the flag is on without the key, because that
+# combination marks every user refreshed for a week and returns nothing.
+# The T-3/T-14 ALERT emails do NOT need either: they read rows that already
+# exist and send them, so they work as soon as migration 0020 is applied.
+# GROUNDING_ENABLED = "true"
+#
+# Optional: how many users the nightly refresh may scan (default 50). Each one
+# costs three live web calls plus a shaping call, and every call also draws on
+# the shared GROUNDING_GLOBAL_DAILY budget, which stops the loop when spent.
+# DEADLINE_REFRESH_DAILY_CAP = "50"
+
+# V2 S11 — how many STALE weeks the Monday digest may generate with Gemini in
+# one run (default 25). The digest runs before the student's first visit of the
+# week, so whatever it generates is what they see on the page; past this cap the
+# email falls back to the deterministic task selection (the same steps, without
+# the AI phrasing) and the page generates normally on their next visit.
+# DIGEST_GENERATE_CAP = "25"
 
 # Secrets to set in this worker (wrangler secret put ... inside workers/cron):
 #   RESEND_API_KEY   — same key as the Pages project
@@ -31,6 +91,3 @@ SITE_URL = "https://flightwayjacobprototype.pages.dev"
 #   UNSUB_SECRET     — MUST match the Pages project's UNSUB_SECRET so unsubscribe
 #                      links verify (both default to "flightway-unsub" if unset)
 #   MAILING_ADDRESS  — a real physical postal address (CAN-SPAM requirement)
-#   ADZUNA_APP_ID    — Adzuna developer App ID (Good Fit Jobs). Same value as Pages.
-#   ADZUNA_APP_KEY   — Adzuna developer App Key. Without both, the email sends with
-#                      no jobs section (feature is off, nothing breaks).

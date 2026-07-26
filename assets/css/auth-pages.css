@@ -1,7 +1,7 @@
 /* Auth pages (sign in, register, forgot/reset password) — card layout.
    Every style for auth.html lives here; the markup carries no inline styles.
-   The shell deliberately does NOT use .hero: that class carries forced
-   overrides in flightway-theme.css that fight card typography. */
+   The shell deliberately does NOT use .hero: that class is loaded with
+   !important overrides in flightway-theme.css that fight card typography. */
 
 .auth-shell {
   display: flex;
@@ -20,7 +20,7 @@
   padding: 40px 32px 28px;
   background: rgb(var(--surface));
   border: 1px solid rgb(var(--border));
-  border-radius: 16px;
+  border-radius: 20px;
   box-shadow: var(--elev-2);
   text-align: left;
 }
@@ -35,7 +35,7 @@
 .auth-card-brand {
   justify-content: center;
   margin-bottom: var(--space-5);
-  font-size: 1.125rem;
+  font-size: 1.15rem;
 }
 
 .auth-card .auth-card-title {
@@ -124,7 +124,7 @@
   padding: 0;
   background: none;
   border: 0;
-  border-radius: 10px;
+  border-radius: 8px;
   color: rgb(var(--text-muted));
   cursor: pointer;
   transition: color var(--fw-dur-fast) var(--fw-ease-out);
@@ -178,8 +178,8 @@
   margin-top: 2px;
   border-radius: 50%;
   background: rgb(var(--err));
-  color: rgb(var(--primary-fg));
-  font-size: 0.6875rem;
+  color: #fff;
+  font-size: 11px;
   font-weight: 700;
   line-height: 16px;
   text-align: center;
@@ -220,7 +220,7 @@
 .auth-card .auth-btn-full {
   width: 100%;
   padding: 14px var(--space-5);
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 
 .auth-footnote {
@@ -259,5 +259,5 @@
   }
 
   .auth-card-head { margin-bottom: var(--space-5); }
-  .auth-card .auth-card-title { font-size: 1.5rem; }
+  .auth-card .auth-card-title { font-size: 1.35rem; }
 }

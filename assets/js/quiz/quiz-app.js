@@ -510,7 +510,7 @@ const QZ_Qs = [
     cards:[{l:'Freshman',k:'freshman'},{l:'Sophomore',k:'sophomore'},{l:'Junior',k:'junior'},{l:'Senior',k:'senior'}]},
   {id:1,type:'tags',q:"What subjects light you up?",sub:"Tap everything that excites you. Pick at least 4.",key:'subjects',min:4,max:10,
     tags:[{t:'🧮 Math',s:{tech:2,science:2,finance:3,engineering:2,cybersecurity:1}},{t:'✍️ Writing',s:{creative:3,marketing:2,education:2,law:1,media:2}},{t:'🔬 Science',s:{science:4,healthcare:2,engineering:1,pharmaceutical:2,agriculture:1}},{t:'🎨 Art & Design',s:{creative:4,marketing:2}},{t:'🎵 Music',s:{creative:3,education:1,media:1}},{t:'💼 Business',s:{business:3,finance:2,startups:1,operations:1,hr:1}},{t:'💻 Tech / Coding',s:{tech:4,engineering:2,cybersecurity:2,startups:1}},{t:'🧠 Psychology',s:{healthcare:2,social:2,education:2,marketing:1,hr:2}},{t:'📜 History',s:{education:2,law:2,creative:1,government:1}},{t:'🗣️ Languages',s:{social:2,education:2,creative:1,media:1}},{t:'⚖️ Politics',s:{law:3,social:2,education:1,government:2}},{t:'🏃 Sports',s:{marketing:1,business:1,sports:3}},{t:'🌿 Nature',s:{science:2,social:1,agriculture:3}},{t:'🩺 Medicine',s:{healthcare:4,science:1,pharmaceutical:2}},{t:'🏗️ Engineering',s:{engineering:4,tech:1,aerospace:2,trades:1}},{t:'🤔 Philosophy',s:{education:2,law:2,creative:1}},{t:'📈 Economics',s:{finance:3,business:3,realestate:1}},{t:'🎬 Film',s:{creative:3,marketing:2,media:3}},{t:'📷 Photography',s:{creative:3,marketing:1,media:2}},{t:'🌍 Global Issues',s:{social:3,law:2,government:1}},{t:'🔧 Hands-on Building',s:{trades:4,engineering:2,operations:1}},{t:'🛡️ Cybersecurity',s:{cybersecurity:4,tech:2}},{t:'✈️ Aviation',s:{aerospace:4,engineering:2}},{t:'🏨 Hospitality',s:{hospitality:4,business:1}}]},
-  {id:2,type:'text',q:"What university are you enrolled at?",sub:"Type your school's name — we'll match majors and classes to it.",key:'school',placeholder:'e.g., UCLA, NYU, Boston College...'},
+  {id:2,type:'text',q:"What university are you enrolled at?",sub:"Type your school's name — we'll match majors and classes to it.",key:'school',placeholder:'e.g., UCLA, NYU, Boston College…'},
   {id:20,type:'multi',q:"Where in your career journey are you?",sub:"Select all that apply.",key:'goals',min:1,
     opts:[{t:'Choosing a college / university course'},{t:'Deciding my major'},{t:'Deciding on careers'},{t:'Learning about my personality'},{t:'Looking for internships'},{t:'Joining extracurriculars'},{t:'Pursuing passion projects'}]},
   {id:21,type:'multi',q:"What are you hoping to get from Flightway?",sub:"Select all that apply.",key:'goals2',min:1,
@@ -568,12 +568,22 @@ const QZ_Qs = [
 ];
 
 // ── INITIAL vs HUB split ──────────────────────────────────────────────────
-// The initial quiz is intentionally short + fun (lowest friction → email).
+// The initial quiz is intentionally short + fun (lowest friction → the reveal).
 // Everything else moves to the Career Hub "Sharpen your matches" panel.
 // QZ_ACTIVE is the ordered list the quiz actually plays; QZ_HUB is the rest.
 // Scoring (qzComputeScores) keys off question `id`, so it works regardless of
 // which screen captured the answer.
-const QZ_INITIAL_IDS = [0, 24, 2, 20, 21, 22, 3, 5, 17, 23];
+//
+// V2 S6 (D8): the pre-signup set now carries EIGHT scoring maps (was four —
+// only 3/5/17/22 scored, so a generic profile could not be told apart). The 8
+// scored ids are 1,18,3,5,6,22,16,17; leaning (24) opens and feeds a score boost
+// but carries no s:{}; goals2 (21) closes for personalization. Name/school/grade
+// (old ids 23/2/0) are OUT of the scored flow — collected post-signup (name at
+// the gate; year+school in the Academic Profile step). Everything downstream
+// degrades gracefully when they are absent: qzBuildHubPayload falls back
+// (name→'Student', year/school→null), academics uses its `_default` major copy,
+// and the school-dependent blurbs simply omit (qzSchoolBlurb returns '').
+const QZ_INITIAL_IDS = [24, 1, 18, 3, 5, 6, 22, 16, 17, 21];
 const QZ_ACTIVE = QZ_INITIAL_IDS.map(id => QZ_Qs.find(q => q.id === id)).filter(Boolean);
 const QZ_HUB = QZ_Qs.filter(q => QZ_INITIAL_IDS.indexOf(q.id) === -1);
 
@@ -636,6 +646,8 @@ function qzR(x){return Math.round(x)}
 function qzStart(){
   document.getElementById('qz-intro').classList.add('qz-hidden');
   document.getElementById('qz-quiz').classList.remove('qz-hidden');
+  qzStartedAt = Date.now(); qzLastViewedIdx = -1;
+  try { if (global.FWEvents) FWEvents.log('quiz_start', {}); } catch (_) {}
   qzRenderQ(0);
 }
 
@@ -649,8 +661,12 @@ function qzProgressPct(idx,total){
 
 function qzRenderQ(idx){
   const q=QZ_ACTIVE[idx];
+  // Guarded on idx: this renderer re-runs on every keystroke in the school field
+  // and every checkbox/pair toggle, so an unguarded log would be hundreds of
+  // views per run. Back-then-forward legitimately re-fires the idx.
+  try { if (qzLastViewedIdx !== idx) { qzLastViewedIdx = idx; if (global.FWEvents) FWEvents.log('quiz_q_view', { idx: idx, phase: 'initial' }); } } catch (_) {}
   const pct=qzProgressPct(idx,QZ_ACTIVE.length);
-  const lbl=document.getElementById('qz-q-label'); if(lbl) lbl.textContent='Question '+(idx+1)+' of '+QZ_ACTIVE.length;
+  const lbl=document.getElementById('qz-q-label'); if(lbl) lbl.textContent='About you';
   const pctEl=document.getElementById('qz-q-pct'); if(pctEl) pctEl.textContent='';
   document.getElementById('qz-prog-fill').style.width=`${pct}%`;
 
@@ -771,7 +787,7 @@ function qzRenderInput(q,idx){
     const customText=(ans&&typeof ans==='object')?ans.custom:'';
     const hasCustomText=!!(ans&&typeof ans==='object'&&ans.custom);
     let customHtml=customOpen
-      ?`<div style="margin:0 0 14px"><textarea class="yn-custom-input" rows="2" placeholder="Describe your answer..." oninput="qzYesNoCustomInput(${qzYesNoIdx},this.value)">${customText}</textarea>${hasCustomText?`<button class="qz-btn-next" style="margin-top:8px;width:100%;padding:12px" onclick="qzYesNoAdvance()">Next →</button>`:''}</div>`
+      ?`<div style="margin:0 0 14px"><textarea class="yn-custom-input" rows="2" placeholder="Describe your answer…" oninput="qzYesNoCustomInput(${qzYesNoIdx},this.value)">${customText}</textarea>${hasCustomText?`<button class="qz-btn-next" style="margin-top:8px;width:100%;padding:12px" onclick="qzYesNoAdvance()">Next →</button>`:''}</div>`
       :`<div style="text-align:center;margin-bottom:12px"><button class="yn-custom-btn" onclick="qzYesNoToggleCustom(${qzYesNoIdx})">✏ write my own</button></div>`;
     return `<div class="swipe-prog">Statement ${qzYesNoIdx+1} of ${q.items.length}</div><div class="swipe-card">${item.t}</div>${customHtml}<div class="swipe-btns"><button class="sw-btn sw-no" onclick="qzPickYesNo(${qzYesNoIdx},'no')">✕ No</button><button class="sw-btn sw-yes" onclick="qzPickYesNo(${qzYesNoIdx},'yes')">✓ Yes</button></div>`;
   }
@@ -1088,11 +1104,20 @@ function qzCanNext(q){
 // Guards against double-advance (e.g. button click + auto-advance firing together):
 // no two forward navigations within 250ms.
 let qzLastNav=0;
+// Funnel telemetry state. qzStartedAt stamps the run so quiz_complete can carry
+// a duration; qzLastViewedIdx is the de-dupe key for quiz_q_view, because
+// qzRenderQ re-runs on every edit within a question (see the guard there).
+// Both are reset in qzStart, NOT here — qzRestart() re-shows the intro without
+// clearing either, so the reset has to live on the path a new run actually takes.
+let qzStartedAt=0, qzLastViewedIdx=-1;
 function qzGoNext(){
   if(!qzCanNext(QZ_ACTIVE[qzCur])) return;
   const now=Date.now();
   if(now-qzLastNav<250) return;
   qzLastNav=now;
+  // Deliberately AFTER the debounce stamp — the pairs auto-advance timer and a
+  // live Next click would otherwise log the same commit twice. idx only.
+  try { if (global.FWEvents) FWEvents.log('quiz_q_answer', { idx: qzCur }); } catch (_) {}
   if(qzCur===QZ_ACTIVE.length-1){qzFinishInitialQuiz();return;}
   qzSlide(()=>{qzCur++;qzRenderQ(qzCur);});
 }
@@ -1113,7 +1138,13 @@ function qzForceNext(){const now=Date.now();if(now-qzLastNav<250)return;qzLastNa
 // End of the short initial quiz → straight to the signup gate (lowest friction).
 // The résumé upload used to live here, before the gate; it now runs AFTER the
 // account is created (see qzShowPostSignupResume) so the celebration comes first.
-function qzFinishInitialQuiz(){ qzResolveLeaning(); qzShowGate(); }
+function qzFinishInitialQuiz(){
+  // ms falls back to 0 when qzStartedAt was never stamped (a #r= restore or a
+  // dev run that skipped qzStart) so we can't emit an epoch-sized duration.
+  // n is the run LENGTH, not a count of real answers — reconcile with quiz_q_answer.
+  try { if (global.FWEvents) FWEvents.log('quiz_complete', { ms: qzStartedAt ? (Date.now() - qzStartedAt) : 0, n: QZ_ACTIVE.length }); } catch (_) {}
+  qzResolveLeaning(); qzShowReveal();
+}
 
 // "One last thing" résumé step, shown AFTER registration once the gate confetti
 // has finished. Returns a promise that resolves when the user continues or skips;
@@ -1127,7 +1158,7 @@ function qzShowSharpenStep(){
     const step=document.getElementById('qz-sharpen');
     const root=document.getElementById('qz-sharpen-root');
     if(!step || !root || !global.FWHubRefine || typeof FWHubRefine.mount!=='function'){ resolve(); return; }
-    ['qz-quiz','qz-gate','qz-results','qz-resume','qz-academics'].forEach(function(id){
+    ['qz-quiz','qz-reveal','qz-gate','qz-results','qz-resume','qz-academics'].forEach(function(id){
       const el=document.getElementById(id); if(el) el.classList.add('qz-hidden');
     });
     step.classList.remove('qz-hidden');
@@ -1162,7 +1193,7 @@ function qzShowAcademicsStep(){
     const step=document.getElementById('qz-academics');
     const root=document.getElementById('qz-academics-root');
     if(!step || !root || !global.FWHubAcademics || typeof FWHubAcademics.mount!=='function'){ resolve(); return; }
-    ['qz-quiz','qz-gate','qz-results','qz-sharpen','qz-resume'].forEach(function(id){
+    ['qz-quiz','qz-reveal','qz-gate','qz-results','qz-sharpen','qz-resume'].forEach(function(id){
       const el=document.getElementById(id); if(el) el.classList.add('qz-hidden');
     });
     step.classList.remove('qz-hidden');
@@ -1176,7 +1207,10 @@ function qzShowAcademicsStep(){
     });
     function finish(save){
       step.classList.add('qz-hidden');
-      if(save && FWHubAcademics.answeredCount()>0){
+      // Commit if a scored question OR the About-you (year/school) block was
+      // touched — the latter is not in answeredCount but must still persist.
+      var hasAbout = typeof FWHubAcademics.hasAboutYou === 'function' && FWHubAcademics.hasAboutYou();
+      if(save && (FWHubAcademics.answeredCount()>0 || hasAbout)){
         try{ FWHubAcademics.commit(); }catch(err){ console.warn('academics commit failed', err); }
       }
       resolve();
@@ -1192,6 +1226,7 @@ function qzShowPostSignupResume(){
     if(!step || !global.FWResumeIngest){ resolve(); return; }
     qzResumeStepResolve=resolve;
     document.getElementById('qz-quiz').classList.add('qz-hidden');
+    var qzRevealEl=document.getElementById('qz-reveal'); if(qzRevealEl) qzRevealEl.classList.add('qz-hidden');
     document.getElementById('qz-gate').classList.add('qz-hidden');
     document.getElementById('qz-results').classList.add('qz-hidden');
     // Reframe the step as a warm post-signup welcome rather than a quiz question.
@@ -1461,10 +1496,14 @@ const qzCAREER_META = {
 // legendary+mythic, EPIC to epic, GREAT to rare, SOLID to uncommon/common.
 function qzTierFor(pct){
   const p = Number(pct) || 0;
-  if (p >= 56) return {name:'LEGENDARY', label:'★ LEGENDARY FIT', color:'#f5b301', particles:120};
-  if (p >= 46) return {name:'EPIC',      label:'EPIC MATCH',      color:'#7c3aed', particles:90};
-  if (p >= 34) return {name:'GREAT',     label:'GREAT MATCH',     color:'#2563eb', particles:60};
-  return              {name:'SOLID',     label:'SOLID MATCH',     color:'#16a34a', particles:40};
+  const T = FWOnetMath.FIT_TIERS;
+  if (p >= T.legendary) return {name:'LEGENDARY', label:'★ LEGENDARY FIT', color:'#f5b301', particles:120};
+  if (p >= T.epic)      return {name:'EPIC',      label:'EPIC MATCH',      color:'#7c3aed', particles:90};
+  if (p >= T.rare)      return {name:'GREAT',     label:'GREAT MATCH',     color:'#2563eb', particles:60};
+  if (p >= T.uncommon)  return {name:'SOLID',     label:'SOLID MATCH',     color:'#16a34a', particles:40};
+  // Below the bottom gate there is no match to congratulate. "SOLID MATCH" used
+  // to be the floor, so a 0% career was announced as solid.
+  return                       {name:'EARLY',     label:'EARLY MATCH',     color:'#9AA0AD', particles:20};
 }
 
 // Per-industry illustration params for the parametric SVG portrait generator
@@ -1575,9 +1614,31 @@ function qzResolveCareer(key){
   return {key,careerKey,title,salary,meta};
 }
 
+// SOC major group (first two digits of the code) → quiz industry key. O*NET
+// careers from rankOnetCareersFromVectors carry a synthetic id ('soc:15-1252.00'),
+// NOT a hub-careers numeric id, so FWHubCareers.careerToQuizKeys misses them and
+// every reveal/results card used to fall back to 'business' — a Software Engineer
+// shown as "Business & Entrepreneurship". Deriving from the SOC group gives the
+// right sector + portrait with no async catalog lookup.
+const SOC_MAJOR_TO_QZ = {
+  '11': 'business', '13': 'finance', '15': 'tech', '17': 'engineering', '19': 'science',
+  '21': 'social', '23': 'law', '25': 'education', '27': 'creative', '29': 'healthcare',
+  '31': 'healthcare', '33': 'government', '35': 'hospitality', '37': 'trades',
+  '39': 'hospitality', '41': 'marketing', '43': 'operations', '45': 'agriculture',
+  '47': 'trades', '49': 'trades', '51': 'operations', '53': 'operations', '55': 'government'
+};
+function qzIndustryKeyForCareer(career) {
+  if (career && window.FWHubCareers && FWHubCareers.careerToQuizKeys) {
+    const mapped = FWHubCareers.careerToQuizKeys[career.id];
+    if (mapped && mapped[0]) return mapped[0];
+  }
+  const soc = career && career.soc;
+  if (soc) { const mg = String(soc).slice(0, 2); if (SOC_MAJOR_TO_QZ[mg]) return SOC_MAJOR_TO_QZ[mg]; }
+  return 'business';
+}
+
 function qzResolveHubCareer(career) {
-  const keys = (window.FWHubCareers && FWHubCareers.careerToQuizKeys[career.id]) || ['business'];
-  const industryKey = keys[0];
+  const industryKey = qzIndustryKeyForCareer(career);
   const meta = qzCAREER_META[industryKey] || { person: '🧑‍💼', accent: 'var(--primary-solid)' };
   const slug = (window.FWHubCareers && FWHubCareers.careerSlug)
     ? FWHubCareers.careerSlug(career.id)
@@ -2352,7 +2413,180 @@ function qzConfetti(){
   requestAnimationFrame(frame);
 }
 
+// ── The reveal (V2 S6, D5) ─────────────────────────────────────────────────
+// Value BEFORE the wall. After the final answer we render the top-3 REAL career
+// matches (full "why" on #1), matches 4–10 BLURRED with no real data in the DOM
+// (placeholders only — devtools cannot defeat the gate), and the signup gate
+// below. Computed locally from qzComputeScores() through the SAME ranking chain
+// the emailed full-results screen (qzShowResults) uses, so the pre-signup preview
+// and the post-signup hub agree.
+var qzRevealSoc = {}, qzRevealPct = {}, qzRevealWhyDone = {};
+
+function qzEsc(t){
+  return String(t == null ? '' : t)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function qzTrimTo(s, n){
+  s = String(s || '');
+  if (s.length <= n) return s;
+  var cut = s.slice(0, n), sp = cut.lastIndexOf(' ');
+  return (sp > 40 ? cut.slice(0, sp) : cut) + '…';
+}
+
+// Same fallback chain as qzShowResults: O*NET vector rank → featured-vector rank
+// → the static hub-careers ranking. Always resolves to [{career, score}].
+function qzRankCareersForReveal(sc, limit){
+  limit = limit || 10;
+  var V = window.FWOnetVectors;
+  var sync = function(){
+    return (window.FWHubCareers && typeof FWHubCareers.rankCareersFromQuizScores === 'function')
+      ? FWHubCareers.rankCareersFromQuizScores(sc).slice(0, limit)
+      : [];
+  };
+  var toShape = function(r){ return (r && r.length) ? r.map(function(m){ return { career: m.career, score: m.score }; }) : sync(); };
+  if (V && typeof V.rankOnetCareersFromVectors === 'function') {
+    return V.rankOnetCareersFromVectors({ scores: sc, limit: limit }).then(toShape).catch(sync);
+  }
+  if (V && typeof V.rankFeaturedFromVectors === 'function') {
+    return V.rankFeaturedFromVectors({ scores: sc, limit: limit }).then(toShape).catch(sync);
+  }
+  return Promise.resolve(sync());
+}
+
+function qzShowReveal(){
+  try { if (global.FWEvents) FWEvents.log('reveal_view', {}); } catch (_) {}
+  var quizEl = document.getElementById('qz-quiz'); if (quizEl) quizEl.classList.add('qz-hidden');
+  var resumeEl = document.getElementById('qz-resume'); if (resumeEl) resumeEl.classList.add('qz-hidden');
+  var resultsEl = document.getElementById('qz-results'); if (resultsEl) resultsEl.classList.add('qz-hidden');
+  var stage = document.getElementById('qz-reveal');
+  if (!stage) { qzShowGate(); return; }             // graceful fallback: bare gate
+  stage.classList.remove('qz-hidden');
+  var gateEl = document.getElementById('qz-gate'); if (gateEl) gateEl.classList.remove('qz-hidden');
+  // The gate is shown as part of the reveal now — count its view here (qzShowGate
+  // is only the no-markup fallback path, which fires its own gate_view). The
+  // Google button is already wired by google-auth.js's own load-time mount().
+  try { if (global.FWEvents) FWEvents.log('gate_view', {}); } catch (_) {}
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  var cards = document.getElementById('qz-reveal-cards');
+  if (cards) cards.innerHTML = '<div class="qz-reveal-loading">Reading your answers…</div>';
+  var sc = qzComputeScores();
+  qzRankCareersForReveal(sc, 10)
+    .then(function(ranked){ qzRenderReveal(ranked || []); })
+    .catch(function(){ qzRenderReveal([]); });
+  qzConfetti();
+}
+
+function qzRenderReveal(careerRanked){
+  var cards = document.getElementById('qz-reveal-cards');
+  if (!cards) return;
+  qzRevealSoc = {}; qzRevealPct = {}; qzRevealWhyDone = {};
+  var top = (careerRanked || []).slice(0, 3);
+  if (!top.length) { cards.innerHTML = ''; return; }   // extremely defensive
+  var clampFit = function(s){ return Math.max(0, Math.min(100, Math.round(Number(s) || 0))); };
+  var html = '';
+  top.forEach(function(item, i){ html += qzRevealCardHtml(i + 1, item.career, clampFit(item.score)); });
+  // Matches 4–10: fixed blurred placeholders. NONE of careerRanked[3..] reaches
+  // the DOM — the blurred set carries zero real career data by construction.
+  var TOTAL = 10;
+  for (var rank = top.length + 1; rank <= TOTAL; rank++) html += qzRevealBlurredHtml(rank);
+  cards.innerHTML = html;
+  try { qzRenderLeaningAck({ career: top[0].career }); } catch (_) {}
+  // Persist locally (not authed yet → local putBlob only) so readQuizVectors has
+  // the seeded personality vector for the "why" breakdown. Same proven path the
+  // #r= results screen uses; the signup payload rebuilds it deterministically.
+  var persisted = qzPersistHubQuiz();
+  if (persisted && typeof persisted.then === 'function') persisted.then(function(){ qzInjectRevealWhyFor(1); }).catch(function(){ qzInjectRevealWhyFor(1); });
+  else qzInjectRevealWhyFor(1);
+}
+
+function qzRevealCardHtml(rank, career, pct){
+  var r = qzResolveHubCareer(career);
+  var key = r.key;
+  var ind = QZ_IND[key] || { name: '', icon: '' };
+  var tier = qzTierFor(pct);
+  var desc = qzTrimTo(r.desc || '', 150);
+  qzRevealPct[rank] = pct;
+  qzRevealSoc[rank] = (career && career.soc) ? career.soc : null;
+  var whyBtn = rank === 1
+    ? ''   // #1's factor breakdown is shown expanded by default
+    : '<button type="button" class="qz-mc-whytoggle" onclick="qzToggleRevealWhy(' + rank + ')">Why this fits <span class="qz-mc-caret" aria-hidden="true">▾</span></button>';
+  return '<div class="qz-match-card' + (rank === 1 ? ' is-top' : '') + '" style="--accent:' + r.meta.accent + ';--tier:' + tier.color + '">'
+    + '<div class="qz-mc-top">'
+    +   '<div class="qz-mc-rank">#' + rank + '</div>'
+    +   '<div class="qz-mc-portrait">' + qzCareerSVG(key) + '</div>'
+    +   '<div class="qz-mc-info">'
+    +     '<div class="qz-mc-name">' + qzEsc(r.title) + '</div>'
+    +     '<div class="qz-mc-sector">' + (ind.icon || '') + ' ' + qzEsc(ind.name) + '</div>'
+    +     '<div class="qz-mc-fit"><span class="qz-mc-pct">' + pct + '%</span><span class="qz-mc-tier" style="--tier:' + tier.color + '">' + tier.label + '</span></div>'
+    +   '</div>'
+    + '</div>'
+    + '<div class="qz-mc-why">' + qzEsc(desc) + '</div>'
+    + whyBtn
+    + '<div class="qz-mc-breakdown' + (rank === 1 ? ' is-open' : '') + '" id="qz-reveal-why-' + rank + '"></div>'
+    + '</div>';
+}
+
+function qzRevealBlurredHtml(rank){
+  // No name, sector, or score — a locked placeholder only. Real career data for
+  // ranks 4–10 never enters the DOM, so the gate cannot be defeated via devtools.
+  return '<div class="qz-match-card qz-match-card--locked" aria-hidden="true">'
+    + '<div class="qz-mc-top">'
+    +   '<div class="qz-mc-rank">#' + rank + '</div>'
+    +   '<div class="qz-mc-lockrows"><span class="qz-mc-lockbar"></span><span class="qz-mc-lockbar qz-mc-lockbar--sm"></span></div>'
+    +   '<div class="qz-mc-lockchip">🔒</div>'
+    + '</div>'
+    + '</div>';
+}
+
+function qzToggleRevealWhy(rank){
+  var el = document.getElementById('qz-reveal-why-' + rank);
+  if (!el) return;
+  var open = !el.classList.contains('is-open');
+  el.classList.toggle('is-open', open);
+  var card = el.closest && el.closest('.qz-match-card');
+  if (card) card.classList.toggle('is-why-open', open);
+  if (open) {
+    try { if (global.FWEvents) FWEvents.log('reveal_card_expand', { rank: rank }); } catch (_) {}
+    qzInjectRevealWhyFor(rank);
+  }
+}
+
+// Reuses the same comparison rows + drawer the career.html deep dive renders,
+// so the very first % a visitor sees carries a tap-to-expand explanation rather
+// than standing alone as a verdict. Additive: any failure leaves the card as-is.
+function qzInjectRevealWhyFor(rank){
+  if (qzRevealWhyDone[rank]) return;                       // inject once per card
+  if (!window.FWWhyMatch || !window.FWOnetVectors
+    || typeof FWOnetVectors.userVsCareerDimensions !== 'function'
+    || typeof FWOnetVectors.readQuizVectors !== 'function') return;
+  var soc = qzRevealSoc[rank];
+  var mount = document.getElementById('qz-reveal-why-' + rank);
+  if (!soc || !mount) return;
+  var vecs = null;
+  try { vecs = FWOnetVectors.readQuizVectors(); } catch (_) { return; }
+  var personality = vecs && vecs.personality && vecs.personality.values;
+  if (!personality || !personality.length) return;
+  var objective = vecs.objective && vecs.objective.values;
+  var confidence = vecs.personality.confidence;
+  var objActive = !!(objective && objective.some(function(v){ return Number(v) > 1; }));
+  qzRevealWhyDone[rank] = true;
+  FWOnetVectors.userVsCareerDimensions(soc, personality, objective, confidence).then(function(match){
+    if (!match || !match.comparisons || !match.comparisons.length) { qzRevealWhyDone[rank] = false; return; }
+    FWWhyMatch.inject(mount, match.comparisons, qzRevealPct[rank], { k: 3 });
+    if (!objActive && !mount.querySelector('.placement-basis')) {
+      var basis = document.createElement('div');
+      basis.className = 'placement-basis';
+      basis.textContent = 'A starting read from your quiz answers — we\'ll sharpen it together right after you sign up.';
+      mount.appendChild(basis);
+    }
+  }).catch(function(){ qzRevealWhyDone[rank] = false; });
+}
+
 function qzShowGate(){
+  // Its own funnel stage (quiz_complete → gate_view → signup_complete). Only one
+  // caller today, so it looks redundant — a second gate entry point must not
+  // silently go dark, which is exactly what folding it into quiz_complete does.
+  try { if (global.FWEvents) FWEvents.log('gate_view', {}); } catch (_) {}
   document.getElementById('qz-quiz').classList.add('qz-hidden');
   const resumeEl=document.getElementById('qz-resume');
   if(resumeEl) resumeEl.classList.add('qz-hidden');
@@ -2605,15 +2839,30 @@ function qzSendResultsInBackground(email, url, token) {
   });
 }
 
+// The reveal gate's "Continue with Google" click. Navigation itself is wired by
+// FWGoogleAuth.mount (google-auth.js) when googleAuthEnabled; this only records
+// the funnel intent, so it no-ops silently while the flag is dark (button hidden).
+function qzGateGoogleClick(){
+  try { if (global.FWEvents) FWEvents.log('gate_google_click', {}); } catch (_) {}
+}
+
 async function qzCreateAccount(ev){
   if (ev && ev.preventDefault) ev.preventDefault();
   if (qzSignupBusy) return;
+  // Before the email/password validation on purpose: an attempt that dies on a
+  // typo is still gate intent, and that gap is the conversion loss worth seeing.
+  try { if (global.FWEvents) FWEvents.log('gate_signup_click', { cta: 'create' }); } catch (_) {}
   const emailEl = document.getElementById('qz-su-email');
   const pwEl = document.getElementById('qz-su-password');
+  const nameEl = document.getElementById('qz-su-name');
   const errEl = document.getElementById('qz-su-error');
   const btn = document.getElementById('qz-su-btn');
   const email = (emailEl.value || '').trim();
   const password = pwEl ? pwEl.value : '';
+  // Name is optional and OUT of the scored quiz (D8) — collected here at the
+  // account moment for personalization. Empty → qzBuildHubPayload falls back to
+  // 'Student'. year/school are collected later in the Academic Profile step.
+  if (nameEl) { const nm = (nameEl.value || '').trim(); if (nm) qzName = nm.slice(0, 40); }
   errEl.textContent = '';
   errEl.classList.remove('qz-signup-warn');
   if (!qzValidateEmail(email)) { errEl.textContent = 'Please enter a valid email address.'; return; }
@@ -2627,7 +2876,8 @@ async function qzCreateAccount(ev){
     const built = await qzBuildHubUrl();
     // Slim register payload crosses as v2 (the server normalizes both shapes).
     await FWAuth.authRegister(email, password,
-      window.FWUser ? FWUser.normalizeUser(qzRegisterProfilePayload(built.payload)) : qzRegisterProfilePayload(built.payload));
+      window.FWUser ? FWUser.normalizeUser(qzRegisterProfilePayload(built.payload)) : qzRegisterProfilePayload(built.payload),
+      { source: 'quiz' });
 
     // Account created — let the gate confetti finish, then offer the "one last
     // thing" résumé upload before dropping them into the hub.
@@ -2692,6 +2942,9 @@ async function qzCreateAccount(ev){
 // "Already have an account? Log in" — hand off to the coach sign-in flow.
 function qzSignupLogin(ev){
   if (ev && ev.preventDefault) ev.preventDefault();
+  // Same event as the create CTA so the gate's two exits are one comparable
+  // metric — returning users taking this branch otherwise read as abandonment.
+  try { if (global.FWEvents) FWEvents.log('gate_signup_click', { cta: 'signin' }); } catch (_) {}
   // Persist results so they're waiting after login, then open sign-in.
   try { Promise.resolve(qzBuildHubUrl()).catch(function () {}); } catch (_) {}
   if (typeof showPage === 'function') { showPage('signin'); try { history.replaceState(null,'','#signin'); } catch(_){} }

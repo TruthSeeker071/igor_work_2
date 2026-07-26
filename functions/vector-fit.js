@@ -8,9 +8,9 @@ import { loadUser, normalizeUser, denormalizeUser } from './_lib/user.js';
 import { getVectorsForSocs, getMagnitudeSample } from './_lib/onet/vectors.js';
 import { getCareers } from './_lib/onet/store.js';
 import {
-  computeFitPercent,
+  personalityFitPercent,
   objectiveFitPercent,
-  overallFitScore,
+  displayFitPercent,
   computePreparedness,
   computeGapVector,
   isObjectiveVectorActive,
@@ -80,7 +80,7 @@ export async function onRequest(context) {
       const meta = careerMeta.get(soc);
       const entry = { soc };
       if (personality) {
-        entry.personalityFit = computeFitPercent(personality, careerVec);
+        entry.personalityFit = personalityFitPercent(personality, careerVec);
       }
       if (objectiveActive) {
         entry.objectiveFit = objectiveFitPercent(objective, careerVec);
@@ -93,7 +93,7 @@ export async function onRequest(context) {
           .map((g) => ({ index: g.index, gap: Math.round(g.gap * 10) / 10 }));
       }
       if (entry.personalityFit != null) {
-        entry.fitScore = overallFitScore(entry.personalityFit, entry.objectiveFit ?? null);
+        entry.fitScore = displayFitPercent(personality, careerVec);
       }
       fits[soc] = entry;
     }

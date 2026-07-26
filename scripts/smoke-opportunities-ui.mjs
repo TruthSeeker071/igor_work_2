@@ -34,10 +34,14 @@ const server = http.createServer((req, res) => {
 await new Promise((r) => server.listen(PORT, r));
 
 const EMAIL = 'probe@flightway.local';
+// featureIntros marks the probe as a returning student — without it the WS-F
+// roadmap/opportunities interstitials open over the panel and every click here
+// lands on their backdrop instead.
 const QUIZ_SEED = JSON.stringify({
   name: 'Probe',
   scores: { tech: 80 },
   careerFocus: { soc: '15-2051.00', slug: 'test-career', name: 'Test Career' },
+  featureIntros: { _seeded: true, roadmap: { seen: true }, opportunities: { seen: true } },
 });
 
 // Same tree shape scripts/test-vectors.cjs proves normalizes cleanly.
@@ -198,7 +202,12 @@ await test('grounding-off empty shape → clean empty state, never an error', as
   });
   await page.waitForSelector('#oppf-panel .oppf-empty', { timeout: 10000 });
   const text = await page.evaluate(() => document.querySelector('#oppf-panel .oppf-empty').textContent);
-  assert.ok(text.includes('No live opportunity matches right now'), 'empty copy shown');
+  assert.ok(text.includes('Nothing open right now'), 'empty copy shown');
+  const hint = await page.evaluate(() => {
+    const el = document.querySelector('#oppf-panel .oppf-empty-hint');
+    return el ? el.textContent : '';
+  });
+  assert.ok(hint.includes('gaps'), 'empty state explains WHY it is empty, not just that it is');
   assert.deepEqual(pageErrors, [], 'no page errors');
   await ctx.close();
 });

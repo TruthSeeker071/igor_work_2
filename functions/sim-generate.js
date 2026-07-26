@@ -12,14 +12,8 @@
  */
 import { originFromEnv } from './_lib.js';
 import { callGeminiJson } from './_lib/gemini-json.js';
-import {
-  authPreflight,
-  authJsonResponse,
-  authErrorResponse,
-  checkRateLimit,
-  clientIp,
-  getSessionEmail,
-} from './_lib/auth.js';
+import { authPreflight, authJsonResponse, authErrorResponse, checkRateLimit, hashedIpKey, getSessionEmail } from './_lib/auth.js';
+import { checkFeatureLimit, refundFeatureUse } from './_lib/plan-limits.js';
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const MAX_SLUG_LEN = 64;
@@ -335,10 +329,18 @@ export async function onRequest(context) {
   if (!email) return authJsonResponse(401, { error: 'Not signed in.' }, origin);
 
   try {
-    await checkRateLimit(env, 'simgen:' + clientIp(request), { max: RATE_MAX });
+    await checkRateLimit(env, 'simgen:' + await hashedIpKey(env, request), { max: RATE_MAX });
   } catch (err) {
     return authErrorResponse(err, origin);
   }
+
+  // V2 §4: the abuse wall runs FIRST — checkFeatureLimit spends as it checks,
+  // so a throttled caller must never be charged a monthly sim for a 429.
+  const cap = await checkFeatureLimit(env, email, 'career-sim');
+  if (!cap.ok) {
+    return authJsonResponse(429, { error: cap.message, upgrade: !!cap.upgrade, feature: 'career-sim', remaining: 0 }, origin);
+  }
+  let capSpent = true;
 
   try {
     // Draft → critic gate → (one retry with the critic's notes, budget
@@ -349,6 +351,7 @@ export async function onRequest(context) {
     const deadlineAt = Date.now() + PIPELINE_BUDGET_MS;
     let raw = await generateOnce(env, name, null, deadlineAt);
     if (!raw) {
+      if (capSpent) { capSpent = false; await refundFeatureUse(env, email, 'career-sim'); }
       return authJsonResponse(502, { error: 'The simulation builder is busy right now. Please try again in a moment.' }, origin);
     }
     const review = await criticReview(env, name, raw, deadlineAt);
@@ -363,6 +366,7 @@ export async function onRequest(context) {
     }
     const result = validate(raw, slug, name);
     if (!result) {
+      if (capSpent) { capSpent = false; await refundFeatureUse(env, email, 'career-sim'); }
       return authJsonResponse(502, { error: 'Generated simulation failed validation.' }, origin);
     }
     try {
@@ -373,8 +377,9 @@ export async function onRequest(context) {
       console.warn('sim-generate: KV write failed', err);
     }
     await addToIndex(env, result.pub);
-    return authJsonResponse(200, { sim: result.pub, cached: false }, origin);
+    return authJsonResponse(200, { sim: result.pub, cached: false, remaining: cap.remaining }, origin);
   } catch (err) {
+    if (capSpent) await refundFeatureUse(env, email, 'career-sim');
     console.warn('sim-generate failed', err && err.message);
     return authErrorResponse(err, origin);
   }

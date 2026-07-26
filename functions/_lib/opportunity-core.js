@@ -32,6 +32,7 @@ function cleanText(v, cap) {
 // School handling is shared with every other AI surface (functions/_lib/school.js);
 // re-exported so the opportunity code keeps one import for it.
 import { sanitizeSchoolName, normalizeSchoolKey } from './school.js';
+import { buildSurfacePrompt } from './marco-persona.js';
 
 export { sanitizeSchoolName, normalizeSchoolKey };
 
@@ -78,6 +79,13 @@ export function buildOpportunityPrompt({ evidence, dossier, careerName, gaps, sc
     'SKILL GAPS TO CLOSE (largest first):',
     gapTable,
     '',
+    // WS-E: the house voice sits AFTER the evidence, not before it — the
+    // fenced evidence must lead the prompt (pinned by test:opportunities), and
+    // the only user-visible prose this call produces is "whyThisFits".
+    // omitSchool: this surface writes its own school constraint below, tied to
+    // the sanitized value it already computed.
+    buildSurfacePrompt('opportunities', { omitSchool: true }),
+    '',
     'TASK: From the WEB EVIDENCE above, list up to 8 real, currently-relevant opportunities',
     '(courses/certifications, student competitions, fellowships, student organizations) that',
     'would help this student close the skill gaps listed.',
@@ -99,6 +107,21 @@ export function buildOpportunityPrompt({ evidence, dossier, careerName, gaps, sc
     '  specific student\'s dossier (their activities, interests, or background).',
     '- Never output scores, point values, percentages, or any numeric claim about skill impact.',
   ].join('\n');
+}
+
+/**
+ * The per-user result cache key. Career + gap set + school are all baked in,
+ * so any of them changing invalidates automatically and nothing ever needs to
+ * clear this by hand. Lives here (not in the endpoint) because deadlines.js
+ * reads the same cache from the chat and weekly-plan paths — two callers
+ * computing this key separately is how they silently stop agreeing.
+ *
+ * v2: v1 bodies hold pre-resolution (redirect) URLs and must never be served.
+ */
+export function opportunityCacheKey({ email, career, gaps, school }) {
+  const c = career || {};
+  const dims = (gaps || []).map((gp) => (gp && gp.dimIndex)).join('.');
+  return `oppfind:v2:${email}:${c.soc || c.slug || ''}:${dims}:${normalizeSchoolKey(school)}`;
 }
 
 /** Stable id from url + type (djb2, base36). */

@@ -1,0 +1,162 @@
+/* FlightWay V2 S16 — Live-posting readiness scorecard.
+   Client half: assets/js/app/scorecard-panel.js, mounted into #flightplan-scorecard
+   inside a .fp-module--wide plate on flightplan.html.
+
+   `.sc-` namespace only. Vars are the same rgb(var(--x)) triplets the sibling
+   .fp-radar/.fp-commit blocks in flightplan.html's own <style> use (dark
+   .fp-module plate) — --text-solid/--surface-solid etc. from opportunity-finder.css
+   are the same colors under a different alias, so this file just picks the
+   convention already local to this page. House rule: status hue (--ok/--warn/--err)
+   lives on borders/backgrounds only, never as text color — every status also
+   carries its own text label (sc-req-status, sc-band), never color alone. */
+
+.sc-header { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.sc-score-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.sc-score-num {
+  font-family: var(--font-display, inherit);
+  font-size: 40px; font-weight: 800; line-height: 1; color: rgb(var(--text));
+  min-width: 0;
+}
+.sc-score-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.sc-band {
+  display: inline-block; align-self: flex-start; font-size: 11px; font-weight: 700;
+  letter-spacing: .03em; text-transform: uppercase; padding: 3px 10px; border-radius: 999px;
+  border: 1px solid rgb(var(--border)); background: rgb(var(--surface-2)); color: rgb(var(--text));
+}
+.sc-band--ready { background: rgb(var(--ok) / 0.14); border-color: rgb(var(--ok) / 0.45); }
+.sc-band--close { background: rgb(var(--primary) / 0.12); border-color: rgb(var(--primary) / 0.4); }
+.sc-band--building { background: rgb(var(--warn) / 0.14); border-color: rgb(var(--warn) / 0.45); }
+.sc-band--early { background: rgb(var(--err) / 0.12); border-color: rgb(var(--err) / 0.4); }
+.sc-blurb { margin: 0; font-size: 13px; line-height: 1.5; color: rgb(var(--text-muted)); }
+.sc-scanned { margin: 0; font-size: 12.5px; color: rgb(var(--text-muted)); }
+
+.sc-run-wrap { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+.sc-run-btn {
+  padding: 8px 16px; border-radius: 999px; border: 1px solid rgb(var(--primary));
+  background: rgb(var(--primary)); color: rgb(var(--primary-fg)); font: inherit; font-size: 13px;
+  font-weight: 700; cursor: pointer; transition: background var(--transition), border-color var(--transition);
+}
+.sc-run-btn:hover:not(:disabled) { background: rgb(var(--primary-hover)); border-color: rgb(var(--primary-hover)); }
+.sc-run-btn:disabled { opacity: .55; cursor: not-allowed; }
+.sc-run-allowance { font-size: 11.5px; color: rgb(var(--text-muted)); }
+.sc-run-note { margin: 4px 0 0; font-size: 12.5px; color: rgb(var(--text-muted)); }
+.sc-run-result { margin: 2px 0 0; font-size: 12.5px; color: rgb(var(--text-muted)); }
+
+/* Trend: sparkline + delta line. */
+.sc-trend {
+  display: flex; align-items: center; gap: 10px; margin: 4px 0 16px; padding: 10px 12px;
+  border-radius: 10px; border: 1px solid rgb(var(--border)); background: rgb(var(--surface-2) / 0.5);
+}
+.sc-spark { width: 120px; height: 28px; flex: none; color: rgb(var(--primary)); }
+.sc-trend-text { font-size: 12.5px; font-weight: 600; color: rgb(var(--text)); }
+
+.sc-subhead { margin: 0 0 8px; font-size: 13.5px; font-weight: 700; color: rgb(var(--text)); }
+.sc-group-title {
+  margin: 12px 0 6px; font-size: 11px; font-weight: 700; letter-spacing: .04em;
+  text-transform: uppercase; color: rgb(var(--text-muted));
+}
+.sc-group-title:first-of-type { margin-top: 0; }
+
+/* Requirements: status is a text label, never color alone. */
+.sc-requirements { margin-bottom: 18px; }
+.sc-req-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.sc-req-row {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0;
+  padding: 8px 10px; border-radius: 10px; border: 1px solid rgb(var(--border)); background: rgb(var(--surface));
+}
+.sc-req-status {
+  flex: none; font-size: 10.5px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 999px; border: 1px solid rgb(var(--border)); color: rgb(var(--text));
+}
+.sc-req-row--met .sc-req-status { background: rgb(var(--ok) / 0.14); border-color: rgb(var(--ok) / 0.45); }
+.sc-req-row--partial .sc-req-status { background: rgb(var(--warn) / 0.16); border-color: rgb(var(--warn) / 0.45); }
+.sc-req-row--missing .sc-req-status { background: rgb(var(--err) / 0.12); border-color: rgb(var(--err) / 0.4); }
+.sc-req-text { flex: 1 1 200px; min-width: 0; font-size: 13px; color: rgb(var(--text)); }
+.sc-req-kind { flex: none; font-size: 11px; color: rgb(var(--text-muted)); }
+.sc-req-evidence {
+  flex: none; font-size: 10.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px;
+  border: 1px solid rgb(var(--primary) / 0.35); color: rgb(var(--text)); background: rgb(var(--primary) / 0.08);
+}
+
+/* Actions: up to 3 cards, each a commit-to-roadmap moment. */
+.sc-actions { margin-bottom: 18px; }
+.sc-actions-list { display: flex; flex-direction: column; gap: 10px; }
+.sc-action-card {
+  padding: 12px 14px; border-radius: 12px; border: 1px solid rgb(var(--border)); background: rgb(var(--surface));
+  display: flex; flex-direction: column; gap: 6px; min-width: 0;
+}
+.sc-action-text { margin: 0; font-size: 14px; font-weight: 600; color: rgb(var(--text)); }
+.sc-action-req { margin: 0; font-size: 12px; color: rgb(var(--text-muted)); }
+.sc-action-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+.sc-action-commit,
+.sc-action-nodate {
+  padding: 6px 13px; border-radius: 999px; border: 1px solid rgb(var(--border)); background: rgb(var(--surface-2));
+  color: rgb(var(--text)); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+}
+.sc-action-commit { border-color: rgb(var(--primary) / 0.4); color: rgb(var(--primary)); }
+.sc-action-commit:hover:not(:disabled) { background: rgb(var(--primary) / 0.08); }
+.sc-action-nodate:hover:not(:disabled) { background: rgb(var(--surface-hover)); }
+.sc-action-commit:disabled,
+.sc-action-nodate:disabled { opacity: .55; cursor: not-allowed; }
+.sc-action-confirm { margin: 0; font-size: 12.5px; color: rgb(var(--text-muted)); }
+.sc-action-error {
+  margin: 0; font-size: 12px; color: rgb(var(--text)); padding-left: 9px; border-left: 3px solid rgb(var(--err));
+}
+
+.sc-due-picker {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 4px; padding-top: 8px;
+  border-top: 1px dashed rgb(var(--border));
+}
+.sc-due-quick { display: flex; flex-wrap: wrap; gap: 6px; }
+.sc-due-quick-btn,
+.sc-due-go {
+  padding: 5px 11px; border-radius: 999px; border: 1px solid rgb(var(--border)); background: rgb(var(--surface-2));
+  color: rgb(var(--text)); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: background var(--transition);
+}
+.sc-due-quick-btn:hover,
+.sc-due-go:hover { background: rgb(var(--surface-hover)); }
+.sc-due-input {
+  padding: 6px 8px; border-radius: 8px; border: 1px solid rgb(var(--border)); background: rgb(var(--surface));
+  color: rgb(var(--text)); font: inherit; font-size: 12px; min-width: 0; max-width: 100%; box-sizing: border-box;
+}
+
+/* Postings: up to 5, title links out, "Track this" saves into the tracker. */
+.sc-postings { margin-bottom: 4px; }
+.sc-postings-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.sc-posting-row {
+  padding: 10px 12px; border-radius: 10px; border: 1px solid rgb(var(--border)); background: rgb(var(--surface));
+  display: flex; flex-direction: column; gap: 4px; min-width: 0;
+}
+.sc-posting-title { font-size: 13.5px; font-weight: 600; color: rgb(var(--text)); text-decoration: none; min-width: 0; }
+a.sc-posting-title:hover { text-decoration: underline; }
+.sc-posting-meta { font-size: 12px; color: rgb(var(--text-muted)); }
+.sc-posting-foot { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+.sc-posting-track {
+  padding: 5px 12px; border-radius: 999px; border: 1px solid rgb(var(--border)); background: rgb(var(--surface-2));
+  color: rgb(var(--text)); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+}
+.sc-posting-track:hover:not(:disabled) { background: rgb(var(--surface-hover)); }
+.sc-posting-track:disabled { opacity: .55; cursor: not-allowed; }
+.sc-posting-tracked { font-size: 12px; font-weight: 600; color: rgb(var(--text)); padding: 4px 0; }
+.sc-posting-error { font-size: 11.5px; color: rgb(var(--text-muted)); }
+
+@media (prefers-reduced-motion: reduce) {
+  .sc-run-btn,
+  .sc-action-commit,
+  .sc-action-nodate,
+  .sc-due-quick-btn,
+  .sc-due-go,
+  .sc-posting-track { transition: none; }
+}
+
+/* Narrow viewports: everything already wraps via flex-wrap/min-width:0 above,
+   so no element here grows wider than its .fp-module parent — nothing needs
+   its own overflow-x:auto scroller. Confirm the score row and req rows still
+   stack cleanly at the smallest supported width. */
+@media (max-width: 380px) {
+  .sc-score-num { font-size: 32px; }
+  .sc-req-row { flex-direction: column; align-items: flex-start; }
+}

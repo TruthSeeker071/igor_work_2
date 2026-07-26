@@ -64,28 +64,63 @@ export function objectiveFitPercent(objectiveVec, careerVec, len = DIM_COUNT) {
   return cosinePercent(cosine(normalizeVector(objectiveVec, len), careerVec, len));
 }
 
+// ---- Fit chokepoints ----
+
+// Stamps every stored fit percent (KV rank keys, stretch-fit caches, portal
+// snapshots) so a cache written by one formula can never be served under
+// another. Bump it in BOTH math files whenever a chokepoint's output moves.
+export const FIT_MATH_VERSION = 4;
+
+// THE personality-fit chokepoint. Every personality fit percent in the app,
+// client and server, comes from here; no call site composes
+// cosinePercent(cosine(personality, ...)) itself.
+//
+// This is the mean-centered cosine, restored 2026-07-21 after the
+// baseline-subtracted ("distinctive") formula shipped and was rejected in use:
+// it separated desk sectors well but compressed almost the whole catalog into
+// single digits, which reads as no answer at all. Plain correlation trades that
+// discrimination for a legible spread — see docs/FIT_MATH.md.
+export function personalityFitPercent(userValues, careerVec, len = DIM_COUNT) {
+  return cosinePercent(cosine(userValues, careerVec, len));
+}
+
+// THE display-fit chokepoint (server mirror). Every fit percent the product
+// SHOWS is personality fit: how the way you like to work lines up with what a
+// career actually involves.
+//
+// Objective fit is deliberately NOT folded in. It was, twice: as a 0.75/0.25
+// blend, then as one correlation against the summed vector. Both mixed 'would I
+// like this' with 'am I ready for this', which are different questions asked at
+// different moments. Objective fit is still computed and still shown — beside
+// personality fit, and driving preparedness, skill gaps and the stretch panel.
+// MUST stay identical to assets/js/shared/onet-math.js displayFitPercent.
+export function displayFitPercent(personalityValues, careerVec, len = DIM_COUNT) {
+  if (!personalityValues || !personalityValues.length) return null;
+  return personalityFitPercent(personalityValues, careerVec, len);
+}
 /**
  * FW2.0 A1 — server mirror of the browser fitContributions (assets/js/shared/onet-math.js)
  * so deep-dive narrative can cite the same numbers the UI drawer shows. Each
- * dim's u_i*c_i / (|u||c|) is its share of the cosine fit; returns top-k by product.
+ * dim's product / (|u||c|) is its share of the correlation; returns top-k by
+ * product, on the raw levels the plain correlation itself scores.
  */
 export function fitContributions(userVec, careerVec, k = 3, labels = null) {
   if (!userVec || !careerVec) return [];
   const len = Math.min(userVec.length, careerVec.length) || DIM_COUNT;
-  const denom = magnitude(userVec, len) * magnitude(careerVec, len);
+  const n = len;
+  const denom = magnitude(userVec, n) * magnitude(careerVec, n);
   const rows = [];
   let total = 0;
-  for (let i = 0; i < len; i++) {
-    const u = userVec[i] || 0;
-    const c = careerVec[i] || 0;
-    const product = u * c;
+  for (let i = 0; i < n; i++) {
+    const d = i;
+    const product = (userVec[i] || 0) * (careerVec[i] || 0);
     if (product <= 0) continue;
     total += product;
     rows.push({
-      index: i,
-      label: labels && labels[i] != null ? labels[i] : null,
-      userScore: clamp100(u),
-      careerWeight: clamp100(c),
+      index: d,
+      label: labels && labels[d] != null ? labels[d] : null,
+      userScore: clamp100(userVec[d] || 0),
+      careerWeight: clamp100(careerVec[d] || 0),
       product,
       contribution: denom > 0 ? product / denom : 0,
     });
@@ -93,13 +128,6 @@ export function fitContributions(userVec, careerVec, k = 3, labels = null) {
   rows.sort((a, b) => b.product - a.product);
   rows.forEach((r) => { r.share = total > 0 ? r.product / total : 0; });
   return rows.slice(0, k > 0 ? k : 3);
-}
-
-/** Combined display fit: 75% personality + 25% objective (personality-only when objective absent). */
-export function overallFitScore(personalityFit, objectiveFit) {
-  if (personalityFit == null) return null;
-  if (objectiveFit == null) return personalityFit;
-  return Math.round(0.75 * personalityFit + 0.25 * objectiveFit);
 }
 
 export function computeGapVector(objectiveVec, careerVec, importanceVec) {
@@ -143,6 +171,42 @@ export function blendVectors(vectors, weights) {
   });
   if (wSum > 0) {
     for (let d = 0; d < DIM_COUNT; d++) out[d] /= wSum;
+  }
+  return out;
+}
+
+// ---- Onboarding layer gating ----
+// Onboarding stacks several sources (quiz seed, sharpen, know-you / resume) onto
+// ONE personality vector. Ungated, each source adds positive mass in a slightly
+// different direction, the sum drifts back toward the generic-occupation
+// baseline, and every career ends up scoring the same middling percent. So each
+// source's pending deltas are gated against the vector they land on, and the
+// whole layer is then held to an L1 budget so no single source can out-shout the
+// seed. MUST stay identical to assets/js/shared/onet-math.js gateLayerDeltas
+// (client/server parity).
+export const LAYER_GAIN_ALIGNED = 1;    // sharpens a direction the vector already has
+export const LAYER_GAIN_OPEN = 0.5;     // opens a dim the vector has no opinion on
+export const LAYER_GAIN_OPPOSED = 0.25; // fights the direction — new info still moves it, slowly
+
+// `center` is the vector's neutral point: 50 for personality (an O*NET level
+// profile), 0 for objective (a sparse target vector built up from nothing).
+export function gateLayerDeltas(baseValues, pending, budget, center = 50) {
+  const out = new Array(pending.length);
+  let total = 0;
+  for (let i = 0; i < pending.length; i++) {
+    const delta = Number(pending[i]) || 0;
+    if (!delta) { out[i] = 0; continue; }
+    const base = Number(baseValues && baseValues[i]) || 0;
+    const d = base - center;
+    let gain;
+    if (base === 0 || d === 0) gain = LAYER_GAIN_OPEN;
+    else gain = ((delta > 0) === (d > 0)) ? LAYER_GAIN_ALIGNED : LAYER_GAIN_OPPOSED;
+    out[i] = delta * gain;
+    total += Math.abs(out[i]);
+  }
+  if (budget > 0 && total > budget) {
+    const k = budget / total;
+    for (let i = 0; i < out.length; i++) out[i] *= k;
   }
   return out;
 }

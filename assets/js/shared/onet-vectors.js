@@ -116,6 +116,12 @@
   var USER_BLEND_OBJECTIVE = 0.75;
   var USER_BLEND_PERSONALITY = 0.25;
   var PERSONALITY_OBJECTIVE_BLEED = 0.2;
+  // Know-you / resume text reaches personality only through this bleed, and the
+  // objective layer it bleeds from touches most of the vector — so it gets the
+  // same direction gate and L1 budget as sharpen, one notch looser because the
+  // text is the user's own words rather than five slider positions.
+  // Parity: functions/_lib/onet/user-vectors.js.
+  var BLEED_L1_BUDGET = 150;
 
   // Bleed contributions are recorded in a sparse restore map (bleedBase) so the
   // next hydration can strip them exactly before re-applying. Without the strip,
@@ -146,10 +152,18 @@
     var confidence = personalityVec.confidence ? personalityVec.confidence.slice() : new Array(DIM);
     var bleedBase = {};
     var changed = false;
+    var pending = new Array(DIM);
+    var j;
+    for (j = 0; j < DIM; j++) {
+      pending[j] = PERSONALITY_OBJECTIVE_BLEED * ((afterObjectiveValues[j] || 0) - (before[j] || 0));
+    }
+    var bleed = (window.FWOnetMath && typeof FWOnetMath.gateLayerDeltas === 'function')
+      ? FWOnetMath.gateLayerDeltas(values, pending, BLEED_L1_BUDGET, 50)
+      : pending;
     for (var i = 0; i < DIM; i++) {
-      var delta = (afterObjectiveValues[i] || 0) - (before[i] || 0);
+      var delta = bleed[i];
       if (!delta) continue;
-      var bumped = clamp100(values[i] + PERSONALITY_OBJECTIVE_BLEED * delta);
+      var bumped = clamp100(values[i] + delta);
       if (bumped === values[i]) continue;
       bleedBase[i] = values[i];
       values[i] = bumped;
@@ -416,6 +430,11 @@
   var cosinePercent = M.cosinePercent || function (cos) {
     return clamp100(Math.round((Number(cos) || 0) * 100));
   };
+  // THE personality-fit chokepoint (assets/js/shared/onet-math.js). No `||`
+  // fallback on purpose: every page that loads this file also loads onet-math,
+  // and one that somehow did not must fail loudly rather than quietly score
+  // personality fit with a formula that stopped being the app's formula.
+  var personalityFitPercent = M.personalityFitPercent;
   function objectiveFitFromVectors(objValues, careerVec) {
     if (M.objectiveFitPercent) return M.objectiveFitPercent(objValues, careerVec);
     var norm = M.normalizeVector ? M.normalizeVector(objValues) : objValues;
@@ -492,8 +511,50 @@
     };
   }
 
+  // Sources written by the SERVER's personality patches
+  // (functions/_lib/onet/personality-patch.js). Unlike objectiveAiPatch there
+  // is no replay record for these — they edit personalityVector.values in
+  // place — so a stored vector carrying one of these cannot be regenerated
+  // from the quiz. Every other layer on top of the seed (refine, resume bleed)
+  // IS replayed by hydrateQuizVectors, so dropping the base loses nothing.
+  // A patch source survives both layers: the bleed keeps
+  // `personalityVec.source || 'resume-bleed'` and refine keeps `base.source`.
+  var UNREPLAYABLE_PERSONALITY_SOURCES = ['gemini-patch', 'profile-building', 'resume-gemini'];
+
+  /**
+   * Can this stored personality vector be thrown away and re-seeded without
+   * losing information? Fail-closed: anything we cannot re-derive stays.
+   */
+  function personalityReseedIsLossless(stored) {
+    if (!stored) return false;
+    return UNREPLAYABLE_PERSONALITY_SOURCES.indexOf(String(stored.source || '')) < 0;
+  }
+
+  function shouldReseedPersonality(stored, quiz, zoneCentroids) {
+    if ((Number(stored && stored.seedGen) || 0) >= PERSONALITY_SEED_GEN) return false;
+    // Only when a re-seed is actually possible. Without centroids or scores the
+    // seed returns an empty vector, so dropping here would destroy the profile
+    // rather than sharpen it.
+    if (!zoneCentroids || !quiz.scores) return false;
+    return personalityReseedIsLossless(stored);
+  }
+
   function basePersonalityFromQuiz(quiz, zoneCentroids) {
     var stored = quiz.personalityVector;
+    // Fix 1.3 sharpened the seed, but a stored vector was always reused, so
+    // the sharper seed reached new quiz completions and nobody else. Accounts
+    // still on an older generation are re-seeded here — the one place that
+    // holds both the scores and the centroids a re-seed needs.
+    if (stored && shouldReseedPersonality(stored, quiz, zoneCentroids)) {
+      // The seed ranks the quiz scores through FWSectorFitSheet.SECTOR_KEYS, and
+      // not every page that hydrates loads that module. Without it the seed comes
+      // back all zeros — which would overwrite a real profile with nothing, and
+      // then be deleted as corrupt and re-written on the next boot, forever. The
+      // re-seed is an upgrade or it does not happen: fail closed to the stored
+      // vector, exactly as the missing-centroids case above does.
+      var reseeded = seedPersonalityFromQuiz(quiz.scores, zoneCentroids);
+      if (reseeded && !personalityLooksCorrupt(reseeded.values)) return reseeded;
+    }
     if (stored && stored.values && stored.values.length) {
       // Strip in reverse application order: bleed (applied last) first, then refine.
       var unbled = stripBleedFromPersonality(stored);
@@ -598,10 +659,20 @@
     if (!quiz || typeof quiz !== 'object') return quiz;
     var zoneCentroids = opts.zoneCentroids || zoneCentroidsCache;
 
+    // The migration drops vectors it judges unusable, so it can delete a stored
+    // vector before the rebuild below ever compares against it. Snapshot first:
+    // a rebuild that reproduces the dropped values exactly changed nothing, and
+    // must not bump updatedAt — the staleness hashes downstream (portal
+    // snapshot, roadmap, analysis cache) key off it.
+    var priorPersonality = quiz.personalityVector;
     migrateLegacyQuizSchema(quiz);
     quiz.vectorSchemaId = SCHEMA;
 
     var personality = basePersonalityFromQuiz(quiz, zoneCentroids);
+    // The stamp describes the BASE the layers sit on, and refine/bleed rebuild
+    // the vector object without carrying it. Capture it here and re-attach
+    // after the layers, or a re-seeded profile would be re-seeded every boot.
+    var baseSeedGen = Number(personality && personality.seedGen) || 0;
     if (quiz.refine && window.FWRefineMap && typeof FWRefineMap.refreshPersonalityFromRefine === 'function') {
       personality = FWRefineMap.refreshPersonalityFromRefine(personality, quiz.refine);
     }
@@ -646,8 +717,17 @@
     // Keep the stored vector objects (and their updatedAt) when a rebuild
     // produces identical values — hydration must be idempotent so staleness
     // hashes downstream (portal snapshot, roadmap, analysis cache) hold still.
+    if (baseSeedGen && personality) personality.seedGen = baseSeedGen;
     if (vectorValuesEqual(quiz.personalityVector, personality)) {
+      // Reusing the stored object keeps updatedAt (and downstream staleness
+      // hashes) still. Carry the stamp onto it so a re-seed that happened to
+      // reproduce the stored values is not attempted again on every boot.
+      if (baseSeedGen) quiz.personalityVector.seedGen = baseSeedGen;
       personality = quiz.personalityVector;
+    } else if (personality && vectorValuesEqual(priorPersonality, personality)
+               && personality !== priorPersonality && priorPersonality.updatedAt) {
+      // Same values as the vector the migration dropped: nothing moved.
+      personality.updatedAt = priorPersonality.updatedAt;
     }
     if (vectorValuesEqual(quiz.objectiveVector, objective)) {
       objective = quiz.objectiveVector;
@@ -723,17 +803,17 @@
     return entry;
   }
 
-  // Returns the blended overallFitScore. When `out` is provided, also stashes
+  // Returns the overall fit percent. When `out` is provided, also stashes
   // the pFit/oFit components on it so callers can retain them without a second
   // pass. `score` semantics are unchanged for every existing caller.
   function scoreCareerVector(personality, objValues, objActive, vec, out) {
-    var pFit = cosinePercent(cosine(personality.values, vec));
+    var pFit = personalityFitPercent(personality.values, vec);
     var oFit = objActive ? objectiveFitFromVectors(objValues, vec) : null;
     if (out) {
       out.personalityFit = pFit;
       out.objectiveFit = oFit;
     }
-    return overallFitScore(pFit, oFit);
+    return displayFitPercent(personality.values, vec);
   }
 
   function emptyVector() {
@@ -839,6 +919,57 @@
     };
   }
 
+  // Seed gain (parity: functions/_lib/onet/user-vectors.js — same constants,
+  // same values, verified by npm run test:vectors).
+  // The seed blends the top-3 sector centroids, and three broadly-similar
+  // occupation centroids average out to something close to the generic
+  // occupation — a direction that fits everything a little and nothing much.
+  // Two corrections: the blend weight is steep enough that the declared top
+  // sector dominates (90-vs-60 reads ~7.6:1, not 2.25:1), and the contrast
+  // expansion is stronger on the dimensions the top sector commits to, so the
+  // result stays on that axis.
+  // Everything is measured from the per-dimension "generic occupation" baseline
+  // (the mean across every zone centroid), not from a literal 50: fit is a
+  // mean-centered cosine precisely because O*NET level vectors sit on a large
+  // shared baseline well off 50, so 50 is not the neutral point and gating
+  // against it barely discriminates.
+  // Generation stamp on the seed's output. Bumped whenever the seed's MATH
+  // changes, so accounts carrying an older generation can be re-seeded instead
+  // of keeping a vector nobody would produce today. Gen 2 is fix 1.3's
+  // sharpened seed (`f958b3a`); gen 1 is everything written before it, which
+  // carries no stamp at all. Parity: functions/_lib/onet/user-vectors.js.
+  var PERSONALITY_SEED_GEN = 2;
+  var SEED_WEIGHT_EXPONENT = 5;
+  var SEED_GAIN_ALIGNED = 3;
+  var SEED_GAIN_OTHER = 0.75;
+  var SEED_TOP_COMMIT = 8;  // |topCentroid - its mean| below this is not a commitment
+  var SEED_ZERO_BAND = 6;   // post-gain |v - its mean| below this reads as "no signal"
+
+  function vectorMean(vec) {
+    var s = 0;
+    for (var i = 0; i < DIM; i++) s += Number(vec[i]) || 0;
+    return s / DIM;
+  }
+
+  // Per-dimension "generic occupation" baseline: the mean across every zone
+  // centroid. Every sector scores high on reading, speaking and critical
+  // thinking and low on wrist-finger speed, so those dimensions say nothing
+  // about WHICH sector — only a dimension's departure from this baseline does.
+  function zoneBaselineVector(zoneCentroids) {
+    var keys = zoneCentroids ? Object.keys(zoneCentroids) : [];
+    var out = emptyVector();
+    var used = 0;
+    keys.forEach(function (k) {
+      var c = zoneCentroids[k];
+      if (!c || c.length !== DIM) return;
+      used++;
+      for (var i = 0; i < DIM; i++) out[i] += Number(c[i]) || 0;
+    });
+    if (!used) return null;
+    for (var i = 0; i < DIM; i++) out[i] /= used;
+    return out;
+  }
+
   function seedPersonalityFromQuiz(scores, zoneCentroids) {
     var SECTOR_KEYS = (window.FWSectorFitSheet && FWSectorFitSheet.SECTOR_KEYS) || [];
     var SECTOR_TO_ZONE = {
@@ -866,6 +997,7 @@
         confidence: confidence,
         updatedAt: new Date().toISOString(),
         source: 'quiz-seed',
+        seedGen: PERSONALITY_SEED_GEN,
       };
     }
     var total = 0;
@@ -873,16 +1005,31 @@
       var zone = SECTOR_TO_ZONE[item.key] || item.key;
       var centroid = zoneCentroids && zoneCentroids[zone];
       if (!centroid || centroid.length !== DIM) return;
-      var w = Math.pow(item.score / 100, 2);
+      var w = Math.pow(item.score / 100, SEED_WEIGHT_EXPONENT);
       total += w;
       for (i = 0; i < DIM; i++) values[i] += centroid[i] * w;
     });
     if (total > 0) {
       for (i = 0; i < DIM; i++) values[i] /= total;
     }
+    var topZone = SECTOR_TO_ZONE[ranked[0].key] || ranked[0].key;
+    var topCentroid = zoneCentroids && zoneCentroids[topZone];
+    if (!topCentroid || topCentroid.length !== DIM) topCentroid = null;
+    var baseline = zoneBaselineVector(zoneCentroids);
     for (i = 0; i < DIM; i++) {
-      values[i] = clamp100(50 + (values[i] - 50) * 1.6);
-      if (Math.abs(values[i] - 50) < 10) {
+      var b = baseline ? baseline[i] : 50;
+      var d = values[i] - b;
+      var t = topCentroid ? topCentroid[i] - b : 0;
+      var aligned = d !== 0 && Math.abs(t) >= SEED_TOP_COMMIT && (d > 0) === (t > 0);
+      values[i] = clamp100(b + d * (aligned ? SEED_GAIN_ALIGNED : SEED_GAIN_OTHER));
+    }
+    // Zeroing runs against the amplified vector's own mean, not the baseline: a
+    // dimension is "no signal" when it fails to stand out from the rest of THIS
+    // user's profile. Zeroed dims are what make the vector discriminate — an
+    // all-dimensions-populated vector correlates with every occupation.
+    var vMean = vectorMean(values);
+    for (i = 0; i < DIM; i++) {
+      if (Math.abs(values[i] - vMean) < SEED_ZERO_BAND) {
         values[i] = 0;
         confidence[i] = 'estimated';
       } else {
@@ -895,13 +1042,17 @@
       confidence: confidence,
       updatedAt: new Date().toISOString(),
       source: 'quiz-seed',
+      seedGen: PERSONALITY_SEED_GEN,
     };
   }
 
-  function overallFitScore(personalityFit, objectiveFit) {
-    if (personalityFit == null) return null;
-    if (objectiveFit == null) return personalityFit;
-    return Math.round(0.75 * personalityFit + 0.25 * objectiveFit);
+  // The displayed fit for a career or a sector: personality only. Objective fit
+  // is computed alongside and shown separately — it answers "am I ready", not
+  // "would I like this". Delegates to the FWOnetMath chokepoint so client and
+  // server cannot drift.
+  function displayFitPercent(personalityValues, careerVec, len) {
+    if (M.displayFitPercent) return M.displayFitPercent(personalityValues, careerVec, len);
+    return personalityFitPercent(personalityValues, careerVec, len);
   }
 
   function slugifyCareerName(name) {
@@ -945,16 +1096,44 @@
     }
   }
 
+  // A stored vector with no signal is not an answer, and treating it as one is
+  // how a profile ends up scoring the same nothing against every career. It
+  // happens: hydration that ran before the zone centroids loaded writes a
+  // `source: 'empty'` vector with a full-length all-zero `values` array, and an
+  // earlier roadmap bug zeroed live vectors outright. Because the values array
+  // exists, every downstream check ("do we have a vector?") passed, and because
+  // re-hydration reuses a stored vector, nothing ever repaired it.
+  //
+  // MIN_VECTOR_SIGNAL is well under what a completed quiz produces (real
+  // profiles carry 48-152 nonzero dims) and well over what rounding noise could
+  // leave behind, so this re-seeds the broken case without touching thin-but-
+  // real profiles.
+  var MIN_VECTOR_SIGNAL = 12;
+
+  function hasVectorSignal(values) {
+    if (!values || !values.length) return false;
+    var n = 0;
+    for (var i = 0; i < values.length; i++) {
+      if ((values[i] || 0) !== 0 && (n += 1) >= MIN_VECTOR_SIGNAL) return true;
+    }
+    return false;
+  }
+
   function resolvePersonality(opts) {
     opts = opts || {};
     var quiz = readQuizVectors({ hydrate: true, zoneCentroids: opts.zoneCentroids });
     var personality = opts.personality || quiz.personality;
     var scores = opts.scores || quiz.scores;
-    if (personality && personality.values) {
+    if (personality && personality.values && hasVectorSignal(personality.values)) {
       return Promise.resolve(personality);
     }
     if (!scores) return Promise.resolve(null);
-    return loadZoneCentroids().then(function (zc) {
+    // Honour centroids the caller already has — the hub and the gates both hold
+    // them — instead of forcing a fetch that may be cached-rejected.
+    var centroids = opts.zoneCentroids
+      ? Promise.resolve(opts.zoneCentroids)
+      : loadZoneCentroids();
+    return centroids.then(function (zc) {
       if (!zc) return null;
       var seeded = seedPersonalityFromQuiz(scores, zc);
       if (quiz.refine && window.FWRefineMap && typeof FWRefineMap.refreshPersonalityFromRefine === 'function') {
@@ -1005,9 +1184,9 @@
             });
             if (!vecs.length) return;
             var blended = blendVectors(vecs, weights);
-            var pFit = cosinePercent(cosine(personality.values, blended));
+            var pFit = personalityFitPercent(personality.values, blended);
             var oFit = objActive ? objectiveFitFromVectors(objValues, blended) : null;
-            var score = overallFitScore(pFit, oFit);
+            var score = displayFitPercent(personality.values, blended);
             var slug = resolveFeaturedCareerSlug(hubId, entry, null);
             ranked.push({
               hubId: Number(hubId),
@@ -1116,7 +1295,7 @@
   // active when the objective vector is active (magnitude > 0.01).
   //
   // Criteria (mean-centered scale): objectiveFit >= 52 AND objectiveFit >= personalityFit
-  // + 12 AND the entry is NOT in the top 12 by overall score. Returns up to
+  // + 12 AND the entry is NOT in the top 12 by displayed (personality) fit. Returns up to
   // opts.limit (default 3), best objectiveFit first. Each candidate carries its
   // top 3 contributing dimensions (drivers) — dims where min(user objective
   // value, career value) is highest.
@@ -1137,7 +1316,12 @@
       var objActive = objValues && vectorMagnitude(objValues) > 0.01;
       if (!objActive) return [];
 
-      // ranked is sorted by overall score desc; top STRETCH_TOP_EXCLUDE surface today.
+      // ranked is sorted by the displayed fit, which IS personality fit — so the
+      // top of this list is exactly "what the quiz alone surfaces", which is what
+      // this panel is defined against. (It briefly was not: while overall fit was
+      // a correlation against the personality + objective sum, the ranking itself
+      // lifted objective-dominant careers and this exclusion hid the very
+      // candidates the panel exists to rescue.)
       var topSocs = {};
       for (var i = 0; i < ranked.length && i < STRETCH_TOP_EXCLUDE; i++) {
         if (ranked[i] && ranked[i].soc) topSocs[ranked[i].soc] = true;
@@ -1249,9 +1433,8 @@
     });
   }
 
-  // Single fit formula for every surface: percent is the same blended
-  // overallFitScore the hub map uses (0.75 × personality + 0.25 × objective
-  // when objective is active), with the components exposed for dual bars.
+  // Single fit formula for every surface: percent is the same personality fit
+  // the hub map uses, with objective fit exposed separately for the dual bars.
   function fitForSlugOrSoc(careerSlug, soc, fitScoreFallback) {
     var socPromise = soc
       ? Promise.resolve(soc)
@@ -1271,13 +1454,13 @@
             ? { percent: fitScoreFallback, strengths: [], gaps: [], mappedIndustries: [], vector: false }
             : null;
         }
-        var pFit = cosinePercent(cosine(personality.values, vec));
+        var pFit = personalityFitPercent(personality.values, vec);
         var quizVecs = readQuizVectors();
         var objValues = quizVecs.objective && quizVecs.objective.values;
         var objActive = objValues && vectorMagnitude(objValues) > 0.01;
         var oFit = objActive ? objectiveFitFromVectors(objValues, vec) : null;
         return {
-          percent: overallFitScore(pFit, oFit),
+          percent: displayFitPercent(personality.values, vec),
           personalityFit: pFit,
           objectiveFit: oFit,
           strengths: ['O*NET vector alignment'],
@@ -1426,7 +1609,9 @@
     var zones = Object.keys(aggregates || {});
     zones.forEach(function (zone) {
       var entry = aggregates[zone];
-      var lvMean = Array.isArray(entry) ? entry : (entry && entry.lvMean);
+      // Parity with functions/_lib/onet/zone-profiles-fallback.js: prefer the
+      // representativeness-weighted centroid when the artifact carries one.
+      var lvMean = Array.isArray(entry) ? entry : (entry && (entry.lvMeanW || entry.lvMean));
       if (!Array.isArray(lvMean)) return;
       var ranked = lvMean.map(function (v, i) {
         return { index: i, score: Number(v) || 0 };
@@ -1728,12 +1913,12 @@
       return fetchVectorsBatched([soc]).then(function (vectors) {
         var vec = vectors[soc];
         if (!vec) return null;
-        var pFit = cosinePercent(cosine(personality.values, vec));
+        var pFit = personalityFitPercent(personality.values, vec);
         var objective = quizVecs && quizVecs.objective;
         var objValues = objective && objective.values ? objective.values : null;
         var objActive = objValues && vectorMagnitude(objValues) > 0.01;
         var oFit = objActive ? objectiveFitFromVectors(objValues, vec) : null;
-        return overallFitScore(pFit, oFit);
+        return displayFitPercent(personality.values, vec);
       });
     });
   }
@@ -1765,16 +1950,30 @@
     return fitForSlugFromVectors(slug);
   }
 
+  // Igor's hub heatmap blend, re-applied on sync. Pure and stateless: dot
+  // brightness on the career hub map is 0.75 x personality + 0.25 x objective.
+  // Lives here because hub-onet-map.js reads it off FWOnetVectors.
+  function overallFitScore(personalityFit, objectiveFit) {
+    if (personalityFit == null) return null;
+    if (objectiveFit == null) return personalityFit;
+    return Math.round(0.75 * personalityFit + 0.25 * objectiveFit);
+  }
+
   window.FWOnetVectors = {
+    overallFitScore: overallFitScore,
     DIM: DIM,
     SCHEMA: SCHEMA,
+    PERSONALITY_SEED_GEN: PERSONALITY_SEED_GEN,
+    personalityReseedIsLossless: personalityReseedIsLossless,
     clamp100: clamp100,
     cosine: cosine,
     magnitude: vectorMagnitude,
     objectiveFitFromVectors: objectiveFitFromVectors,
+    personalityFitPercent: personalityFitPercent,
     cosinePercent: cosinePercent,
     percentileRank: percentileRank,
-    overallFitScore: overallFitScore,
+    displayFitPercent: displayFitPercent,
+    hasVectorSignal: hasVectorSignal,
     seedPersonalityFromQuiz: seedPersonalityFromQuiz,
     writeQuizPersonalityVector: writeQuizPersonalityVector,
     hydrateQuizVectors: hydrateQuizVectors,

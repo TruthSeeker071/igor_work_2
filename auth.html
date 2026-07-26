@@ -3,20 +3,40 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" href="/favicon.ico?v=20260717h" sizes="any">
-  <link rel="icon" type="image/png" href="/assets/favicon.png?v=20260717h">
-  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=20260717h">
+<!-- Unlike the other app shells this page's markup IS complete for a crawler.
+     It is noindex for the other reason: a sign-in/register form has no search
+     value, it routes off the #hash rather than the path (so every variant is
+     one URL), and an indexed "Sign in" result competes with the landing page
+     for the brand query. -->
+<meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg?v=20260720f">
+  <link rel="icon" href="/favicon.ico?v=20260720a" sizes="any">
+  <link rel="icon" type="image/png" href="/assets/icons/favicon-128.png?v=20260720a">
+  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-180.png?v=20260720a">
 <title>FlightWay — Sign in</title>
-<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260720c">
-<link rel="stylesheet" href="assets/css/auth-pages.css?v=20260720c">
-<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260720c">
+<link rel="preload" href="/assets/fonts/inter-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/space-grotesk-latin.woff2?v=20260720a" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/flightway-theme.css?v=20260721p">
+<link rel="stylesheet" href="assets/css/auth-pages.css?v=20260720a">
+<link rel="stylesheet" href="assets/css/flightway-pages.css?v=20260724i">
 <script src="assets/js/boot/theme-boot.js?v=20260703p"></script>
 <script src="assets/js/shared/flags.js?v=20260716h"></script>
 <script>(function(){var h=(location.hash||'').replace(/^#/,'').split('?')[0];if(['signin','register','forgot-password','reset-password'].indexOf(h)!==-1)document.documentElement.setAttribute('data-boot-page',h);})();</script>
 <style id="fw-boot-css">html[data-boot-page] .auth-page{display:none!important}html[data-boot-page="signin"] #auth-page-signin{display:block!important}html[data-boot-page="register"] #auth-page-register{display:block!important}html[data-boot-page="forgot-password"] #auth-page-forgot-password{display:block!important}html[data-boot-page="reset-password"] #auth-page-reset-password{display:block!important}</style>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<!-- S5 (D6): "Continue with Google". Ships hidden; google-auth.js reveals it only
+     when /config.googleAuthEnabled. White brand button per Google guidelines,
+     high-contrast on both themes; the divider text/lines use theme tokens. -->
+<style id="fw-oauth-css">
+.auth-oauth[hidden]{display:none}
+.auth-oauth{margin:0 0 2px}
+.auth-google-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:44px;padding:10px 16px;border:1px solid #dadce0;border-radius:10px;background:#fff;color:#1f1f1f;font-family:inherit;font-size:.95rem;font-weight:600;cursor:pointer;transition:background var(--fw-dur-fast,.15s) var(--fw-ease-out,ease),box-shadow var(--fw-dur-fast,.15s) var(--fw-ease-out,ease)}
+.auth-google-btn:hover{background:#f6f7f8;box-shadow:0 1px 3px rgba(60,64,67,.24)}
+.auth-google-btn:active{background:#eceef0}
+.auth-google-btn:focus-visible{outline:2px solid #4285f4;outline-offset:2px}
+.auth-google-g{flex:0 0 auto;display:block}
+.auth-oauth-or{display:flex;align-items:center;gap:12px;margin:16px 0 6px;color:rgb(var(--text-muted));font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.auth-oauth-or::before,.auth-oauth-or::after{content:"";flex:1;height:1px;background:rgb(var(--text-muted) / .22)}
+</style>
 </head>
 <body>
 
@@ -25,10 +45,10 @@
     <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay home"></a>
     <div class="nav-links app-nav" aria-label="App">
       <a href="portal.html" class="app-nav-tab" data-app-nav="home"><span class="app-nav-label">Home</span></a>
-      <a href="dashboard.html" class="app-nav-tab" data-app-nav="hub"><span class="app-nav-label">Career Hub</span></a>
+      <a href="flightplan.html" class="app-nav-tab" data-app-nav="plan"><span class="app-nav-label">Flight Plan</span></a>
+      <a href="roadmap.html" class="app-nav-tab" data-app-nav="roadmap"><span class="app-nav-label">Roadmap</span></a>
       <a href="coach.html" class="app-nav-tab" data-app-nav="advisor"><span class="app-nav-label">Marco</span></a>
-      <a href="roadmap.html" class="app-nav-tab" data-app-nav="roadmap"><span class="app-nav-label">Career Roadmap</span></a>
-      <a href="quiz.html" class="app-nav-tab app-nav-tab--muted" data-app-nav="quiz"><span class="app-nav-label">Career Quiz</span></a>
+      <a href="dashboard.html" class="app-nav-tab" data-app-nav="explore"><span class="app-nav-label">Explore</span></a>
       <a href="auth.html#signin" class="app-nav-tab nav-signin-link" id="nav-signin-link">Sign in</a>
       <button type="button" class="fw-theme-toggle" aria-label="Switch to dark mode" aria-pressed="false">
         <span class="fw-theme-icon" aria-hidden="true"></span>
@@ -46,6 +66,13 @@
         <p class="auth-card-sub">Sign in to reach your Career Hub and Marco.</p>
       </div>
       <div class="auth-form-shell">
+        <div class="auth-oauth" hidden>
+          <button type="button" class="auth-google-btn" data-google-auth data-return="/portal.html">
+            <svg class="auth-google-g" viewBox="0 0 18 18" width="18" height="18" aria-hidden="true"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.71-1.57 2.68-3.89 2.68-6.62Z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.02-3.7H.96v2.34A9 9 0 0 0 9 18Z"/><path fill="#FBBC05" d="M3.98 10.72a5.42 5.42 0 0 1 0-3.44V4.94H.96a9 9 0 0 0 0 8.12l3.02-2.34Z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.46 3.44 1.35l2.58-2.58C13.47.89 11.43 0 9 0A9 9 0 0 0 .96 4.94l3.02 2.34C4.68 5.16 6.66 3.58 9 3.58Z"/></svg>
+            <span>Continue with Google</span>
+          </button>
+          <div class="auth-oauth-or"><span>or</span></div>
+        </div>
         <label class="auth-label" for="signin-email">Email</label>
         <input type="email" id="signin-email" class="coach-email-input auth-field" placeholder="you@example.com" autocomplete="email" onkeydown="if(event.key==='Enter')document.getElementById('signin-password').focus()">
         <label class="auth-label" for="signin-password">Password</label>
@@ -56,7 +83,8 @@
             <svg class="auth-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.2A9.9 9.9 0 0 1 12 5c6.4 0 10 7 10 7a17.8 17.8 0 0 1-3.4 4.2"/><path d="M6.2 6.7A17.5 17.5 0 0 0 2 12s3.6 7 10 7a9.8 9.8 0 0 0 4.2-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
           </button>
         </div>
-        <p class="auth-link-row"><a href="#" onclick="coachOpenForgotPassword();return false">Forgot password?</a></p>
+        <!-- Real path so the link still goes somewhere if the onclick handler ever fails to fire; the handler returns false, so behavior is unchanged when JS is up. -->
+        <p class="auth-link-row"><a href="auth.html#forgot-password" onclick="coachOpenForgotPassword();return false">Forgot password?</a></p>
         <div class="auth-alert" id="signin-error" role="alert"></div>
         <button type="button" class="coach-primary-btn auth-btn-full" id="signin-btn" onclick="coachSignInFromPage()">Sign in →</button>
         <p class="auth-footnote">Don&rsquo;t have an account? <a href="auth.html#register">Create one</a></p>
@@ -75,6 +103,13 @@
         <p class="auth-card-sub">Save your results and unlock your Career Hub.</p>
       </div>
       <div class="auth-form-shell">
+        <div class="auth-oauth" hidden>
+          <button type="button" class="auth-google-btn" data-google-auth data-return="/portal.html">
+            <svg class="auth-google-g" viewBox="0 0 18 18" width="18" height="18" aria-hidden="true"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.71-1.57 2.68-3.89 2.68-6.62Z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.02-3.7H.96v2.34A9 9 0 0 0 9 18Z"/><path fill="#FBBC05" d="M3.98 10.72a5.42 5.42 0 0 1 0-3.44V4.94H.96a9 9 0 0 0 0 8.12l3.02-2.34Z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.46 3.44 1.35l2.58-2.58C13.47.89 11.43 0 9 0A9 9 0 0 0 .96 4.94l3.02 2.34C4.68 5.16 6.66 3.58 9 3.58Z"/></svg>
+            <span>Continue with Google</span>
+          </button>
+          <div class="auth-oauth-or"><span>or</span></div>
+        </div>
         <label class="auth-label" for="register-email">Email</label>
         <input type="email" id="register-email" class="coach-email-input auth-field" placeholder="you@example.com" autocomplete="email">
         <label class="auth-label" for="register-password">Password</label>
@@ -88,6 +123,9 @@
         <label class="auth-label" for="register-password-confirm">Confirm password</label>
         <input type="password" id="register-password-confirm" class="coach-email-input auth-field" placeholder="Re-enter your password" autocomplete="new-password" onkeydown="if(event.key==='Enter')coachRegisterFromPage()">
         <div class="auth-alert" id="register-error" role="alert"></div>
+        <!-- This is the one form on the site that creates an account, so it's the one place the legal links need to carry real weight. -->
+        <p class="auth-footnote auth-footnote--muted">By creating an account you agree to our <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a>.</p>
+        <p class="auth-footnote auth-footnote--muted">We&rsquo;ll send you a weekly Flight Plan email — <a href="/flightplan.html#notifications">unsubscribe anytime</a>.</p>
         <button type="button" class="coach-primary-btn auth-btn-full" id="register-btn" onclick="coachRegisterFromPage()">Create account →</button>
         <p class="auth-footnote">Already have an account? <a href="auth.html#signin">Sign in</a></p>
       </div>
@@ -142,15 +180,34 @@
   </div>
 </section>
 
+<footer>
+  <div class="footer-inner">
+    <div class="footer-left">
+      <a class="fw-brand" href="index.html" data-fw-brand data-fw-brand-href="index.html" aria-label="FlightWay"></a>
+      <p>&copy; 2026 FlightWay, Inc. All rights reserved.</p>
+    </div>
+    <div class="footer-links">
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+      <a href="/security">Security</a>
+      <a href="/contact">Contact</a>
+    </div>
+  </div>
+</footer>
+
 <script src="assets/js/shared/page-boot.js?v=20260703p" defer></script>
+<!-- S1: auth.html was the one funnel page with no telemetry at all — the
+     signup step of every funnel measured nowhere. -->
+<script src="assets/js/shared/events.js?v=20260724a" defer></script>
 <script src="assets/js/shared/fw-errors.js?v=20260720a" defer></script>
-<script src="assets/js/shared/auth.js?v=20260720c" defer></script>
+<script src="assets/js/shared/auth.js?v=20260725b" defer></script>
 <script src="assets/js/shared/fw-busy.js?v=20260720a" defer></script>
-<script src="assets/js/shared/user.js?v=20260719g" defer></script>
+<script src="assets/js/shared/user.js?v=20260725e" defer></script>
 <script src="assets/js/shared/auth-pages.js?v=20260720c" defer></script>
-<script src="assets/js/shared/auth-nav.js?v=20260703p" defer></script>
-<script src="assets/js/shared/brand.js?v=20260717g" defer></script>
-<script src="assets/js/shared/app-nav.js?v=20260703p" defer></script>
+<script src="assets/js/shared/google-auth.js?v=20260725b" defer></script>
+<script src="assets/js/shared/auth-nav.js?v=20260724d" defer></script>
+<script src="assets/js/shared/brand.js?v=20260720i" defer></script>
+<script src="assets/js/shared/app-nav.js?v=20260724d" defer></script>
 <script src="assets/js/shared/theme.js?v=20260703p" defer></script>
 </body>
 </html>

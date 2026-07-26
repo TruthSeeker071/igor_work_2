@@ -6,7 +6,7 @@
 // account yet leaves a pending row that auth/register.js consumes at signup.
 
 import { originFromEnv, jsonResponse, preflightResponse } from '../_lib.js';
-import { checkRateLimit, clientIp } from '../_lib/auth.js';
+import { checkRateLimit, hashedIpKey } from '../_lib/auth.js';
 import {
   adminGate, adminNotFound, readJsonBody, requireElevation,
   normalizeGrantInput, createGrant, listGrants,
@@ -50,7 +50,7 @@ export async function onRequestPost(context) {
 
   try {
     await checkRateLimit(env, `admingrant:${who.email}`, { max: 60 });
-    await checkRateLimit(env, `admingrant:${clientIp(request)}`, { max: 60 });
+    await checkRateLimit(env, `admingrant:${await hashedIpKey(env, request)}`, { max: 60 });
   } catch (err) {
     return jsonResponse(err.status || 429, { error: err.message || 'Too many attempts.' }, origin, { credentials: true });
   }

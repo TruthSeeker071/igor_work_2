@@ -7,6 +7,7 @@ import {
   requireSession,
   saveQuizPortalSnapshot,
   checkRateLimit,
+  refundRateLimit,
 } from './_lib/auth.js';
 import {
   computeInputsHash,
@@ -101,8 +102,13 @@ export async function onRequest(context) {
     payload = {};
   }
 
+  // The portal fires this on page load, so a server-side failure loop can
+  // burn the whole default 10/hour allowance in ten visits — refund what a
+  // failed generation spent, same shape as /chat.
+  let email = '';
+  let snapSpent = false;
   try {
-    const { email } = await requireSession(request, env);
+    ({ email } = await requireSession(request, env));
     const [quizRaw, dossierRaw] = await Promise.all([
       loadUserBlob(env, email),
       loadDossier(env, email),
@@ -141,6 +147,7 @@ export async function onRequest(context) {
     }
 
     await checkRateLimit(env, `portal-snap:${email}`);
+    snapSpent = true;
 
     const { portalSnapshot, aiError } = await generatePortalSnapshot(env, quiz, careerPool, dossier);
 
@@ -161,6 +168,11 @@ export async function onRequest(context) {
       aiError: aiError || undefined,
     }, origin);
   } catch (err) {
+    // Auth and rate walls fail before the spend, so a spent slot reaching
+    // this catch was our failure — give the attempt back.
+    if (snapSpent) {
+      await refundRateLimit(env, `portal-snap:${email}`);
+    }
     return authErrorResponse(err, origin);
   }
 }

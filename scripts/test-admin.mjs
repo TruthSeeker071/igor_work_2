@@ -30,9 +30,17 @@ import {
   onRequestGet as adminsGet, onRequestPost as adminsPost, onRequestDelete as adminsDelete,
 } from '../functions/admin/admins.js';
 import { onRequestGet as auditGet } from '../functions/admin/audit.js';
+import { onRequestGet as analyticsGet } from '../functions/admin/analytics.js';
 import { onRequestPost as webhookPost } from '../functions/stripe/webhook.js';
 import { signWebhookPayload } from '../functions/_lib/stripe.js';
+import { logServerError, shiftDay } from '../functions/_lib/events.js';
+import {
+  overviewMetrics, funnelMetrics, retentionMetrics, featureUsage,
+  sourceAttribution, liveTail, recentServerErrors,
+  clampRange, weekStart, classifyChannel,
+} from '../functions/_lib/analytics.js';
 import { readFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 
 let fail = 0;
 const assert = (c, m) => { if (c) console.log('  PASS', m); else { fail++; console.error('  FAIL', m); } };
@@ -299,7 +307,7 @@ console.log('expiry degradation:');
   env.DB.users.get('temp@x.com').plan_expires_at = new Date(Date.now() - DAY).toISOString();
   assert(await getPlan(env, 'temp@x.com') === 'free', 'an expired comp degrades to free on read');
   const capped = await checkFeatureLimit(env, 'temp@x.com', 'marco-chat');
-  assert(capped.ok && capped.plan === 'free' && capped.remaining === 4, 'and the free caps come back with it');
+  assert(capped.ok && capped.plan === 'free' && capped.remaining === 9, 'and the free caps come back with it');
 }
 
 console.log('revoke guard:');
@@ -368,6 +376,49 @@ console.log('endpoints — 404 to everyone who is not an admin:');
   const subWho = await call(whoamiGet, env, '/admin/whoami', { as: SUB });
   assert(subWho.status === 200 && subWho.body.root === false, 'a sub-admin sees whoami with root:false');
   assert(subWho.body.elevated === false, 'a fresh session is not elevated');
+}
+
+// The 404-not-403 property is the console's whole cover story: a 403 tells a
+// stranger the route exists and that admins exist. It was asserted for whoami
+// and admins only; these are the other four routes, from real requests.
+console.log('endpoints — every admin route 404s a stranger, signed out or in:');
+{
+  const env = await makeEnv({
+    signedIn: [ROOT, 'plain@x.com'],
+    users: [{ email: ROOT, password_hash: PASSWORD_HASH }, { email: 'plain@x.com' }, { email: 'target@x.com' }],
+  });
+  await grantElevation(env, 'plain@x.com'); // a lease is worthless without the role
+
+  const routes = [
+    ['GET  /admin/audit', auditGet, '/admin/audit', { method: 'GET' }],
+    ['GET  /admin/grants', grantsGet, '/admin/grants', { method: 'GET' }],
+    ['POST /admin/grants', grantsPost, '/admin/grants', { method: 'POST', body: { email: 'target@x.com', plan: 'lifetime' } }],
+    ['POST /admin/grants/revoke', revokePost, '/admin/grants/revoke', { method: 'POST', body: { email: 'target@x.com' } }],
+    ['POST /admin/elevate', elevatePost, '/admin/elevate', { method: 'POST', body: { password: PASSWORD } }],
+    // S3: the analytics dashboards are behind the same 404-to-strangers gate.
+    ['GET  /admin/analytics', analyticsGet, '/admin/analytics?panel=overview', { method: 'GET' }],
+  ];
+
+  for (const [label, handler, path, opts] of routes) {
+    const anon = await call(handler, env, path, opts);
+    assert(anon.status === 404, `${label} → 404 signed out (got ${anon.status})`);
+    const stranger = await call(handler, env, path, { ...opts, as: 'plain@x.com' });
+    assert(stranger.status === 404, `${label} → 404 for a signed-in non-admin (got ${stranger.status})`);
+    assert(!/admin|elevat|grant/i.test(JSON.stringify(stranger.body)),
+      `${label} leaks nothing about the console in its 404 body`);
+  }
+
+  // Reads render for an admin with no elevation — analytics is a read.
+  const rootAnalytics = await call(analyticsGet, env, '/admin/analytics?panel=overview', { as: ROOT });
+  assert(rootAnalytics.status === 200 && rootAnalytics.body.panel === 'overview' && rootAnalytics.body.data
+    && typeof rootAnalytics.body.data.active === 'object',
+    'an admin GETs /admin/analytics 200 with an overview payload (no elevation needed)');
+  const badPanel = await call(analyticsGet, env, '/admin/analytics?panel=nonsense', { as: ROOT });
+  assert(badPanel.status === 400, 'an unknown panel is a 400, not a 500');
+
+  assert(env.DB.users.get('target@x.com').plan === 'free', 'and no stranger mutation reached the users table');
+  assert(!env.DB.auditRows.some((r) => r.actor_email === 'plain@x.com'),
+    'a refused stranger writes no audit row — the log stays a record of admins');
 }
 
 console.log('endpoints — /admin/admins is ROOT-ONLY:');
@@ -483,17 +534,220 @@ console.log('gate integrity — ordinary accounts (not dev-listed, not comped):'
   assert(await getPlan(env, 'honest@x.com') === 'free', 'it really is a free account with the paywall on');
 
   let marco;
-  for (let i = 0; i < 5; i++) marco = await checkFeatureLimit(env, 'honest@x.com', 'marco-chat');
-  assert(marco.ok && marco.remaining === 0, 'it spends exactly 5 Marco messages');
-  const sixth = await checkFeatureLimit(env, 'honest@x.com', 'marco-chat');
-  assert(!sixth.ok && sixth.upgrade, 'the 6th Marco message is blocked');
+  for (let i = 0; i < 10; i++) marco = await checkFeatureLimit(env, 'honest@x.com', 'marco-chat');
+  assert(marco.ok && marco.remaining === 0, 'it spends exactly 10 Marco messages (V2 §4)');
+  const eleventh = await checkFeatureLimit(env, 'honest@x.com', 'marco-chat');
+  assert(!eleventh.ok && eleventh.upgrade, 'the 11th Marco message is blocked');
 
   const gen1 = await checkFeatureLimit(env, 'honest@x.com', 'roadmap-generate');
   const gen2 = await checkFeatureLimit(env, 'honest@x.com', 'roadmap-generate');
-  assert(gen1.ok && !gen2.ok, 'one free roadmap generation, then blocked');
+  assert(gen1.ok && !gen2.ok, 'one free roadmap generation a month, then blocked');
 
+  // V2 §4 replaced the free:0 hard gate with a single lifetime taste, so the
+  // honest free account now gets one session and is refused the second.
   const iv = await checkFeatureLimit(env, 'honest@x.com', 'mock-interview');
-  assert(!iv.ok && iv.limit === 0, 'mock interviews stay hard-gated off the free plan');
+  const iv2 = await checkFeatureLimit(env, 'honest@x.com', 'mock-interview');
+  assert(iv.ok && !iv2.ok && iv2.upgrade, 'the free plan gets exactly one mock-interview taste');
+}
+
+// The gates above run the analytics ENDPOINT against the SQL-pattern-matching
+// fakeDb, which proves authorization but returns empty aggregates. The numbers
+// themselves are proven here against a REAL SQLite loaded from migration 0017 —
+// the only thing that can catch a wrong GROUP BY, a broken julianday window, or
+// a DISTINCT that double-counts. (node:sqlite is built in from Node 22.5.)
+console.log('analytics aggregates (real SQL against migrations/0017_analytics.sql):');
+{
+  let DatabaseSync = null;
+  try { ({ DatabaseSync } = await import('node:sqlite')); } catch { /* older node */ }
+  if (!DatabaseSync) {
+    console.warn('  SKIP node:sqlite unavailable — the aggregate section did not run');
+  } else {
+    // --- pure helpers first (cheap, catch date/channel regressions) ---
+    assert(new Date(weekStart('2026-07-24') + 'T00:00:00Z').getUTCDay() === 1, 'weekStart lands on a Monday');
+    assert(clampRange(undefined, undefined, '2026-07-24').from === shiftDay('2026-07-24', -29), 'clampRange defaults to a 30-day window');
+    assert(clampRange('2020-01-01', '2026-07-24', '2026-07-24', 90).from === shiftDay('2026-07-24', -90), 'clampRange caps an over-long range at maxDays');
+    assert(clampRange('2026-07-01', '2999-01-01', '2026-07-24').to === '2026-07-24', 'clampRange never lets `to` exceed today');
+    assert(classifyChannel('linkedin', '', '') === 'linkedin', 'utm_source maps to a channel');
+    assert(classifyChannel('', '', 'instagram.com') === 'instagram', 'ref host maps to a channel when utm is absent');
+    assert(classifyChannel('', 'referral', '') === 'referral', 'a referral medium is its own channel');
+    assert(classifyChannel('', '', '') === 'organic', 'no attribution is organic');
+    // The label-boundary fix (both sides `(^|\.)`…`(\.|$)`): the SAME list must
+    // catch a full host, a bare utm token, AND an apex shortener like t.co — and
+    // must NOT let the single-letter `x` token false-match an unrelated host.
+    assert(classifyChannel('', '', 't.co') === 'twitter', 't.co (the Twitter/X web referrer) maps to twitter, not its own row');
+    assert(classifyChannel('', '', 'www.linkedin.com') === 'linkedin', 'a full referrer host still maps');
+    assert(classifyChannel('x', '', '') === 'twitter', 'a bare x utm_source maps to twitter');
+    assert(classifyChannel('ig', '', '') === 'instagram', 'a bare ig utm_source maps to instagram');
+    assert(classifyChannel('fb', '', '') === 'facebook', 'a bare fb utm_source maps to facebook');
+    assert(classifyChannel('', '', 'xyz.com') !== 'twitter', 'the single-letter x token does not false-match xyz.com');
+
+    const sqlite = new DatabaseSync(':memory:');
+    sqlite.exec(readFileSync(new URL('../migrations/0017_analytics.sql', import.meta.url), 'utf8'));
+    sqlite.exec('CREATE TABLE users (email TEXT PRIMARY KEY, plan TEXT, plan_expires_at TEXT, plan_source TEXT)');
+
+    // D1-shaped wrapper over the real database (mirrors scripts/test-events.mjs).
+    const d1 = {
+      prepare(sql) {
+        const runP = (params) => { const r = sqlite.prepare(sql).run(...params); return { meta: { changes: Number(r.changes) || 0 } }; };
+        const allP = (params) => ({ results: sqlite.prepare(sql).all(...params) });
+        const firstP = (params) => (sqlite.prepare(sql).get(...params) ?? null);
+        return {
+          bind(...params) { return { async run() { return runP(params); }, async all() { return allP(params); }, async first() { return firstP(params); } }; },
+          async run() { return runP([]); },
+          async all() { return allP([]); },
+          async first() { return firstP([]); },
+        };
+      },
+      async batch(list) { const out = []; for (const s of list) out.push(await s.run()); return out; },
+    };
+
+    const TODAY = '2026-07-24';
+    const NOW_ISO = TODAY + 'T23:59:59.000Z';
+    const DM10 = '2026-07-14';
+    const at = (day, hhmm) => `${day}T${hhmm}:00.000Z`;
+
+    const insEv = sqlite.prepare(
+      'INSERT INTO events (id,ts,day,anon_id,user_id,name,path,props,ref,utm_source,utm_medium,utm_campaign,ua_class) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+    );
+    let evn = 0;
+    const ev = (o) => insEv.run(
+      'e' + (evn++), o.ts, o.day, o.anon, o.user || null, o.name, o.path || '/', o.props ? JSON.stringify(o.props) : null,
+      o.ref || null, o.utm || null, o.med || null, null, o.ua || 'desktop',
+    );
+
+    // A1 (linkedin) — full funnel + activation. u1 signed-in on a today row.
+    const L = { utm: 'linkedin' };
+    ev({ anon: 'anon1-aaaa', day: TODAY, ts: at(TODAY, '09:00'), name: 'page_view', path: '/', ...L });
+    ev({ anon: 'anon1-aaaa', day: TODAY, ts: at(TODAY, '09:00'), name: 'session_start', path: '/', ...L });
+    ev({ anon: 'anon1-aaaa', day: TODAY, ts: at(TODAY, '09:05'), name: 'quiz_start', ...L });
+    ev({ anon: 'anon1-aaaa', day: TODAY, ts: at(TODAY, '09:10'), name: 'quiz_complete', ...L });
+    ev({ anon: 'anon1-aaaa', day: TODAY, ts: at(TODAY, '09:11'), name: 'reveal_view', ...L });
+    ev({ anon: 'anon1-aaaa', day: TODAY, ts: at(TODAY, '09:12'), name: 'signup_complete', ...L });
+    ev({ anon: 'anon1-aaaa', day: TODAY, ts: at(TODAY, '09:20'), name: 'roadmap_generated', user: 'u1@x.com', ...L });
+    // A2 (instagram via ref) — funnel to signup, no activation, all paywall stages. u2 signed-in.
+    const I = { ref: 'instagram.com' };
+    ev({ anon: 'anon2-bbbb', day: TODAY, ts: at(TODAY, '10:00'), name: 'page_view', path: '/', user: 'u2@x.com', ...I });
+    ev({ anon: 'anon2-bbbb', day: TODAY, ts: at(TODAY, '10:00'), name: 'session_start', path: '/', ...I });
+    ev({ anon: 'anon2-bbbb', day: TODAY, ts: at(TODAY, '10:05'), name: 'quiz_start', ...I });
+    ev({ anon: 'anon2-bbbb', day: TODAY, ts: at(TODAY, '10:10'), name: 'quiz_complete', ...I });
+    ev({ anon: 'anon2-bbbb', day: TODAY, ts: at(TODAY, '10:11'), name: 'reveal_view', ...I });
+    ev({ anon: 'anon2-bbbb', day: TODAY, ts: at(TODAY, '10:12'), name: 'signup_complete', ...I });
+    ev({ anon: 'anon2-bbbb', day: TODAY, ts: at(TODAY, '10:30'), name: 'plan_cap_hit', props: { feature: 'mock-interview' }, ...I });
+    ev({ anon: 'anon2-bbbb', day: TODAY, ts: at(TODAY, '10:31'), name: 'plan_cap_hit', props: { feature: 'resume-tailor' }, ...I });
+    ev({ anon: 'anon2-bbbb', day: TODAY, ts: at(TODAY, '10:32'), name: 'upgrade_click', props: { source: 'cap:mock-interview' }, ...I });
+    ev({ anon: 'anon2-bbbb', day: TODAY, ts: at(TODAY, '10:33'), name: 'checkout_start', props: { price: 'monthly' }, ...I });
+    ev({ anon: 'anon2-bbbb', day: TODAY, ts: at(TODAY, '10:40'), name: 'checkout_success', props: { mode: 'subscription', price: 'monthly' }, ua: 'server' });
+    // A3 — a bounced organic visitor (landing only).
+    ev({ anon: 'anon3-cccc', day: TODAY, ts: at(TODAY, '11:00'), name: 'page_view', path: '/' });
+    // A4 — active 10 days ago (inside MAU, outside WAU/DAU and the 7-day funnel).
+    ev({ anon: 'anon4-dddd', day: DM10, ts: at(DM10, '09:00'), name: 'page_view', path: '/other' });
+
+    // events_daily fixture for the feature-usage panel (reads the rollup, not raw).
+    const insDaily = sqlite.prepare('INSERT INTO events_daily (day,name,count,uniques_anon,uniques_user) VALUES (?,?,?,?,?)');
+    insDaily.run(TODAY, 'roadmap_generated', 5, 3, 2);
+    insDaily.run(TODAY, 'quiz_complete', 4, 4, 2);
+
+    // server_errors fixture (day-stamped to TODAY so the byRoute window is deterministic).
+    const insErr = sqlite.prepare('INSERT INTO server_errors (id,ts,day,route,message,detail) VALUES (?,?,?,?,?,?)');
+    insErr.run('er0', at(TODAY, '08:00'), TODAY, 'career-analysis', 'Gemini timeout', null);
+    insErr.run('er1', at(TODAY, '08:05'), TODAY, 'career-analysis', 'parse fail', null);
+    insErr.run('er2', at(TODAY, '08:10'), TODAY, 'contact', 'resend unreachable', null);
+
+    const opts = { today: TODAY, nowIso: NOW_ISO };
+
+    // --- overview ---
+    const ov = await overviewMetrics(d1, { ...opts, monthlyCents: 1200 });
+    assert(ov.active.dau.anon === 3 && ov.active.wau.anon === 3 && ov.active.mau.anon === 4,
+      `DAU/WAU/MAU anon = 3/3/4 (got ${ov.active.dau.anon}/${ov.active.wau.anon}/${ov.active.mau.anon})`);
+    assert(ov.active.dau.user === 2, `DAU signed-in uniques = 2 (got ${ov.active.dau.user})`);
+    assert(ov.signups.today === 2 && ov.signups.last7 === 2 && ov.signups.last30 === 2, 'signups today/7d/30d = 2');
+    assert(ov.signups.perDay.length === 14 && ov.signups.perDay[13].count === 2, 'the 14-day trend ends on today with 2 signups');
+    assert(ov.activation.signups === 2 && ov.activation.activated === 1 && ov.activation.rate === 50,
+      `activation = 1/2 within 48h = 50% (got ${ov.activation.activated}/${ov.activation.signups} = ${ov.activation.rate})`);
+
+    // --- overview revenue (needs the users fixture) ---
+    const insUser = sqlite.prepare('INSERT INTO users (email,plan,plan_expires_at,plan_source) VALUES (?,?,?,?)');
+    insUser.run('u1@x.com', 'premium', null, 'stripe');
+    insUser.run('u2@x.com', 'free', null, null);
+    insUser.run('u3@x.com', 'lifetime', null, 'stripe');
+    insUser.run('u4@x.com', 'premium', '2020-01-01T00:00:00.000Z', 'stripe'); // expired → not paid
+    const ov2 = await overviewMetrics(d1, { ...opts, monthlyCents: 1200 });
+    assert(ov2.revenue.paidCount === 2 && ov2.revenue.activeByPlan.premium === 1 && ov2.revenue.activeByPlan.lifetime === 1,
+      `paid = 2 (1 premium, 1 lifetime); the expired premium is excluded (got ${ov2.revenue.paidCount})`);
+    assert(ov2.revenue.mrr.estimateCents === 1200, 'MRR estimate = active premium × monthly cents; lifetime excluded');
+    const ov3 = await overviewMetrics(d1, opts);
+    assert(ov3.revenue.mrr.estimateCents === null, 'MRR is null (never fabricated) when no monthly price is provided');
+
+    // --- funnel (7-day window) ---
+    const fn = await funnelMetrics(d1, { ...opts, from: shiftDay(TODAY, -6), to: TODAY });
+    const byStage = Object.fromEntries(fn.discovery.map((s) => [s.stage, s]));
+    assert(byStage.landing.count === 3, `funnel landing = 3 distinct visitors (got ${byStage.landing.count})`);
+    assert(byStage.quiz_start.count === 2 && byStage.quiz_complete.count === 2, 'quiz start/complete = 2');
+    // S6 shipped the reveal, so this stage counts REAL events now. Seeding it
+    // (rather than asserting a structural 0) is what makes the assertion able to
+    // fail if the stage is ever wired to the wrong event name.
+    assert(byStage.reveal_view.count === 2 && !byStage.reveal_view.pending,
+      `reveal_view counts real events and is no longer flagged pending (got ${byStage.reveal_view.count}, pending=${byStage.reveal_view.pending})`);
+    assert(byStage.signup.count === 2 && byStage.activated.count === 1, 'signup = 2, activated (roadmap) = 1');
+    assert(byStage.quiz_start.pctOfPrev === Math.round((2 / 3) * 1000) / 10, 'per-stage conversion is share of the previous stage');
+    const pay = Object.fromEntries(fn.paywall.stages.map((s) => [s.event, s.count]));
+    assert(pay.plan_cap_hit === 2 && pay.upgrade_click === 1 && pay.checkout_start === 1 && pay.checkout_success === 1, 'paywall stage totals');
+    assert(fn.paywall.capsByFeature.length === 2 && fn.paywall.capsByFeature.every((c) => c.count === 1), 'cap hits split by feature');
+
+    // --- retention ---
+    const rt = await retentionMetrics(d1, { ...opts, weeks: 8 });
+    assert(rt.cohorts.length === 8, 'retention returns one row per requested week');
+    const thisCohort = rt.cohorts.find((c) => c.cohortWeek === weekStart(TODAY));
+    assert(thisCohort && thisCohort.size === 2 && thisCohort.retained[0].count === 2,
+      `this week's cohort has both signups, week-0 retained = 2 (got size ${thisCohort && thisCohort.size})`);
+    const rec = Object.fromEntries(rt.recency.map((b) => [b.bucket, b.count]));
+    assert(rec['0–1d'] === 3 && rec['8–30d'] === 1, `recency: 3 active today, 1 at ten days (got 0–1d=${rec['0–1d']}, 8–30d=${rec['8–30d']})`);
+
+    // --- features (from events_daily) ---
+    const feat = await featureUsage(d1, { ...opts, weeks: 8 });
+    const fmap = Object.fromEntries(feat.features.map((f) => [f.event, f]));
+    assert(fmap.roadmap_generated.total === 5 && fmap.quiz_complete.total === 4, 'weekly feature totals come from events_daily');
+    assert(feat.zeroUse.some((z) => z.key === 'opp_finder') && !feat.zeroUse.some((z) => z.event === 'roadmap_generated'),
+      'zero-use lists the untouched features and excludes the used ones');
+
+    // --- sources (7-day window) ---
+    const src = await sourceAttribution(d1, { ...opts, from: shiftDay(TODAY, -6), to: TODAY });
+    const chan = Object.fromEntries(src.channels.map((c) => [c.channel, c]));
+    assert(chan.linkedin.visitors === 1 && chan.linkedin.signups === 1 && chan.linkedin.activations === 1, 'linkedin visitor signed up and activated');
+    assert(chan.instagram.visitors === 1 && chan.instagram.signups === 1 && chan.instagram.activations === 0, 'instagram visitor signed up, did not activate');
+    assert(chan.organic.visitors === 1 && chan.organic.signups === 0, 'the bounced organic visitor is attributed but never converts');
+
+    // --- live tail ---
+    const tail = await liveTail(d1, { limit: 100 });
+    assert(tail.events.length === evn, `the tail returns every event (${tail.events.length}/${evn})`);
+    assert(tail.events[0].name === 'page_view' && tail.events[0].anon === 'anon3-cc', 'newest-first, anon id truncated to 8 chars');
+    assert(tail.events.every((e) => !('user' in e) && !('user_id' in e)), 'the tail never carries a user id / email');
+    const capRow = tail.events.find((e) => e.name === 'plan_cap_hit'); // newest-first → resume-tailor (10:31) before mock-interview (10:30)
+    assert(capRow && capRow.props && ['mock-interview', 'resume-tailor'].includes(capRow.props.feature), 'props are parsed back for debugging');
+
+    // --- error log + logServerError write→read→PII redaction + 4xx drop ---
+    const errEnv = { DB: d1 };
+    const wrote = await logServerError(errEnv, 'roadmap-generate',
+      new Error('bad email leaked@example.com from 203.0.113.9 tok deadbeefdeadbeefdeadbeefdeadbeef'), { status: 500 });
+    assert(wrote === true, 'logServerError writes a row and reports success');
+    // A user-caused 4xx (a 429 rate-limit that reached an outer catch) is NOT a
+    // server error and must not fill the Sentry-stand-in with throttle noise.
+    const skipped429 = await logServerError(errEnv, 'rate-throttle', { status: 429, message: 'rate limited' });
+    assert(skipped429 === false, 'a user-caused 4xx (429 rate-limit) is dropped, not logged');
+    const errs = await recentServerErrors(d1, { ...opts, limit: 50, sinceDays: 7 });
+    assert(errs.recent.length === 4, `recent errors = 3 seeded + 1 logged, the 429 wrote nothing (got ${errs.recent.length})`);
+    assert(!errs.recent.some((r) => r.route === 'rate-throttle'), 'the dropped 429 left no server_errors row');
+    const logged = errs.recent.find((r) => r.route === 'roadmap-generate');
+    assert(logged && /<redacted>/.test(logged.message) && !/leaked@example\.com/.test(logged.message),
+      'an email in an error message is redacted before it is stored');
+    assert(logged && /<ip>/.test(logged.message) && !/203\.0\.113\.9/.test(logged.message),
+      'an IPv4 address in an error message is redacted');
+    assert(logged && /<token>/.test(logged.message) && !/deadbeefdeadbeef/.test(logged.message),
+      'a long hex token in an error message is redacted');
+    const byRoute = Object.fromEntries(errs.byRoute.map((r) => [r.route, r.count]));
+    assert(byRoute['career-analysis'] === 2 && byRoute.contact === 1, 'byRoute rolls the seeded errors up per route');
+    assert(await logServerError({}, 'x', new Error('y')) === false, 'logServerError with no DB binding degrades to false, never throws');
+  }
 }
 
 process.exit(fail ? 1 : 0);

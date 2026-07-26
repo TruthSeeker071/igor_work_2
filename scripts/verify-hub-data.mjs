@@ -5,10 +5,12 @@
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { baseIndexFromCareers, rekeyDerivedRows } from '../functions/_lib/onet/derive-rekey.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ART = join(ROOT, 'data/onet/artifacts');
 const HUB_MAP_PATH = join(ROOT, 'data/onet/hub-career-soc-map.json');
+const DERIVED_FIXTURE = join(ROOT, 'scripts/fixtures/derived-rows-stale.json');
 
 function loadJson(name) {
   return JSON.parse(readFileSync(join(ART, name), 'utf8'));
@@ -76,6 +78,20 @@ ok('Every hub-career-soc-map SOC resolves in careers.json');
 const aggZones = Object.keys(zoneAggregates);
 if (!aggZones.length) fail('zone-aggregate-vectors.json empty');
 ok(`zone-aggregate-vectors.json has ${aggZones.length} zones`);
+
+// Sector fit reads lvMeanW (representativeness-weighted centroid). A zone that
+// lost it silently falls back to the outlier-diluted mean, which is the exact
+// mushiness fix 1.3 removed — so a missing/degenerate field is a hard failure.
+// Regenerate with `npm run onet:zoneweights`.
+let aggWeightedBad = 0;
+aggZones.forEach((z) => {
+  const e = zoneAggregates[z];
+  if (!Array.isArray(e.lvMeanW) || e.lvMeanW.length !== e.lvMean.length) { aggWeightedBad++; return; }
+  if (!(Number(e.repWeightSum) > 0)) { aggWeightedBad++; return; }
+  if (e.lvMeanW.every((v, d) => v === e.lvMean[d])) aggWeightedBad++;
+});
+if (aggWeightedBad) fail(`${aggWeightedBad} zone(s) missing a usable lvMeanW/repWeightSum`);
+ok(`all ${aggZones.length} zones carry a weighted centroid (lvMeanW + repWeightSum)`);
 
 const centroidZones = Object.keys(zoneCentroids);
 if (!centroidZones.length) fail('zone-centroids.json empty');
@@ -242,5 +258,48 @@ if (closePct > 5) {
   fail(`${closePct.toFixed(1)}% of zone pairs closer than ${MIN_PAIR} units (max 5%)`);
 }
 ok(`Pair spacing: ${closePct.toFixed(1)}% pairs < ${MIN_PAIR} units (max 5%)`);
+
+// --- Derived ("fragment") row re-key: a satellite must land in a live zone ---
+// Fragments snapshot their base's zone/color/coords when generated, so a rezone
+// strands every older row in a bucket nothing renders. derive-rekey.js re-derives
+// those fields at read time; this replays it over a deliberately stale fixture.
+const zoneKeys = new Set(Object.keys(zoneLayout.zones || zoneLayout));
+const baseBySoc = baseIndexFromCareers(careers);
+const staleRows = JSON.parse(readFileSync(DERIVED_FIXTURE, 'utf8')).careers;
+const servedRows = rekeyDerivedRows(staleRows, baseBySoc);
+
+if (staleRows.some((r) => zoneKeys.has(r.hubZone) === false) === false) {
+  fail('derived fixture no longer contains a stale hubZone — it cannot prove the re-key');
+}
+const orphanSocs = staleRows
+  .filter((r) => !baseBySoc.has(r.derivedFrom && r.derivedFrom.soc))
+  .map((r) => r.soc);
+if (!orphanSocs.length) fail('derived fixture no longer contains an orphan row');
+for (const soc of orphanSocs) {
+  if (servedRows.some((r) => r.soc === soc)) fail(`orphaned derived row ${soc} was served`);
+}
+if (servedRows.length !== staleRows.length - orphanSocs.length) {
+  fail(`re-key served ${servedRows.length} rows, expected ${staleRows.length - orphanSocs.length}`);
+}
+for (const row of servedRows) {
+  const base = baseBySoc.get(row.derivedFrom.soc);
+  if (!zoneKeys.has(row.hubZone)) fail(`derived ${row.soc} re-keyed to dead zone ${row.hubZone}`);
+  if (row.hubZone !== base.hubZone) fail(`derived ${row.soc} zone ${row.hubZone} != base ${base.hubZone}`);
+  if (row.orbColor !== base.orbColor) fail(`derived ${row.soc} orbColor not taken from its base`);
+  if (row.jobZone !== base.jobZone) fail(`derived ${row.soc} jobZone not taken from its base`);
+  const dx = row.sectorX - base.sectorX;
+  const dy = row.sectorY - base.sectorY;
+  const r = Math.sqrt(dx * dx + dy * dy);
+  if (!(r > 50 && r < 140)) fail(`derived ${row.soc} orbit radius ${r.toFixed(1)} off its base (want 50-140)`);
+}
+// Siblings get distinct orbit slots, and the re-key is idempotent.
+const sibs = servedRows.filter((r) => r.derivedFrom.soc === '15-1252.00');
+if (sibs.length === 2 && sibs[0].sectorX === sibs[1].sectorX && sibs[0].sectorY === sibs[1].sectorY) {
+  fail('sibling fragments were placed on the same point');
+}
+if (JSON.stringify(rekeyDerivedRows(servedRows, baseBySoc)) !== JSON.stringify(servedRows)) {
+  fail('derived re-key is not idempotent');
+}
+ok(`derived re-key: ${servedRows.length} rows in live zones, ${orphanSocs.length} orphan dropped, idempotent`);
 
 console.log('\nverify-hub-data: all checks passed');

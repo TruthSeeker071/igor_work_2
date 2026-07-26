@@ -13,7 +13,10 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const PORT = 8934;
+// Own port, overridable. This used to be 8934 — the same port verify-fluid-layout.mjs
+// defaults to — so the two gates could not run concurrently and a leaked server from
+// either one made the other die with EADDRINUSE. One port per gate; see run-gates.mjs.
+const PORT = Number(process.env.RESUME_UI_PORT || 8937);
 const MIME = {
   '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
   '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png',
@@ -34,7 +37,16 @@ await new Promise((r) => server.listen(PORT, r));
 
 const SOC = '15-2051.00';
 // readLocalQuiz (auth.js) requires a `scores` object before it returns the doc.
-const QUIZ_SEED = JSON.stringify({ name: 'Probe', scores: { tech: 80 }, careerFocus: { soc: SOC, name: 'Data Scientist' } });
+// featureIntros marks the probe as a returning student: without it the WS-F
+// resume interstitial opens over the editor and every click in this file times
+// out against its backdrop. Any future harness that drives a page carrying
+// data-fw-intro needs the same line.
+const QUIZ_SEED = JSON.stringify({
+  name: 'Probe',
+  scores: { tech: 80 },
+  careerFocus: { soc: SOC, name: 'Data Scientist' },
+  featureIntros: { _seeded: true, resume: { seen: true } },
+});
 
 const GUIDED_QUESTIONS = [
   { question: 'About how many people used your biggest project?', options: ['~10', '~100', 'Not sure'] },
@@ -103,7 +115,9 @@ await test('skills: Enter commits a removable tag into preview + draft; blur com
   await page.evaluate(() => document.getElementById('resume-skill-input').blur());
   await page.waitForTimeout(1100);
   const r = await page.evaluate(() => ({
-    tags: Array.from(document.querySelectorAll('.resume-skill-tag')).map((t) => t.textContent.replace('✕', '')),
+    // The remove control is a lucide SVG now, so read the label span rather than
+    // stripping a glyph out of textContent.
+    tags: Array.from(document.querySelectorAll('.resume-skill-tag span')).map((t) => t.textContent.trim()),
     preview: document.getElementById('resume-preview-pane').innerHTML,
     draft: JSON.parse(localStorage.getItem('fw_resume_draft_v1')).resume.sections.find((s) => s.kind === 'skills').flat,
   }));

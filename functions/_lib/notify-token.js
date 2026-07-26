@@ -9,8 +9,33 @@ export async function sha256Hex(input) {
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+// S2: the fallback chain below is a correctness bug the moment two DIFFERENT
+// deploy targets take two different branches of it — and that is exactly the
+// live state today. The Pages projects have SESSION_PEPPER but no UNSUB_SECRET,
+// so they mint tokens from the pepper; the standalone cron Worker has neither,
+// so it mints them from the committed constant. The cron builds the unsubscribe
+// link, Pages verifies it, and they disagree — every unsubscribe link in the
+// weekly digest 403s, which is a CAN-SPAM problem, not a cosmetic one.
+//
+// The code cannot fix that (only Jacob can set the env var in all three stores),
+// but it must stop HIDING it. Warned once per isolate: this runs per-recipient
+// inside the cron's send loop, and a warning repeated 200 times is a warning
+// nobody reads.
+let warnedUnsubFallback = false;
+
 export function unsubSecret(env) {
-  return (env && (env.UNSUB_SECRET || env.SESSION_PEPPER)) || 'flightway-unsub';
+  const explicit = env && env.UNSUB_SECRET;
+  if (explicit) return explicit;
+  if (!warnedUnsubFallback) {
+    warnedUnsubFallback = true;
+    console.warn(
+      'UNSUB_SECRET is not set — falling back to '
+      + (env && env.SESSION_PEPPER ? 'SESSION_PEPPER' : "the committed constant 'flightway-unsub'")
+      + '. Unsubscribe links only verify if EVERY target (both Pages projects AND '
+      + 'the flightway-cron Worker) resolves to the same value. Run `npm run verify:env`.',
+    );
+  }
+  return (env && env.SESSION_PEPPER) || 'flightway-unsub';
 }
 
 export async function unsubToken(email, env) {

@@ -3,7 +3,10 @@
  */
 (function (global) {
   const TREE_VERSION = 2;
-  const MAX_NODES = 24;
+  // Guards the trunk->node ancestor walks (preview path, follow path, decision
+  // lookup) and the v1 migration cap. Must stay >= the server's MAX_TREE_NODES
+  // so a long committed+extended branch's chain is walked in full, not truncated.
+  const MAX_NODES = 48;
   const TRUNK_SCREEN_Y = 0.88;
 
   let layoutCache = null;
@@ -172,6 +175,12 @@ function canonicalBranchDisplayTitle(title) {
   function esc(s) {
     return String(s == null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // §3C.5: esc() alone leaves quotes intact, so a value with a " in an attribute
+  // context (data-node-id, style="…") could break out. Use escAttr for attributes.
+  function escAttr(s) {
+    return esc(s).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
   function treeKey(tree) {
@@ -349,22 +358,38 @@ function canonicalBranchDisplayTitle(title) {
     // Committed branch node = a branch-role node that is on the active path or
     // resolved as a chosen branch. Its deepest such node is the tip.
     const committedBranch = isBranch && (onActive || onChosenBranch);
+    // Tip = a branch node with no branch child. Computed for ANY branch so the
+    // Extend affordance works on tracked (not only structurally committed) tips.
     let isTip = false;
-    if (committedBranch) {
+    if (isBranch) {
       const hasBranchChild = (tree.nodes || []).some(function (n) {
         return n.parentId === nodeId && n.pathRole === 'branch';
       });
       isTip = !hasBranchChild;
     }
-    // Determine if the branch choice waypoint (major spine node) is completed
-    // This is the major spine node that has the decision for this branch
-    let branchChoiceCompleted = false;
+    // WS-C2: reverse-a-commitment affordances. Available only on a committed
+    // branch whose fork is still the user's current position (latest-completed
+    // waypoint) — same guard the server enforces, so no wasted 409 round-trips.
+    let canUncommit = false;
+    let switchTarget = null;
+    let decisionId = null;
     if (isBranch) {
       const hit = findDecisionForNode(tree, nodeId);
       if (hit) {
-        const majorNode = (tree.nodes || []).find(function (n) { return n.id === hit.decision.nodeId; });
-        if (majorNode) {
-          branchChoiceCompleted = !!majorNode.done;
+        decisionId = hit.decision.id;
+        if (committedBranch) {
+          canUncommit = latestCompletedWaypointId(tree) === hit.decision.nodeId;
+          const chosen = hit.decision.chosenOptionId;
+          const alt = (hit.decision.options || []).find(function (o) {
+            return o.id !== chosen && o.childNodeId;
+          });
+          if (alt) {
+            const altRoot = (tree.nodes || []).find(function (n) { return n.id === alt.childNodeId; });
+            switchTarget = {
+              optionId: alt.id,
+              label: (altRoot && (altRoot.shortTitle || altRoot.title)) || alt.label || 'the other path',
+            };
+          }
         }
       }
     }
@@ -374,7 +399,9 @@ function canonicalBranchDisplayTitle(title) {
       committedBranch: committedBranch,
       isTip: isTip,
       previewing: previewing,
-      branchChoiceCompleted: branchChoiceCompleted,
+      canUncommit: canUncommit,
+      switchTarget: switchTarget,
+      decisionId: decisionId,
     };
   }
 
@@ -417,7 +444,22 @@ function canonicalBranchDisplayTitle(title) {
     const imm = immediateWaypoint(tree);
     if (imm && imm.id === nodeId) return true;
     if (canMarkWaypointUndone(tree, nodeId)) return true;
-    return !!(tree && tree.focusTracker && tree.focusTracker.waypointId === nodeId);
+    if (tree && tree.focusTracker && tree.focusTracker.waypointId === nodeId) return true;
+    // Branch frontier (WS-multi): a branch's next-undone waypoint is the user's live
+    // frontier on that path and is editable, even though it is not on the spine
+    // activePath. Tracking in the Flight Plan replaced the old structural branch
+    // "commit", so a branch waypoint no longer needs a commit to be worked on. The
+    // first-undone guard still prevents skipping ahead within the branch.
+    const SGT = global.FWSkillGapTracker;
+    if (SGT && typeof SGT.branchKeyForNode === 'function'
+      && typeof SGT.immediateWaypointForBranch === 'function') {
+      const key = SGT.branchKeyForNode(tree, nodeId);
+      if (key && key !== 'spine') {
+        const bimm = SGT.immediateWaypointForBranch(tree, key);
+        if (bimm && bimm.id === nodeId) return true;
+      }
+    }
+    return false;
   }
 
   function latestCompletedWaypointId(tree) {
@@ -432,8 +474,44 @@ function canonicalBranchDisplayTitle(title) {
     return null;
   }
 
+  // A waypoint can be marked undone only when nothing built AFTER it is still done:
+  // it is done, and no descendant waypoint is done — a descendant being either a
+  // later spine waypoint (spine nodes chain by parentId from the trunk) or any branch
+  // waypoint forked off it or off a later waypoint. This lets any completed leaf be
+  // reverted — spine tip OR branch tip — while blocking revert of a waypoint whose
+  // later waypoints are still complete (e.g. a spine waypoint with a completed branch
+  // hanging off it). It replaces the old activePath-tip-only rule, which ignored
+  // branches: it couldn't undo branch tips, yet wrongly let an earlier spine waypoint
+  // be undone while its branches stayed done. "Nothing done after it" already enforces
+  // spine order (a later spine waypoint is a descendant), so no separate ancestor
+  // check is needed — and adding one would wrongly block undoing a branch waypoint
+  // completed before its spine fork, which the editor explicitly allows.
   function canMarkWaypointUndone(tree, nodeId) {
-    return !!(nodeId && latestCompletedWaypointId(tree) === nodeId);
+    if (!tree || !nodeId) return false;
+    const nodes = tree.nodes || [];
+    const byId = {};
+    nodes.forEach(function (n) { byId[n.id] = n; });
+    const node = byId[nodeId];
+    if (!node || !node.done) return false;
+    const childrenByParent = {};
+    nodes.forEach(function (n) {
+      const p = n.parentId;
+      if (p == null) return;
+      (childrenByParent[p] || (childrenByParent[p] = [])).push(n);
+    });
+    const stack = (childrenByParent[nodeId] || []).slice();
+    const seen = {};
+    let guard = 0;
+    while (stack.length && guard < MAX_NODES * 4) {
+      guard += 1;
+      const d = stack.pop();
+      if (!d || seen[d.id]) continue;
+      seen[d.id] = true;
+      if (d.done) return false;
+      const kids = childrenByParent[d.id];
+      if (kids) for (let i = 0; i < kids.length; i += 1) stack.push(kids[i]);
+    }
+    return true;
   }
 
   function drawerOptsForNode(tree, nodeId) {
@@ -577,92 +655,138 @@ function canonicalBranchDisplayTitle(title) {
       return true;
     }
 
-    function placeBranch(parentLayoutId, parentId, startX, startY, side, depth, forkDepth) {
-      forkDepth = forkDepth || 0;
-      const parentNode = (tree.nodes || []).find(function (n) { return n.id === parentId; });
-      // Sub-branches this node forks into via a decision (deeper fork, WS5). These
-      // are laid out off to the side; the linear branch child continues straight.
+    // Collision-aware branch layout (WS-A1). Branches never overlap the spine,
+    // each other, or their own nodes because each branch subtree owns a disjoint
+    // band of vertical lanes: the spine holds lane 0 (x=0), left branches take
+    // x<0, right branches x>0, and lanes are packed strictly outward so two
+    // distinct branches can never share an x. A branch's linear continuation
+    // runs straight up its inner lane (each hop -branchGap in y, so same-lane
+    // nodes never share a y either); sub-forks claim additional outward lanes.
+    // There is NO depth cap — a committed branch may run well past the spine tip,
+    // which is the whole point of "model where they could get to".
+    const nodeById = {};
+    (tree.nodes || []).forEach(function (n) { nodeById[n.id] = n; });
+
+    // The linear (straight-up) continuation of a node plus the sub-fork roots
+    // that split off it. forkDepth mirrors the old placeBranch gate so the set
+    // of nodes treated as forks is unchanged.
+    function linearAndForks(node, forkDepth) {
       const forkRootIds = {};
-      if (parentNode && forkDepth < 2) {
-        branchRootsForNode(tree, parentNode, spineIds).forEach(function (r) { forkRootIds[r.id] = true; });
+      if (node && forkDepth < 2) {
+        branchRootsForNode(tree, node, spineIds).forEach(function (r) { forkRootIds[r.id] = true; });
       }
       const kids = (tree.nodes || []).filter(function (n) {
-        return n.parentId === parentId && !spineIds[n.id] && nodeConfidence(n) > 1;
+        return n.parentId === node.id && !spineIds[n.id] && nodeConfidence(n) > 1;
       });
-      // The straight continuation is the first non-fork child.
-      const linear = kids.find(function (k) { return !forkRootIds[k.id]; });
-      const y = startY - branchGap;
-      if (y < spineTipY - branchGap * 4) return;
-
-      if (linear) {
-        const x = depth <= 1 ? startX + side * 0.35 * siblingGap : startX;
-        const added = addLayoutNode({
-          id: linear.id,
-          title: linear.title,
-          depth: linear.depth || depth + 1,
-          confidence: nodeConfidence(linear),
-          parentId: parentLayoutId,
-          done: !!linear.done,
-          phaseColor: linear.phaseColor,
-          pathRole: linear.pathRole || 'branch',
-          x: x,
-          y: y,
-          raw: linear,
-          stepPct: nodeStepProgress(linear).pct,
-        });
-        if (added) placeBranch(linear.id, linear.id, x, y, side, depth + 1, forkDepth);
-      }
-
-      // Deeper forks: sub-branch roots off this node, nudged further to the side
-      // with a reduced offset so they read as secondary to the trunk fork.
-      Object.keys(forkRootIds).forEach(function (rootId, fi) {
-        const root = (tree.nodes || []).find(function (n) { return n.id === rootId; });
-        if (!root) return;
-        const subSide = fi % 2 === 0 ? side : -side;
-        const subX = startX + subSide * (0.55 * siblingGap);
-        const added = addLayoutNode({
-          id: root.id,
-          title: root.title,
-          depth: root.depth || depth + 1,
-          confidence: nodeConfidence(root),
-          parentId: parentLayoutId,
-          done: !!root.done,
-          phaseColor: root.phaseColor,
-          pathRole: root.pathRole || 'branch',
-          x: subX,
-          y: y,
-          raw: root,
-          stepPct: nodeStepProgress(root).pct,
-        });
-        if (added) placeBranch(root.id, root.id, subX, y, subSide, depth + 1, forkDepth + 1);
-      });
+      return {
+        linear: kids.find(function (k) { return !forkRootIds[k.id]; }) || null,
+        forks: Object.keys(forkRootIds).map(function (id) { return nodeById[id]; }).filter(Boolean),
+      };
     }
 
+    // Branches grow SIDEWAYS as they climb (WS-multi): each hop drifts this many
+    // lanes further from the spine, so a branch fans out at an angle instead of
+    // stacking in a straight vertical column that the connectors then cross. The
+    // drift stays inside the branch's reserved lane band (see leanLanes), so the
+    // collision-free guarantee (disjoint x-bands, ≥1 lane = 130 world units apart)
+    // is preserved — outward drift only ever increases |x|, never toward x=0.
+    const BRANCH_LEAN = 0.34;
+
+    function chainLength(rootId, forkDepth) {
+      let cur = nodeById[rootId];
+      let len = 0;
+      let g = 0;
+      while (cur && g < MAX_NODES) {
+        g += 1; len += 1;
+        cur = linearAndForks(cur, forkDepth).linear;
+      }
+      return len;
+    }
+
+    // Extra lanes a chain's outward lean sweeps across (hop 0 = 0 drift), rounded
+    // up so the reserved band always fully contains the leaning chain.
+    function leanLanes(rootId, forkDepth) {
+      return Math.ceil(Math.max(0, chainLength(rootId, forkDepth) - 1) * BRANCH_LEAN);
+    }
+
+    // Lanes the subtree rooted at rootId needs to draw without internal overlap:
+    // its own linear column (1) + the lean span that column sweeps + the width of
+    // every sub-fork it spawns. Must stay in lockstep with placeBranchSubtree.
+    function subtreeWidth(rootId, forkDepth) {
+      let cur = nodeById[rootId];
+      let width = 1 + leanLanes(rootId, forkDepth);
+      let g = 0;
+      while (cur && g < MAX_NODES) {
+        g += 1;
+        const lf = linearAndForks(cur, forkDepth);
+        lf.forks.forEach(function (f) { width += subtreeWidth(f.id, forkDepth + 1); });
+        cur = lf.linear;
+      }
+      return width;
+    }
+
+    // Place a branch subtree: its linear chain climbs at an outward angle from
+    // `baseLane` (hop h sits at lane baseLane + h*BRANCH_LEAN); its sub-forks take
+    // lanes strictly OUTSIDE that leaning chain's band. Returns lanes consumed.
+    function placeBranchSubtree(rootId, parentLayoutId, side, baseLane, startY, forkDepth, depth) {
+      let cur = nodeById[rootId];
+      let parent = parentLayoutId;
+      let y = startY;
+      let d = depth;
+      let h = 0; // hop index along this linear chain, drives the outward lean
+      const chainLean = leanLanes(rootId, forkDepth);
+      let width = 1 + chainLean;             // linear column + its lean span
+      let forkLaneCursor = baseLane + width; // sub-forks start beyond the lean band
+      let g = 0;
+      while (cur && g < MAX_NODES) {
+        g += 1;
+        const added = addLayoutNode({
+          id: cur.id,
+          title: cur.title,
+          depth: d,
+          confidence: nodeConfidence(cur),
+          parentId: parent,
+          done: !!cur.done,
+          phaseColor: cur.phaseColor,
+          pathRole: cur.pathRole || 'branch',
+          x: side * (baseLane + h * BRANCH_LEAN) * siblingGap,
+          y: y,
+          raw: cur,
+          stepPct: nodeStepProgress(cur).pct,
+        });
+        if (!added) break;
+        const lf = linearAndForks(cur, forkDepth);
+        lf.forks.forEach(function (fork) {
+          const used = placeBranchSubtree(fork.id, cur.id, side, forkLaneCursor, y - branchGap, forkDepth + 1, d + 1);
+          forkLaneCursor += used;
+          width += used;
+        });
+        parent = cur.id;
+        cur = lf.linear;
+        y -= branchGap;
+        d += 1;
+        h += 1;
+      }
+      return width;
+    }
+
+    // Top-level branches in deterministic (major, option) order. Each is packed
+    // onto an alternating side, outward from the spine, so lane-bands never
+    // collide — with the spine or with one another.
+    let leftLane = 1;
+    let rightLane = 1;
+    let branchOrdinal = 0;
     majorNodes.forEach(function (major) {
       const majorPos = posById[major.id];
       if (!majorPos) return;
-      const branchRoots = branchRootsForMajor(tree, major, spineIds);
-      branchRoots.forEach(function (root, bi) {
-        const side = bi % 2 === 0 ? -1 : 1;
-        const lane = Math.floor(bi / 2) + 1;
-        const x = side * lane * siblingGap;
-        const y = majorPos.y - branchGap;
-        if (y < spineTipY - branchGap * 4) return;
-        const added = addLayoutNode({
-          id: root.id,
-          title: root.title,
-          depth: root.depth || major.depth + 1,
-          confidence: nodeConfidence(root),
-          parentId: major.id,
-          done: !!root.done,
-          phaseColor: root.phaseColor,
-          pathRole: root.pathRole || 'branch',
-          x: x,
-          y: y,
-          raw: root,
-          stepPct: nodeStepProgress(root).pct,
-        });
-        if (added) placeBranch(root.id, root.id, x, y, side, 2);
+      branchRootsForMajor(tree, major, spineIds).forEach(function (root) {
+        const side = branchOrdinal % 2 === 0 ? -1 : 1;
+        branchOrdinal += 1;
+        const baseLane = side < 0 ? leftLane : rightLane;
+        const startY = majorPos.y - branchGap;
+        const startDepth = (major.depth || 1) + 1;
+        const used = placeBranchSubtree(root.id, major.id, side, baseLane, startY, 1, startDepth);
+        if (side < 0) leftLane += used; else rightLane += used;
       });
     });
 
@@ -739,6 +863,9 @@ function canonicalBranchDisplayTitle(title) {
     const labelText = String(text || '');
     const maxLines = labelText.length <= 55 ? 3 : 2;
     const lines = wrapLabel(labelText, 28, maxLines);
+    // §3C.6: an empty/whitespace title yields no lines; Math.max.apply(null, [])
+    // is -Infinity → NaN coords → a bare circle. Skip the pill instead.
+    if (!lines.length) return;
     const fontSize = emphasized ? 11 : 10;
     const lineH = fontSize + 3;
     const padX = 8;
@@ -997,7 +1124,7 @@ function canonicalBranchDisplayTitle(title) {
     const trunk = tree.trunk || {};
     const head = '<div><p class="roadmap-detail-eyebrow">Starting point</p>'
       + '<h3 class="roadmap-detail-title">' + esc(trunk.title || tree.targetCareerName || 'Your path begins here') + '</h3></div>'
-      + '<button type="button" class="roadmap-detail-close" id="roadmap-detail-close" aria-label="Close">×</button>';
+      + '<button type="button" class="roadmap-detail-close" id="roadmap-detail-close" aria-label="Close">' + lucide.svg('x') + '</button>';
     let body = '';
     if (trunk.subtitle) {
       body += '<p class="roadmap-detail-subheading">' + esc(trunk.subtitle) + '</p>';
@@ -1010,6 +1137,67 @@ function canonicalBranchDisplayTitle(title) {
     setDrawerOpen(true);
     const closeBtn = document.getElementById('roadmap-detail-close');
     if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
+  }
+
+  // Commitments (V2 §5 S10) — due date + effort per step, plus the AI
+  // "break this down" affordance. FWCommitments is the client mirror of the
+  // server rule (functions/_lib/commitments.js); guarded because the drawer
+  // must still render if the shared script hasn't loaded for some reason.
+  function commitmentPickerHtml(FWC, nid, sid, c, editable) {
+    const qd = FWC.quickDates();
+    const dis = editable ? '' : ' disabled';
+    const curDate = (c && c.dueAt) || '';
+    const curEffort = (c && c.effort) || '';
+    let html = '<div class="roadmap-commit-picker" data-node-id="' + nid + '" data-step-id="' + sid + '" hidden>';
+    html += '<div class="roadmap-commit-picker-quick">';
+    html += '<button type="button" class="roadmap-commit-quick-btn" data-date="' + escAttr(qd.thisWeek) + '"' + dis + '>This week</button>';
+    html += '<button type="button" class="roadmap-commit-quick-btn" data-date="' + escAttr(qd.nextWeek) + '"' + dis + '>Next week</button>';
+    html += '</div>';
+    html += '<input type="date" class="roadmap-commit-date-input" min="' + escAttr(qd.today) + '" value="' + escAttr(curDate) + '"' + dis + '>';
+    html += '<div class="roadmap-commit-effort-chips">';
+    FWC.EFFORTS.forEach(function (e) {
+      html += '<button type="button" class="roadmap-commit-effort-chip' + (e === curEffort ? ' is-active' : '') + '" data-effort="' + escAttr(e) + '"' + dis + '>' + esc(FWC.EFFORT_LABELS[e]) + '</button>';
+    });
+    html += '</div>';
+    html += '<button type="button" class="roadmap-commit-save-btn"' + dis + '>Save</button>';
+    html += '</div>';
+    return html;
+  }
+
+  function commitmentControlsHtml(tree, nodeId, step, editable) {
+    const FWC = global.FWCommitments;
+    if (!FWC) return '';
+    const nid = escAttr(nodeId);
+    const sid = escAttr(step.id);
+    const dis = editable ? '' : ' disabled';
+    const c = FWC.forStep(tree, nodeId, step.id);
+    let html = '<div class="roadmap-commit-wrap">';
+    if (c) {
+      const tier = FWC.urgencyTier(c);
+      html += '<div class="roadmap-commit-row">';
+      html += '<span class="roadmap-commit-chip roadmap-commit-chip--' + esc(tier) + '">' + esc(FWC.dueLabel(c)) + '</span>';
+      if (c.effort) {
+        html += '<span class="roadmap-commit-effort">' + esc(FWC.EFFORT_LABELS[c.effort] || '') + '</span>';
+      }
+      if (c.dueMoves > 0) {
+        html += '<span class="roadmap-commit-moved">moved ' + esc(String(c.dueMoves)) + 'x</span>';
+      }
+      html += '<button type="button" class="roadmap-commit-change-btn" data-node-id="' + nid + '" data-step-id="' + sid + '"' + dis + '>Change</button>';
+      html += '<button type="button" class="roadmap-commit-clear-btn" data-node-id="' + nid + '" data-step-id="' + sid + '"' + dis + '>Clear</button>';
+      html += '</div>';
+    } else {
+      html += '<div class="roadmap-commit-row roadmap-commit-row--empty">';
+      html += '<button type="button" class="roadmap-commit-add-btn" data-node-id="' + nid + '" data-step-id="' + sid + '"' + dis + '>by when?</button>';
+      html += '</div>';
+    }
+    // A micro-step generated by a prior breakdown does not get broken down
+    // again — aiBuilt is the simplest correct signal for "already granular".
+    if (!step.aiBuilt) {
+      html += '<button type="button" class="roadmap-commit-breakdown-btn" data-node-id="' + nid + '" data-step-id="' + sid + '"' + dis + '>Break this down</button>';
+    }
+    html += commitmentPickerHtml(FWC, nid, sid, c, editable);
+    html += '</div>';
+    return html;
   }
 
   function renderDetailPanel(tree, nodeLayout, opts) {
@@ -1035,12 +1223,35 @@ function canonicalBranchDisplayTitle(title) {
     const locked = !!(opts && opts.locked);
     const readOnly = !!(opts && opts.readOnly);
     const editable = !locked && !readOnly && !pending;
+    const nid = escAttr(nodeLayout.id);
+
+    // Multi-track focus state — one source of truth (FWSkillGapTracker). Drives
+    // the "open focus?" tab and the Track / Uncommit (Flight Plan) controls. A
+    // path is the spine or a branch root; tracking never rewires the tree.
+    const SGT = global.FWSkillGapTracker;
+    const focusPathKey = (SGT && SGT.branchKeyForNode && raw.type !== 'decision')
+      ? SGT.branchKeyForNode(tree, nodeLayout.id) : null;
+    const pathTracked = !!(focusPathKey && SGT && SGT.isPathTracked && SGT.isPathTracked(tree, focusPathKey));
+    const trackedBranches = (SGT && SGT.trackedBranchCount) ? SGT.trackedBranchCount(tree) : 0;
+    const maxBranches = (SGT && SGT.maxTrackedBranches) || 4;
+    const isTrackedFocusWp = !!(focusPathKey && SGT && SGT.trackedPaths
+      && (SGT.trackedPaths(tree) || []).some(function (p) { return p.waypointId === nodeLayout.id; }));
 
     const head = '<div><p class="roadmap-detail-eyebrow">' + esc(roleLabel) + '</p>'
       + '<h3 class="roadmap-detail-title">' + esc(displayTitle(raw) || nodeLayout.title) + '</h3></div>'
-      + '<button type="button" class="roadmap-detail-close" id="roadmap-detail-close" aria-label="Close">×</button>';
+      + '<button type="button" class="roadmap-detail-close" id="roadmap-detail-close" aria-label="Close">' + lucide.svg('x') + '</button>';
 
     let body = '';
+    if (isTrackedFocusWp && !pending) {
+      // Overhead Y/N tab (WS-multi): this node is the live focus waypoint of a
+      // tracked path, so offer to open its focus without leaving the drawer.
+      body += '<div class="roadmap-focus-tab" role="group" aria-label="Open this focus">'
+        + '<span class="roadmap-focus-tab-q">Open the focus for this waypoint?</span>'
+        + '<span class="roadmap-focus-tab-actions">'
+        + '<button type="button" class="cta-btn roadmap-focus-tab-yes" data-node-id="' + nid + '">Yes</button>'
+        + '<button type="button" class="cta-btn cta-btn-outline roadmap-focus-tab-no">No</button>'
+        + '</span></div>';
+    }
     if (drawerError) {
       body += '<p class="roadmap-detail-error">' + esc(drawerError) + '</p>';
     }
@@ -1068,7 +1279,7 @@ function canonicalBranchDisplayTitle(title) {
       body += '</div>';
     }
     if (raw.phaseLabel) {
-      body += '<p class="roadmap-detail-phase" style="border-left-color:' + esc(raw.phaseColor || '#c4956a') + '">' + esc(raw.phaseLabel);
+      body += '<p class="roadmap-detail-phase" style="border-left-color:' + escAttr(raw.phaseColor || '#c4956a') + '">' + esc(raw.phaseLabel);
       if (raw.phaseEndsAt) body += ' · until ' + esc(raw.phaseEndsAt);
       body += '</p>';
     }
@@ -1080,8 +1291,10 @@ function canonicalBranchDisplayTitle(title) {
       steps.forEach(function (step) {
         body += '<li class="roadmap-step-item">'
           + '<label class="roadmap-step-label">'
-          + '<input type="checkbox" class="roadmap-step-check" data-node-id="' + esc(nodeLayout.id) + '" data-step-id="' + esc(step.id) + '"' + (step.done ? ' checked' : '') + (editable ? '' : ' disabled') + '>'
-          + '<span>' + esc(step.text) + '</span></label></li>';
+          + '<input type="checkbox" class="roadmap-step-check" data-node-id="' + escAttr(nodeLayout.id) + '" data-step-id="' + escAttr(step.id) + '"' + (step.done ? ' checked' : '') + (editable ? '' : ' disabled') + '>'
+          + '<span>' + esc(step.text) + '</span></label>'
+          + commitmentControlsHtml(tree, nodeLayout.id, step, editable)
+          + '</li>';
       });
       body += '</ul></div>';
     }
@@ -1105,34 +1318,46 @@ function canonicalBranchDisplayTitle(title) {
     const branchState = branchDrawerState(tree, nodeLayout.id);
     const pendingBranch = !!(opts && opts.branchPending);
     const pendingExtend = pendingBranch && opts && opts.branchAction === 'extend';
-    const nid = esc(nodeLayout.id);
     let foot = '';
+    const extendBtnHtml = '<button type="button" class="cta-btn cta-btn-outline roadmap-extend-branch-btn' + (pendingExtend ? ' is-busy' : '') + '" data-node-id="' + nid + '"' + (pendingBranch ? ' disabled' : '') + '>'
+      + (pendingExtend ? '<span class="roadmap-btn-spinner" aria-hidden="true"></span>Extending…' : 'Extend this branch with AI') + '</button>';
 
-    // Branch affordances (WS2) — rendered above the step done/undone control.
+    // Branch affordances — rendered above the step done/undone control. There is
+    // no structural "Commit to this branch" anymore: committing a branch IS
+    // "Track in Flight Plan" (below), which is non-exclusive and never prunes a
+    // sibling. Any branch tip can still be grown with AI.
     if (branchState.onUnchosenBranch) {
       if (branchState.previewing) {
-        if (!branchState.branchChoiceCompleted) {
-          foot += '<button type="button" class="cta-btn roadmap-commit-branch-btn" data-node-id="' + nid + '" disabled aria-disabled="true">Complete branch choice waypoint first</button>';
-          foot += '<button type="button" class="cta-btn cta-btn-outline roadmap-exit-preview-btn"' + (pendingBranch ? ' disabled' : '') + '>Exit preview</button>';
-        } else {
-          foot += '<button type="button" class="cta-btn roadmap-commit-branch-btn" data-node-id="' + nid + '"' + (pendingBranch ? ' disabled' : '') + '>Commit to this branch</button>';
-          foot += '<button type="button" class="cta-btn cta-btn-outline roadmap-exit-preview-btn"' + (pendingBranch ? ' disabled' : '') + '>Exit preview</button>';
-        }
+        foot += '<button type="button" class="cta-btn cta-btn-outline roadmap-exit-preview-btn"' + (pendingBranch ? ' disabled' : '') + '>Exit preview</button>';
       } else {
-        if (!branchState.branchChoiceCompleted) {
-          foot += '<button type="button" class="cta-btn cta-btn-outline roadmap-preview-branch-btn" data-node-id="' + nid + '"' + (pendingBranch ? ' disabled' : '') + '>Preview this path</button>';
-          foot += '<button type="button" class="cta-btn roadmap-commit-branch-btn" data-node-id="' + nid + '" disabled aria-disabled="true">Complete branch choice waypoint first</button>';
-        } else {
-          foot += '<button type="button" class="cta-btn cta-btn-outline roadmap-preview-branch-btn" data-node-id="' + nid + '"' + (pendingBranch ? ' disabled' : '') + '>Preview this path</button>';
-          foot += '<button type="button" class="cta-btn roadmap-commit-branch-btn" data-node-id="' + nid + '"' + (pendingBranch ? ' disabled' : '') + '>Commit to this branch</button>';
-        }
+        foot += '<button type="button" class="cta-btn cta-btn-outline roadmap-preview-branch-btn" data-node-id="' + nid + '"' + (pendingBranch ? ' disabled' : '') + '>Preview this path</button>';
+        if (branchState.isTip) foot += extendBtnHtml;
       }
     } else if (branchState.committedBranch) {
-      if (branchState.isTip) {
-        foot += '<button type="button" class="cta-btn cta-btn-outline roadmap-extend-branch-btn' + (pendingExtend ? ' is-busy' : '') + '" data-node-id="' + nid + '"' + (pendingBranch ? ' disabled' : '') + '>'
-          + (pendingExtend ? '<span class="roadmap-btn-spinner" aria-hidden="true"></span>Extending…' : 'Extend this branch with AI') + '</button>';
+      if (branchState.isTip) foot += extendBtnHtml;
+      // WS-C2: change your mind while standing at the fork (legacy committed paths).
+      if (branchState.canUncommit) {
+        if (branchState.switchTarget) {
+          foot += '<button type="button" class="cta-btn cta-btn-outline roadmap-switch-branch-btn" data-node-id="' + nid + '" data-option-id="' + escAttr(branchState.switchTarget.optionId) + '"' + (pendingBranch ? ' disabled' : '') + '>Switch to ' + esc(branchState.switchTarget.label) + '</button>';
+        }
+        foot += '<button type="button" class="cta-btn cta-btn-outline roadmap-uncommit-branch-btn" data-node-id="' + nid + '"' + (pendingBranch ? ' disabled' : '') + '>Return to main path</button>';
       }
-      foot += '<button type="button" class="cta-btn cta-btn-outline roadmap-track-branch-btn" data-node-id="' + nid + '"' + (pendingBranch ? ' disabled' : '') + '>Track this branch in Focus</button>';
+    }
+
+    // Focus tracking — the user's "commit / uncommit". Independent of the
+    // structural branch commit above: tracking a path adds its live waypoint to
+    // the Flight Plan and lets its focus be opened; it never rewires the tree.
+    // Offered on spine AND branch waypoints so any tracked path can be untracked.
+    if (focusPathKey && !branchState.previewing) {
+      if (pathTracked) {
+        foot += '<button type="button" class="cta-btn cta-btn-outline roadmap-untrack-focus-btn" data-node-id="' + nid + '"' + (pendingBranch ? ' disabled' : '') + '>Uncommit from Flight Plan</button>';
+      } else {
+        const atCap = focusPathKey !== 'spine' && trackedBranches >= maxBranches;
+        foot += '<button type="button" class="cta-btn cta-btn-outline roadmap-track-focus-btn" data-node-id="' + nid + '"' + ((pendingBranch || atCap) ? ' disabled' : '') + (atCap ? ' aria-disabled="true"' : '') + '>Track in Flight Plan</button>';
+      }
+      foot += '<p class="roadmap-focus-cap-hint">Tracking ' + trackedBranches + ' of ' + maxBranches + ' branches'
+        + (focusPathKey !== 'spine' && trackedBranches >= maxBranches && !pathTracked ? ' — uncommit one to add this' : '')
+        + '</p>';
     }
 
     if (raw.done) {
@@ -1158,6 +1383,60 @@ function canonicalBranchDisplayTitle(title) {
         }
       });
     });
+    // Commitments (V2 §5 S10). The picker's open/closed state is plain DOM
+    // (a `hidden` toggle scoped to this step's own wrap) rather than module
+    // state — a drawer re-render collapses it back closed, which is fine.
+    panel.querySelectorAll('.roadmap-commit-add-btn, .roadmap-commit-change-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const wrap = btn.closest('.roadmap-commit-wrap');
+        const picker = wrap && wrap.querySelector('.roadmap-commit-picker');
+        if (picker) picker.hidden = !picker.hidden;
+      });
+    });
+    panel.querySelectorAll('.roadmap-commit-quick-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const picker = btn.closest('.roadmap-commit-picker');
+        const input = picker && picker.querySelector('.roadmap-commit-date-input');
+        if (input) input.value = btn.getAttribute('data-date');
+      });
+    });
+    panel.querySelectorAll('.roadmap-commit-effort-chip').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const picker = btn.closest('.roadmap-commit-picker');
+        if (!picker) return;
+        const wasActive = btn.classList.contains('is-active');
+        picker.querySelectorAll('.roadmap-commit-effort-chip').forEach(function (b) { b.classList.remove('is-active'); });
+        if (!wasActive) btn.classList.add('is-active'); // effort is optional — a second click clears it
+      });
+    });
+    panel.querySelectorAll('.roadmap-commit-save-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const picker = btn.closest('.roadmap-commit-picker');
+        if (!picker) return;
+        const dateInput = picker.querySelector('.roadmap-commit-date-input');
+        const dueAt = dateInput ? dateInput.value : '';
+        if (!dueAt) return;
+        const activeChip = picker.querySelector('.roadmap-commit-effort-chip.is-active');
+        const effort = activeChip ? activeChip.getAttribute('data-effort') : null;
+        if (callbacks.onSetCommitment) {
+          callbacks.onSetCommitment(picker.getAttribute('data-node-id'), picker.getAttribute('data-step-id'), dueAt, effort);
+        }
+      });
+    });
+    panel.querySelectorAll('.roadmap-commit-clear-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (callbacks.onClearCommitment) {
+          callbacks.onClearCommitment(btn.getAttribute('data-node-id'), btn.getAttribute('data-step-id'));
+        }
+      });
+    });
+    panel.querySelectorAll('.roadmap-commit-breakdown-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (callbacks.onBreakDownStep) {
+          callbacks.onBreakDownStep(btn.getAttribute('data-node-id'), btn.getAttribute('data-step-id'));
+        }
+      });
+    });
     panel.querySelectorAll('.roadmap-mark-done-btn, .roadmap-mark-undone-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
         if (callbacks.onMarkDone) callbacks.onMarkDone(btn.getAttribute('data-node-id'));
@@ -1166,23 +1445,55 @@ function canonicalBranchDisplayTitle(title) {
 
     const previewBtn = panel.querySelector('.roadmap-preview-branch-btn');
     if (previewBtn) previewBtn.addEventListener('click', function () {
+      // Preview is ephemeral and client-only (computePreviewPath) — the server
+      // never sees it, so this is the only signal for the preview -> track step.
+      try { if (global.FWEvents) FWEvents.log('tree_interact', { kind: 'branch_preview' }); } catch (_) {}
       if (callbacks.onPreviewPath) callbacks.onPreviewPath(previewBtn.getAttribute('data-node-id'));
     });
     const exitPreviewBtn = panel.querySelector('.roadmap-exit-preview-btn');
     if (exitPreviewBtn) exitPreviewBtn.addEventListener('click', function () {
       if (callbacks.onExitPreview) callbacks.onExitPreview();
     });
-    const commitBtn = panel.querySelector('.roadmap-commit-branch-btn');
-    if (commitBtn) commitBtn.addEventListener('click', function () {
-      if (callbacks.onCommitBranch) callbacks.onCommitBranch(commitBtn.getAttribute('data-node-id'));
-    });
     const extendBtn = panel.querySelector('.roadmap-extend-branch-btn');
     if (extendBtn) extendBtn.addEventListener('click', function () {
+      // Attempt half of the pair with roadmap_extend (success): the delta is the
+      // metered cap/failure rate, which the cap card renders without logging.
+      try { if (global.FWEvents) FWEvents.log('tree_interact', { kind: 'branch_extend' }); } catch (_) {}
       if (callbacks.onExtendBranch) callbacks.onExtendBranch(extendBtn.getAttribute('data-node-id'));
     });
-    const trackBtn = panel.querySelector('.roadmap-track-branch-btn');
-    if (trackBtn) trackBtn.addEventListener('click', function () {
-      if (callbacks.onTrackBranch) callbacks.onTrackBranch(trackBtn.getAttribute('data-node-id'));
+    const trackFocusBtn = panel.querySelector('.roadmap-track-focus-btn');
+    if (trackFocusBtn) trackFocusBtn.addEventListener('click', function () {
+      if (trackFocusBtn.getAttribute('aria-disabled') === 'true') return;
+      if (callbacks.onTrackBranch) callbacks.onTrackBranch(trackFocusBtn.getAttribute('data-node-id'));
+    });
+    const untrackFocusBtn = panel.querySelector('.roadmap-untrack-focus-btn');
+    if (untrackFocusBtn) untrackFocusBtn.addEventListener('click', function () {
+      if (callbacks.onUntrackFocus) callbacks.onUntrackFocus(untrackFocusBtn.getAttribute('data-node-id'));
+    });
+    // roadmap_committed is deliberately NOT logged here. This drawer button is
+    // only ONE of the two ways to track — the preview rail's "Track in Flight
+    // Plan" is the other, and it is the flow the product actually leads with.
+    // Both land in roadmap.js trackBranchInFocus/untrackFocusForNode, which
+    // also know whether the cap refused the change, so the event lives there
+    // and counts persisted state instead of clicks.
+    const focusYesBtn = panel.querySelector('.roadmap-focus-tab-yes');
+    if (focusYesBtn) focusYesBtn.addEventListener('click', function () {
+      if (callbacks.onOpenFocusForNode) callbacks.onOpenFocusForNode(focusYesBtn.getAttribute('data-node-id'));
+    });
+    const focusNoBtn = panel.querySelector('.roadmap-focus-tab-no');
+    if (focusNoBtn) focusNoBtn.addEventListener('click', function () {
+      const tab = panel.querySelector('.roadmap-focus-tab');
+      if (tab) tab.remove();
+    });
+    const uncommitBtn = panel.querySelector('.roadmap-uncommit-branch-btn');
+    if (uncommitBtn) uncommitBtn.addEventListener('click', function () {
+      if (callbacks.onUncommitBranch) callbacks.onUncommitBranch(uncommitBtn.getAttribute('data-node-id'));
+    });
+    const switchBtn = panel.querySelector('.roadmap-switch-branch-btn');
+    if (switchBtn) switchBtn.addEventListener('click', function () {
+      if (callbacks.onSwitchBranch) {
+        callbacks.onSwitchBranch(switchBtn.getAttribute('data-node-id'), switchBtn.getAttribute('data-option-id'));
+      }
     });
   }
 
@@ -1277,9 +1588,21 @@ function canonicalBranchDisplayTitle(title) {
       if (hit) {
         e.preventDefault();
         const treeNow = currentTree();
-        if (callbacks.onNodeSelect && callbacks.onNodeSelect(hit, treeNow) === true) {
-          return;
-        }
+        // onNodeSelect returns true when it CONSUMED the click — that is the
+        // preview-mode jump along the previewed branch, which moves the preview
+        // cursor and opens no drawer. Same click, different intent, so it gets
+        // its own kind rather than inflating node_open. Only reachable on a real
+        // node hit; pan, zoom and hover never get here.
+        const handled = !!(callbacks.onNodeSelect && callbacks.onNodeSelect(hit, treeNow) === true);
+        try {
+          if (global.FWEvents) {
+            FWEvents.log('tree_interact', {
+              kind: handled ? 'preview_jump' : 'node_open',
+              role: hit.id === 'trunk' ? 'trunk' : ((hit.raw && hit.raw.pathRole) || 'spine'),
+            });
+          }
+        } catch (_) {}
+        if (handled) return;
         const drawerOpts = drawerOptsForNode(treeNow, hit.id);
         renderDetailPanel(treeNow, hit, drawerOpts);
         return;
@@ -1308,14 +1631,15 @@ function canonicalBranchDisplayTitle(title) {
       canvas.style.cursor = 'grab';
     }
 
-    canvas.onmousedown = onPointerDown;
-    canvas.onmousemove = onPointerMove;
-    canvas.onmouseup = onPointerUp;
-    canvas.onmouseleave = function () { dragState = null; hoveredId = null; };
+    // §3C.4: pointer events already cover mouse + touch. Binding the legacy on*
+    // mouse handlers alongside them made every mouse action fire BOTH the mouse
+    // and pointer event, so each handler ran twice — double pan/redraw per tick,
+    // double node-select. Pointer events only; pointerleave replaces onmouseleave.
     canvas.addEventListener('pointerdown', onPointerDown);
     canvas.addEventListener('pointermove', onPointerMove);
     canvas.addEventListener('pointerup', onPointerUp);
     canvas.addEventListener('pointercancel', onPointerUp);
+    canvas.addEventListener('pointerleave', function () { dragState = null; hoveredId = null; redraw(); });
 
     canvas.onwheel = function (e) {
       e.preventDefault();
@@ -1334,6 +1658,20 @@ function canonicalBranchDisplayTitle(title) {
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', onVisualViewportResize);
     }
+    // A pure DPR change (OS display scaling, or a monitor with a different
+    // scale factor) does not resize the layout viewport, so no resize event
+    // fires and the tree keeps rendering into a stale backing store. The query
+    // pins one exact ratio, so it re-arms after every change.
+    (function watchDpr() {
+      if (!window.matchMedia) return;
+      const mq = window.matchMedia('(resolution: ' + (window.devicePixelRatio || 1) + 'dppx)');
+      const once = function () {
+        mq.removeEventListener('change', once);
+        resize();
+        watchDpr();
+      };
+      mq.addEventListener('change', once);
+    })();
     function onThemeChange() { redraw(); }
     window.addEventListener('flightway-theme-change', onThemeChange);
     let resizeObserver = null;

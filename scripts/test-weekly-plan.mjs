@@ -130,7 +130,7 @@ function gapTree() {
 assert(eq(computeGapProgressDims({ nodes: [] }), []), 'no focusTracker → []');
 
 // ── v2: AI weekly plan pure helpers ─────────────────────────────
-const { currentWaypoint, sanitizeWeeklyTasks, fallbackWeeklyTasks, describeStepProgress } =
+const { currentWaypoint, trackedWaypointNodes, sanitizeWeeklyTasks, fallbackWeeklyTasks, describeStepProgress } =
   await import('../functions/_lib/weekly-plan-gen.js');
 const { emptyProgressState, accrueTaskToggle, reconcileFractionsWithTree } =
   await import('../functions/_lib/flightplan-progress.js');
@@ -143,23 +143,55 @@ console.log('weekly-plan-gen:');
   assert(currentWaypoint(t)?.id === 'wp2', 'skips done waypoints');
 }
 {
-  const node = sampleTree().nodes[0];
+  // trackedWaypointNodes: no focusTracker → just the spine's current waypoint.
+  assert(eq(trackedWaypointNodes(sampleTree()).map((n) => n.id), ['wp1']), 'tracked set = spine current waypoint when nothing else tracked');
+  const branchTree = sampleTree();
+  branchTree.nodes.push({ id: 'b1', title: 'Branch 1', shortTitle: 'B1', pathRole: 'branch', done: false, steps: [{ id: 'x1', text: 'Branch step', done: false }] });
+  branchTree.focusTracker = { branchFocuses: [{ branchKey: 'b1', waypointId: 'b1' }] };
+  assert(eq(trackedWaypointNodes(branchTree).map((n) => n.id), ['wp1', 'b1']), 'tracked set = spine + each tracked branch (spine first)');
+  const spineOff = sampleTree();
+  spineOff.focusTracker = { spineTracked: false, branchFocuses: [] };
+  assert(trackedWaypointNodes(spineOff).length >= 1, 'never empty — falls back to the current waypoint even if spine flagged off with no branches');
+}
+{
+  // sanitizeWeeklyTasks now takes an ARRAY of tracked nodes; each task must name
+  // one of them via waypointId, else it is dropped.
+  const nodes = [sampleTree().nodes[0]]; // tracked = [wp1]
   const tasks = sanitizeWeeklyTasks([
-    { label: 'Read ch. 4 of the stats book', stepId: 's1', advance: 0.4 },
-    { label: 'Task on a done step', stepId: 's2', advance: 0.5 },
-    { label: 'Send 3 networking emails', stepId: 'nope', advance: 2, carried: true },
-    { label: '', stepId: 's3' },
-    { label: 'x'.repeat(300), stepId: 's3', advance: -1 },
-  ], node, '2026-W28');
-  assert(tasks.length === 3, 'drops empty labels and done-step tasks only');
+    { label: 'Read ch. 4 of the stats book', stepId: 's1', waypointId: 'wp1', advance: 0.4 },
+    { label: 'Task on a done step', stepId: 's2', waypointId: 'wp1', advance: 0.5 },
+    { label: 'Send 3 networking emails', stepId: 'nope', waypointId: 'wp1', advance: 2, carried: true },
+    { label: '', stepId: 's3', waypointId: 'wp1' },
+    { label: 'z'.repeat(300), stepId: 's3', waypointId: 'wp1', advance: -1 },
+    { label: 'Task on an untracked waypoint', stepId: 'x', waypointId: 'zzz' },
+  ], nodes, '2026-W28');
+  assert(tasks.length === 3, 'drops empty labels, done-step, and untracked-waypoint tasks');
   assert(tasks[0].id === '2026-W28-t1' && tasks[0].stepId === 's1' && tasks[0].advance === 0.4, 'week-scoped ids, valid stepId + advance kept');
   assert(tasks[1].stepId === null && tasks[1].carried === true && tasks[1].advance === 1, 'unknown stepId nulled, advance clamped to 1, carried kept');
   assert(tasks[2].label.length === 120 && tasks[2].advance === 0.05, 'label capped at 120, advance floor 0.05');
-  assert(tasks.every((x) => x.waypointId === 'wp1' && x.done === false), 'tasks bound to the waypoint, start undone');
+  assert(tasks.every((x) => x.waypointId === 'wp1' && x.done === false), 'tasks bound to a tracked waypoint, start undone');
 }
 {
+  // The guarantee: a tracked waypoint the model skipped still gets ≥1 task.
+  const nodes = [sampleTree().nodes[0], sampleTree().nodes[1]]; // tracked = [wp1, wp2]
+  const tasks = sanitizeWeeklyTasks([
+    { label: 'Only covers wp1', stepId: 's1', waypointId: 'wp1', advance: 0.5 },
+  ], nodes, '2026-W28');
+  assert(tasks.some((t) => t.waypointId === 'wp1') && tasks.some((t) => t.waypointId === 'wp2'), '≥1 task per tracked waypoint (skipped wp2 is lifted)');
+  assert(tasks.find((t) => t.waypointId === 'wp2').source === 'waypoint', 'the lifted task is a deterministic waypoint lift');
+}
+{
+  // Fallback is scoped to the tracked set. No focusTracker → only wp1's not-done
+  // steps (s1, s3), not the whole active path.
   const fb = fallbackWeeklyTasks(sampleTree(), '2026-W28');
-  assert(fb.length === 3 && fb[0].id === '2026-W28-t1' && fb[0].stepId === 's1' && fb[0].advance === 1, 'fallback maps old selection into v2 shape (advance 1)');
+  assert(fb.length === 2 && fb[0].id === '2026-W28-t1' && fb[0].stepId === 's1' && fb[0].advance === 1, 'fallback lifts the tracked waypoint\'s not-done steps into v2 shape');
+  assert(fb.every((t) => t.waypointId === 'wp1'), 'fallback stays within the tracked set (no wander to untracked wp2)');
+  // Multi-track fallback covers spine AND each tracked branch.
+  const bt = sampleTree();
+  bt.nodes.push({ id: 'b1', title: 'Branch 1', shortTitle: 'B1', pathRole: 'branch', done: false, steps: [{ id: 'x1', text: 'Branch step', done: false }] });
+  bt.focusTracker = { branchFocuses: [{ branchKey: 'b1', waypointId: 'b1' }] };
+  const fb2 = fallbackWeeklyTasks(bt, '2026-W28');
+  assert(fb2.some((t) => t.waypointId === 'wp1') && fb2.some((t) => t.waypointId === 'b1'), 'fallback covers the spine AND the tracked branch (≥1 each)');
 }
 {
   const lines = describeStepProgress(sampleTree().nodes[0], { 'wp1:s1': 0.5 });
@@ -187,6 +219,54 @@ console.log('flightplan-progress:');
   const rec = reconcileFractionsWithTree(st, sampleTree());
   assert(rec.fractions['wp1:s2'] === 1, 'directly-completed steps read as fraction 1');
   assert(rec.fractions['wp1:s1'] === 0.9, 'stale ≥1 fraction on an undone step drops back below the flip point');
+}
+
+// ---------------------------------------------------------------------------
+// S18 — term-aware fixtures (§5 S18 names this gate for them).
+//
+// Two things are being pinned, and the second is the one that will bite:
+//
+//   1. **The ritual's output feeds the weekly loop.** Three outcomes become dated
+//      steps on the current waypoint, and if `selectWeeklyTasks` did not pick
+//      them up the whole Semester Loop would be a card that writes to a place
+//      nothing reads. This is the composition, tested directly.
+//   2. **`node.semesterPlan` and the S18 term are DIFFERENT things that share a
+//      word.** The waypoint's `semesterPlan` is a pre-existing per-waypoint
+//      phase sequence (`planOrderForNode`, weekly-plan-core.js:26); the term is
+//      the student's academic calendar. Neither is derived from the other and
+//      neither may quietly become the other's fallback — a student on quarters
+//      whose waypoint carries a "semesterPlan" is not thereby on semesters.
+console.log('S18 term awareness:');
+{
+  const { termWeek, termPhrase, seedSchedule } = await import('../functions/_lib/term-core.js');
+  const at = (iso) => Date.parse(`${iso}T12:00:00Z`);
+  const term = { system: 'quarter', startDate: '2026-09-28', endDate: '2026-12-11' };
+
+  // The ritual's steps, as functions/semester.js seeds them: the student's own
+  // text, `aiBuilt` (which exempts them from pruneBranchNodes), a due date.
+  const seeded = seedSchedule(term, { outcomes: ['Ship the backtest', 'Get the referral'], deliverable: 'Public writeup' }, at('2026-09-28'));
+  assert(seeded.length === 3, 'the ritual schedules two outcomes and a deliverable');
+  const tree = sampleTree();
+  tree.nodes[0].steps = seeded.map((s, i) => ({ id: `tmabc o${i}`.replace(' ', ''), text: s.text, done: false, aiBuilt: true, dueAt: s.dueAt }));
+  const tasks = selectWeeklyTasks(tree, { limit: 3 });
+  assert(tasks.length === 3, 'and all three are pickable as weekly tasks');
+  assert(tasks[0].label === 'Ship the backtest',
+    'the weekly plan offers the term outcome by the student\'s own words — the ritual feeds the loop');
+  assert(tasks.every((t) => t.waypointId === 'wp1'),
+    'from the current waypoint, which is where the ritual put them');
+
+  // The two "semester" concepts do not leak into each other.
+  const planned = sampleTree();
+  planned.nodes[0].semesterPlan = { plan: { phases: [{ weeks: 'Weeks 1-3', items: [{ stepId: 's3' }] }] } };
+  const order = selectWeeklyTasks(planned, { limit: 3 }).map((t) => t.id);
+  assert(order[0] === 'wp1:s3',
+    "a waypoint's own semesterPlan still sequences its steps — that concept is untouched by S18");
+  assert(termWeek(planned.nodes[0].semesterPlan || {}).status === 'none',
+    'and a semesterPlan is not a term: it has no dates, so termWeek says "none" rather than guessing');
+  assert(termPhrase(term, at('2026-11-02')) === 'Week 6 of 11',
+    'the term phrase the digest and the card share is week-of-total, from the term\'s own dates');
+  assert(termWeek(term, at('2026-11-02')).total === 11 && termWeek(term, at('2026-11-02')).week === 6,
+    'and an eleven-week quarter is eleven weeks, not fifteen — the system name never sets the length');
 }
 
 process.exit(fail ? 1 : 0);

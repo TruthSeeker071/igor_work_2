@@ -162,7 +162,7 @@
       return r.text().then(function (t) {
         var data;
         try { data = t ? JSON.parse(t) : {}; } catch (_) { data = { error: 'Bad response' }; }
-        if (!r.ok) throw Object.assign(new Error(data.error || ('HTTP ' + r.status)), { status: r.status });
+        if (!r.ok) throw Object.assign(new Error(data.error || ('HTTP ' + r.status)), { status: r.status, data: data });
         return data;
       });
     });
@@ -299,7 +299,7 @@
       '<div class="fw-eyebrow">Plain English</div>'
       + '<div class="fw-decoder-term">' + esc(entry.term) + '</div>'
       + '<p class="fw-decoder-plain">' + esc(entry.plain) + '</p>'));
-    var close = h('button', 'fw-decoder-close', '✕');
+    var close = h('button', 'fw-decoder-close', lucide.svg('x'));
     close.type = 'button';
     close.setAttribute('aria-label', 'Close decoder');
     close.onclick = hideDecoder;
@@ -586,7 +586,10 @@
       card.type = 'button';
       var lockedCta = d.upgrade ? 'See Flight Plan →' : 'Finish a test flight first';
       card.innerHTML = '<div class="fw-tier-head"><span class="fw-tier-title">' + d.title + '</span>'
-        + (d.locked ? '<span class="fw-tier-lock">🔒</span>' : '') + '</div>'
+        // WS-G G2: locked entries look the same everywhere — a drawn lock, not
+        // an emoji next to the SVG locks the other gated surfaces use.
+        + (d.locked ? '<span class="fw-tier-lock" aria-hidden="true">'
+          + (typeof lucide !== 'undefined' && lucide.svg ? lucide.svg('lock') : '') + '</span>' : '') + '</div>'
         + '<p class="fw-tier-desc">' + d.desc + '</p>'
         + '<span class="fw-tier-cta">' + (d.locked ? lockedCta : d.cta) + '</span>';
       card.disabled = true;
@@ -595,7 +598,12 @@
         tierBtns.push(card);
       } else if (d.upgrade) {
         card.disabled = false;
-        card.onclick = function () { location.href = 'pricing.html'; };
+        card.onclick = function () {
+          // Funnel upgrade_click: this card is a <button> with a JS href, so the
+          // plan-surface delegated anchor listener never sees it (S1 deferred gap).
+          try { if (global.FWEvents) FWEvents.log('upgrade_click', { source: 'sim:tier' }); } catch (_) {}
+          location.href = 'pricing.html';
+        };
       }
       tiersWrap.appendChild(card);
     });
@@ -1257,7 +1265,13 @@
           deepOk ? 'Go deeper — the 25-minute version →' : 'Go deeper — the 25-minute version (Flight Plan) →',
           function () {
             logEvent('tier_upgrade_click', { from: 'flight', gated: !deepOk });
-            if (!deepOk) { location.href = 'pricing.html'; return; }
+            if (!deepOk) {
+              // Funnel upgrade_click for the beacon (logEvent above is sim-local
+              // localStorage only). This bigButton is not an anchor, so the
+              // plan-surface delegated listener misses it (S1 deferred gap).
+              try { if (global.FWEvents) FWEvents.log('upgrade_click', { source: 'sim:deep' }); } catch (_) {}
+              location.href = 'pricing.html'; return;
+            }
             clearDraft(sim.id);
             startTier('deep');
           },
@@ -1500,7 +1514,16 @@
         S.sims.push(sim);
         openEntry(sim);
       })
-      .catch(function () {
+      .catch(function (err) {
+        if (err && err.status === 429 && err.data && err.data.upgrade
+            && window.FWPlanSurface && typeof FWPlanSurface.capCard === 'function') {
+          clearRoot();
+          var capPage = h('div', 'fw-page fw-up');
+          capPage.appendChild(backRow('All careers', showBoard));
+          root.appendChild(capPage);
+          FWPlanSurface.capCard(capPage, 'career-sim', err.data.error);
+          return;
+        }
         logEvent('generate_fail', { slug: slug });
         clearRoot();
         var page = h('div', 'fw-page fw-up');
